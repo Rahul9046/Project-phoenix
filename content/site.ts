@@ -22,7 +22,7 @@ export const launchCities = [
   "Kolkata",
   "Mumbai",
   "Pune",
-  "Mizoram",
+  "Aizawl",
   "Chennai",
 ] as const;
 
