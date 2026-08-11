@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
+import { AuthSessionProvider } from "@/lib/auth/AuthSessionProvider";
 import { site } from "@/content/site";
 import "./globals.css";
 
@@ -75,11 +74,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SiteHeader />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <SiteFooter />
+        {/*
+          The session lives above both route groups so the marketing header and
+          the auth screens read the same state. It is client-side only for now —
+          see `lib/auth/README` notes in `mock-auth-provider.ts`.
+        */}
+        <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>
   );

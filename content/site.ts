@@ -12,14 +12,20 @@ export const site = {
 } as const;
 
 /**
- * The cities Eraya opens in first. Anyone outside these joins the waitlist,
- * so this list drives both the copy and the form.
+ * The cities Eraya opens in first. This list drives the landing page, the
+ * waitlist form and the city step in signup.
+ *
+ * It never gates account creation — anyone can join from anywhere, and someone
+ * outside these cities simply hears from us when we reach them.
  */
 export const launchCities = [
-  "Bengaluru",
   "Hyderabad",
   "Delhi",
   "Kolkata",
+  "Mumbai",
+  "Pune",
+  "Aizawl",
+  "Chennai",
 ] as const;
 
 /** Value used by the form when someone is not in a launch city. */
