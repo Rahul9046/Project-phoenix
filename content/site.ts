@@ -20,6 +20,10 @@ export const launchCities = [
   "Hyderabad",
   "Delhi",
   "Kolkata",
+  "Mumbai",
+  "Pune",
+  "Aizawl",
+  "Chennai",
 ] as const;
 
 /** Value used by the form when someone is not in a launch city. */

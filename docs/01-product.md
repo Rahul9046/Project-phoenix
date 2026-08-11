@@ -34,7 +34,7 @@ difference obvious within a few seconds of arriving.
 | Area | Decision |
 | --- | --- |
 | Country | India only. Country selection does not appear anywhere in the MVP. |
-| Cities | Opens in a few cities first: Bengaluru, Hyderabad, Delhi, Kolkata. |
+| Cities | Opens in a few cities first: Bengaluru, Hyderabad, Delhi, Kolkata, Mumbai, Pune, Aizawl, Chennai. |
 | Elsewhere in India | Waitlist. People outside the launch cities register interest and are told when Eraya reaches their city. |
 | Verification | Phone and email, required. |
 | Relationship verification | Deferred — handled later in the product flow, not at signup, and not described on the landing page. |
