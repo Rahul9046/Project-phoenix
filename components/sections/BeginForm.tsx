@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 
 import { joinWaitlist, type WaitlistState } from "@/app/actions/waitlist";
 import { Button } from "@/components/ui/Button";
-import { begin, launchCities, otherCityValue } from "@/content/site";
+import { begin, otherCityValue } from "@/content/site";
 
 const initialState: WaitlistState = { status: "idle" };
 
@@ -53,7 +53,7 @@ function SubmitButton() {
   );
 }
 
-export function BeginForm() {
+export function BeginForm({ cities }: { cities: string[] }) {
   const [state, formAction] = useActionState(joinWaitlist, initialState);
   const [city, setCity] = useState("");
   const ids = {
@@ -134,7 +134,7 @@ export function BeginForm() {
             <option value="" disabled>
               Select a city
             </option>
-            {launchCities.map((option) => (
+            {cities.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>

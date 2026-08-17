@@ -12,19 +12,14 @@ export const site = {
 } as const;
 
 /**
- * The cities Eraya opens in first. Anyone outside these joins the waitlist,
- * so this list drives both the copy and the form.
+ * The launch cities now live in the `cities` table and are read through
+ * `lib/data/reference.ts` — changing where Eraya is available is a data change,
+ * not a deploy. The seed list is in
+ * `supabase/migrations/20260811090900_seed_reference_data.sql`.
+ *
+ * Availability never gates account creation: anyone can join from anywhere, and
+ * someone outside these cities simply hears from us when we reach them.
  */
-export const launchCities = [
-  "Bengaluru",
-  "Hyderabad",
-  "Delhi",
-  "Kolkata",
-  "Mumbai",
-  "Pune",
-  "Aizawl",
-  "Chennai",
-] as const;
 
 /** Value used by the form when someone is not in a launch city. */
 export const otherCityValue = "Another city";

@@ -1,9 +1,7 @@
 "use server";
 
-import { mkdir, appendFile } from "node:fs/promises";
-import path from "node:path";
-
-import { launchCities, otherCityValue } from "@/content/site";
+import { createClient } from "@/lib/supabase/server";
+import { getActiveCities } from "@/lib/data/reference";
 
 export type WaitlistState =
   | { status: "idle" }
@@ -12,21 +10,18 @@ export type WaitlistState =
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/** Postgres unique violation — this address is already on the list. */
+const UNIQUE_VIOLATION = "23505";
+
 /**
- * Where signups land.
+ * Where landing-page signups go.
  *
- * This is a file-backed store so the form is genuinely functional in
- * development and on a single long-lived server. It is NOT durable on
- * serverless or multi-instance hosting — swap this for the real datastore
- * before launch. See docs/07-open-questions.md.
+ * Now a Supabase table rather than a file on disk, which was never durable on
+ * serverless or multi-instance hosting. Inserted under the anon key and the
+ * insert-only RLS policy: the browser can add an entry and cannot read anyone
+ * else's, which is the correct shape for a public form collecting personal
+ * details.
  */
-const storePath = path.join(process.cwd(), "data", "waitlist.jsonl");
-
-async function record(entry: Record<string, string>) {
-  await mkdir(path.dirname(storePath), { recursive: true });
-  await appendFile(storePath, `${JSON.stringify(entry)}\n`, "utf8");
-}
-
 export async function joinWaitlist(
   _previous: WaitlistState,
   formData: FormData,
@@ -55,10 +50,13 @@ export async function joinWaitlist(
     fieldErrors.email = "Please enter a valid email address.";
   }
 
-  const isLaunchCity = (launchCities as readonly string[]).includes(city);
-  const isOther = city === otherCityValue;
+  // The list of cities comes from the database, so the form and the validation
+  // can never disagree about what is on offer.
+  const cities = await getActiveCities();
+  const chosen = cities.find((entry) => entry.name === city);
+  const isOther = city === OTHER_CITY_LABEL;
 
-  if (!isLaunchCity && !isOther) {
+  if (!chosen && !isOther) {
     fieldErrors.city = "Please choose your city.";
   }
 
@@ -75,16 +73,14 @@ export async function joinWaitlist(
   }
 
   const resolvedCity = isOther ? otherCity : city;
+  const list = isOther || !chosen?.isLaunchCity ? "waitlist" : "early_access";
 
-  try {
-    await record({
-      name,
-      email,
-      city: resolvedCity,
-      list: isOther ? "waitlist" : "early-access",
-      submittedAt: new Date().toISOString(),
-    });
-  } catch {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("waitlist")
+    .insert({ name, email, city: resolvedCity, list });
+
+  if (error && error.code !== UNIQUE_VIOLATION) {
     return {
       status: "error",
       message:
@@ -93,6 +89,8 @@ export async function joinWaitlist(
     };
   }
 
+  // A duplicate is not a failure worth reporting: they are on the list either
+  // way, and saying so would only tell a stranger which addresses we hold.
   return {
     status: "success",
     message: isOther
@@ -100,3 +98,6 @@ export async function joinWaitlist(
       : `Thank you, ${name}. You are on the early access list for ${resolvedCity} — we will email you when Eraya opens there.`,
   };
 }
+
+/** Matches the option rendered by the landing page form. */
+const OTHER_CITY_LABEL = "Another city";

@@ -2,9 +2,14 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { cities, launchCities } from "@/content/site";
+import { cities } from "@/content/site";
+import { getActiveCities } from "@/lib/data/reference";
 
-export function Cities() {
+export async function Cities() {
+  const launchCities = (await getActiveCities()).filter(
+    (city) => city.isLaunchCity,
+  );
+
   return (
     <Section id="cities" tone="sand">
       <Container className="grid gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-20">
@@ -29,11 +34,11 @@ export function Cities() {
           <ul className="mt-6">
             {launchCities.map((city) => (
               <li
-                key={city}
+                key={city.id}
                 className="flex items-baseline justify-between gap-4 border-b border-line py-4 last:border-b-0"
               >
                 <span className="font-serif text-xl tracking-[-0.01em] text-ink">
-                  {city}
+                  {city.name}
                 </span>
                 <span className="text-sm text-ink-subtle">India</span>
               </li>

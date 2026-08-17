@@ -84,7 +84,8 @@ Explains why Eraya opens in a few cities: a community needs people in it to be
 worth joining, so a handful of cities grown properly beats a national launch
 into empty profiles.
 
-Lists Bengaluru, Hyderabad, Delhi, Kolkata, Mumbai, Pune, Aizawl and Chennai,
+Lists Hyderabad, Delhi, Kolkata, Mumbai, Pune, Aizawl and Chennai — read from
+the `cities` table at request time rather than hardcoded,
 and tells anyone elsewhere in India to join the waitlist. This is the section
 that makes the waitlist mean something specific rather than a generic email
 capture.
