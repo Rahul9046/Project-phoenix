@@ -26,8 +26,10 @@ export function StartOverLink({
   return (
     <button
       type="button"
-      onClick={() => {
-        signOut();
+      onClick={async () => {
+        // Ends the Supabase session and clears its cookies before navigating —
+        // otherwise the login screen would bounce them straight back.
+        await signOut();
         router.replace(authRoutes.login);
       }}
       className={`rounded-full px-2 py-1 font-medium text-ember-text underline underline-offset-4 transition-colors hover:text-ember-strong ${className}`.trim()}

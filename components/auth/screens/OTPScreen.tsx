@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { markPhoneVerified } from "@/app/actions/profile";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthLoading } from "@/components/auth/AuthLoading";
@@ -58,12 +59,23 @@ export function OTPScreen() {
     setPending(true);
 
     try {
-      const updated = await verifyCode(value);
+      await verifyCode(value);
+
+      // The code check is still mocked; recording the result is not. This
+      // writes phone_verified_at and advances the stored stage.
+      const saved = await markPhoneVerified();
+      if (!saved.ok) {
+        setError(saved.message);
+        setPending(false);
+        return;
+      }
+
       setVerified(true);
       setPending(false);
+
       // Let the confirmation land before moving on.
       timeout.current = setTimeout(() => {
-        router.push(nextRoute(updated));
+        router.push(nextRoute({ ...session, stage: "phoneVerified" }));
       }, SUCCESS_PAUSE_MS);
     } catch (cause) {
       setError(describeAuthError(cause));

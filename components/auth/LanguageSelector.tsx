@@ -1,6 +1,7 @@
 "use client";
 
-import { languageOptions, languagesStep } from "@/content/auth";
+import { languagesStep } from "@/content/auth";
+import type { LanguageOption } from "@/lib/data/reference";
 
 export const PREFER_NOT_TO_SAY = languagesStep.preferNotToSay;
 
@@ -12,9 +13,13 @@ export const PREFER_NOT_TO_SAY = languagesStep.preferNotToSay;
  * can never contradict itself.
  */
 export function LanguageSelector({
+  languages,
   selected,
   onChange,
 }: {
+  /** Read from the database, in display order. */
+  languages: LanguageOption[];
+  /** Selected language *names*, plus possibly the opt-out. */
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
@@ -35,7 +40,7 @@ export function LanguageSelector({
     );
   }
 
-  const chips = [...languageOptions, PREFER_NOT_TO_SAY];
+  const chips = [...languages.map((language) => language.name), PREFER_NOT_TO_SAY];
 
   return (
     <div

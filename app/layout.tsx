@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 
-import { AuthSessionProvider } from "@/lib/auth/AuthSessionProvider";
 import { site } from "@/content/site";
 import "./globals.css";
 
@@ -75,11 +74,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         {/*
-          The session lives above both route groups so the marketing header and
-          the auth screens read the same state. It is client-side only for now —
-          see `lib/auth/README` notes in `mock-auth-provider.ts`.
+          No session provider here. Reading it costs a Supabase round-trip, and
+          only the (auth) group needs it — the marketing pages are static and
+          should stay that way.
         */}
-        <AuthSessionProvider>{children}</AuthSessionProvider>
+        {children}
       </body>
     </html>
   );

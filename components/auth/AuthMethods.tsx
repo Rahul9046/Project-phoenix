@@ -1,57 +1,58 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { secondaryButtonClasses } from "@/components/ui/SecondaryButton";
-import { useAuth } from "@/lib/auth/AuthSessionProvider";
 import { authRoutes } from "@/lib/auth/flow";
-import type { AuthIntent } from "@/lib/auth/types";
+import type { SocialProviderId } from "@/lib/auth/types";
 
 /**
  * The block of choices shared by "Welcome back." and "Welcome to Eraya." —
  * identical mechanics, different words around them.
  *
- * Whether someone arrives through login or signup is remembered as `intent`.
- * It changes nothing today, because with no account database a returning member
- * and a new one take the same path; it is recorded so that when accounts exist,
- * the two can diverge without rebuilding these screens.
+ * With no account database there is still no difference between signing in and
+ * signing up: Supabase creates the account on first sign-in either way. Which
+ * door someone came through is carried in the email link's `from` parameter,
+ * purely so the back button returns them to it.
  */
 export function AuthMethods({
-  intent,
+  providers,
+  emailHref,
   emailCta,
   dividerLabel,
   switchPrompt,
   switchCta,
   switchHref,
 }: {
-  intent: AuthIntent;
+  /** Social providers Supabase actually has configured. May be empty. */
+  providers: readonly SocialProviderId[];
+  emailHref: string;
   emailCta: string;
   dividerLabel: string;
   switchPrompt: string;
   switchCta: string;
   switchHref: typeof authRoutes.login | typeof authRoutes.signup;
 }) {
-  const { setIntent } = useAuth();
-
-  useEffect(() => {
-    setIntent(intent);
-  }, [intent, setIntent]);
-
   return (
     <div>
-      <SocialLoginButtons />
-
-      <AuthDivider label={dividerLabel} />
+      {/*
+        Only offer what works. With no configured provider the social block and
+        its "or" divider disappear entirely, leaving email as the single, whole
+        choice — rather than three buttons that would throw someone out of the
+        site onto a Supabase error page.
+      */}
+      {providers.length > 0 ? (
+        <>
+          <SocialLoginButtons providers={providers} />
+          <AuthDivider label={dividerLabel} />
+        </>
+      ) : null}
 
       {/* A link, wearing the secondary button's skin — never a button inside
           an anchor, which is invalid and confuses assistive technology. */}
-      <Link
-        href={authRoutes.email}
-        className={`${secondaryButtonClasses} w-full`}
-      >
+      <Link href={emailHref} className={`${secondaryButtonClasses} w-full`}>
         {emailCta}
       </Link>
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,8 +10,8 @@ import { ErrorMessage } from "@/components/auth/ErrorMessage";
 import { ProgressIndicator } from "@/components/auth/ProgressIndicator";
 import { SelectableOption } from "@/components/auth/SelectableOption";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { saveRelationshipStatus } from "@/app/actions/profile";
 import { relationshipOptions, relationshipStep } from "@/content/auth";
-import { useAuth } from "@/lib/auth/AuthSessionProvider";
 import { authRoutes, onboardingStepIndex } from "@/lib/auth/flow";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import type { RelationshipStatus } from "@/lib/auth/types";
@@ -28,13 +28,14 @@ function RelationshipForm({
   stored: RelationshipStatus | null;
 }) {
   const router = useRouter();
-  const { updateProfile } = useAuth();
 
   const [status, setStatus] = useState<RelationshipStatus | null>(stored);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
 
     if (!status) {
       setError(relationshipStep.error);
@@ -42,7 +43,15 @@ function RelationshipForm({
     }
 
     setError(null);
-    updateProfile({ relationshipStatus: status });
+    setPending(true);
+
+    const result = await saveRelationshipStatus(status);
+    if (!result.ok) {
+      setError(result.message);
+      setPending(false);
+      return;
+    }
+
     router.push(authRoutes.languages);
   }
 
@@ -86,7 +95,12 @@ function RelationshipForm({
 
         {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
 
-        <PrimaryButton type="submit" className="mt-8">
+        <PrimaryButton
+          type="submit"
+          loading={pending}
+          loadingLabel="Saving…"
+          className="mt-8"
+        >
           {relationshipStep.cta}
         </PrimaryButton>
       </form>

@@ -6,13 +6,14 @@ import { useId, useState } from "react";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthLoading } from "@/components/auth/AuthLoading";
+import { ErrorMessage } from "@/components/auth/ErrorMessage";
 import { FormField, inputClasses } from "@/components/auth/FormField";
 import { ProgressIndicator } from "@/components/auth/ProgressIndicator";
 import { SelectableOption } from "@/components/auth/SelectableOption";
 import { StartOverLink } from "@/components/auth/StartOverLink";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { saveBasics } from "@/app/actions/profile";
 import { basicsStep, genderOptions } from "@/content/auth";
-import { useAuth } from "@/lib/auth/AuthSessionProvider";
 import { authRoutes, onboardingStepIndex } from "@/lib/auth/flow";
 import { useAuthGuard } from "@/lib/auth/useAuthGuard";
 import type { OnboardingProfile } from "@/lib/auth/types";
@@ -30,7 +31,6 @@ export function BasicsScreen() {
 
 function BasicsForm({ profile }: { profile: OnboardingProfile }) {
   const router = useRouter();
-  const { updateProfile } = useAuth();
 
   const nameId = useId();
   const dobId = useId();
@@ -44,12 +44,16 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
     dateOfBirth?: string;
     gender?: string;
   }>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
 
-    // Presence only. Nothing here is checked against a record, because there
-    // is no record to check it against yet.
+    // Presence only. The database enforces what actually matters — that a date
+    // of birth is 18 or more years ago, and that gender is one of the known
+    // values — so the form does not duplicate those rules.
     const next: typeof errors = {};
     if (!firstName.trim()) next.firstName = basicsStep.firstName.error;
     if (!dateOfBirth) next.dateOfBirth = basicsStep.dateOfBirth.error;
@@ -58,7 +62,21 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    updateProfile({ firstName: firstName.trim(), dateOfBirth, gender });
+    setPending(true);
+    setFormError(null);
+
+    const result = await saveBasics({
+      firstName: firstName.trim(),
+      dateOfBirth,
+      gender: gender as string,
+    });
+
+    if (!result.ok) {
+      setFormError(result.message);
+      setPending(false);
+      return;
+    }
+
     router.push(authRoutes.city);
   }
 
@@ -142,7 +160,11 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
           ) : null}
         </fieldset>
 
-        <PrimaryButton type="submit">{basicsStep.cta}</PrimaryButton>
+        {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
+
+        <PrimaryButton type="submit" loading={pending} loadingLabel="Saving…">
+          {basicsStep.cta}
+        </PrimaryButton>
       </form>
 
       {/* The first onboarding step has no Back, so this is the only way out. */}

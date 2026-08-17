@@ -33,9 +33,16 @@ export const emailStep = {
   label: "Email address",
   placeholder: "you@example.com",
   cta: "Continue",
-  pending: "Connecting…",
+  pending: "Sending link…",
   emptyError: "Enter your email address to continue.",
   formatError: "That doesn't look like an email address yet.",
+  // Shown after the sign-in link is sent: the journey continues in their inbox,
+  // and the screen has to say so rather than appear to have done nothing.
+  sentTitle: "Check your email.",
+  sentBody: "We've sent a sign-in link to",
+  sentHint:
+    "Open it on this device to continue. The link works once and expires after an hour.",
+  sentRetry: "Use a different email address",
 } as const;
 
 export const phoneStep = {
@@ -197,8 +204,15 @@ export const authErrors = {
   network:
     "We couldn't reach Eraya just now. Check your connection and try again.",
   generic: "Something went wrong on our side. Please try again.",
-  rate_limited: "Too many attempts. Please wait a moment and try again.",
+  // Deliberately vague about the wait: the limit is enforced per hour, and
+  // promising "a moment" would send someone back to press the button again.
+  rate_limited:
+    "We've sent a few links to this address already. Please check your inbox, including spam — a new link can only be sent a little later.",
   invalid_code: otpStep.invalidError,
+  // Says what to do next instead of describing our configuration to someone
+  // who cannot act on it.
+  provider_unavailable:
+    "That sign-in option isn't available yet. Please continue with email — it takes a moment.",
 } as const;
 
 export const connecting = "Connecting…";

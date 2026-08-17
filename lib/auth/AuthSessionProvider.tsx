@@ -1,135 +1,110 @@
-"use client";
+﻿"use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
 } from "react";
 
-import { advanceStage } from "@/lib/auth/flow";
-import { mockAuthClient } from "@/lib/auth/mock-auth-provider";
+import { createClient } from "@/lib/supabase/client";
 import {
-  getServerSnapshot,
-  getSnapshot,
-  hydration,
-  resetStoredSession,
-  setStoredSession,
-  subscribe,
-} from "@/lib/auth/session-store";
-import { anonymousSession } from "@/lib/auth/types";
+  clearPendingPhone,
+  getPendingPhone,
+  getPendingPhoneServerSnapshot,
+  pendingPhoneHydration,
+  setPendingPhone,
+  subscribePendingPhone,
+} from "@/lib/auth/pending-phone";
+import { supabaseAuthClient } from "@/lib/auth/supabase-auth-client";
 import type {
   AuthClient,
-  AuthIntent,
   AuthSession,
-  AuthUser,
-  OnboardingProfile,
   PhoneNumber,
   SocialProviderId,
 } from "@/lib/auth/types";
 
-/**
- * Decides what survives a sign-in.
- *
- * Signing in as the *same* person resumes where they left off. Signing in as
- * anyone else starts clean — their phone number, profile and progress are
- * theirs, and must never be inherited by the next identity to use this browser.
- *
- * Without a database the only durable handle on "who" is the provider and the
- * address; the mocked user id is regenerated on every call, so it cannot be
- * compared. A real provider gives a stable id and this becomes an id check.
- */
-function sessionForIdentity(
-  current: AuthSession,
-  user: AuthUser,
-): AuthSession {
-  const previous = current.user;
-  const samePerson =
-    previous !== null &&
-    previous.provider === user.provider &&
-    (previous.email ?? "").trim().toLowerCase() ===
-      (user.email ?? "").trim().toLowerCase();
-
-  if (samePerson) {
-    return {
-      ...current,
-      user,
-      stage: advanceStage(current.stage, "authenticated"),
-    };
-  }
-
-  // A different person. Keep only how they arrived at the door.
-  return {
-    ...anonymousSession,
-    intent: current.intent,
-    user,
-    stage: "authenticated",
-  };
-}
-
 type AuthContextValue = {
+  /**
+   * Who this is, as the *server* understands it. Rendered from the Supabase
+   * session and the profile row on every request, so the browser cannot claim
+   * a stage it has not reached.
+   */
   session: AuthSession;
-  /**
-   * False until the stored session is known. Screens wait for this so they
-   * never act on the signed-out placeholder rendered on the server.
-   */
+  /** False only until the transient pending-phone store has been read. */
   ready: boolean;
-  setIntent: (intent: AuthIntent) => void;
-  /**
-   * The mutating actions resolve with the session as it is *after* the change,
-   * so a caller can decide where to navigate without waiting for a re-render.
-   */
-  signInWithSocial: (provider: SocialProviderId) => Promise<AuthSession>;
-  signInWithEmail: (email: string) => Promise<AuthSession>;
-  sendVerificationCode: (phone: PhoneNumber) => Promise<AuthSession>;
+  signInWithSocial: (provider: SocialProviderId) => Promise<void>;
+  signInWithEmail: (email: string) => Promise<void>;
+  sendVerificationCode: (phone: PhoneNumber) => Promise<void>;
+  /** Re-sends to the number already awaiting verification. */
   resendVerificationCode: () => Promise<void>;
-  verifyCode: (code: string) => Promise<AuthSession>;
-  updateProfile: (patch: Partial<OnboardingProfile>) => AuthSession;
-  completeOnboarding: () => AuthSession;
-  signOut: () => void;
+  verifyCode: (code: string) => Promise<void>;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthSessionProvider({
   children,
-  client = mockAuthClient,
+  serverSession,
+  client = supabaseAuthClient,
 }: {
   children: React.ReactNode;
-  /** Swap in a real `AuthClient` here when one exists. */
+  /** Loaded by the server layout via `loadAuthSession()`. */
+  serverSession: AuthSession;
+  /** Overridable so tests can drive the flow without a network. */
   client?: AuthClient;
 }) {
-  const session = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
+  const router = useRouter();
+
+  // The number being verified never reaches the database, so it is the one
+  // piece of auth state the client still owns.
+  const pendingPhone = useSyncExternalStore(
+    subscribePendingPhone,
+    getPendingPhone,
+    getPendingPhoneServerSnapshot,
   );
 
   const ready = useSyncExternalStore(
-    hydration.subscribe,
-    hydration.getSnapshot,
-    hydration.getServerSnapshot,
+    pendingPhoneHydration.subscribe,
+    pendingPhoneHydration.getSnapshot,
+    pendingPhoneHydration.getServerSnapshot,
   );
 
-  // Actions read the store directly rather than closing over `session`, so two
-  // updates in the same tick cannot overwrite one another.
-  const setIntent = useCallback((intent: AuthIntent) => {
-    setStoredSession({ ...getSnapshot(), intent });
-  }, []);
+  // Signing in or out in another tab, or a token expiring, must not leave this
+  // one rendering a stale identity. Re-rendering from the server is the only
+  // safe response â€” the client cannot recompute the session itself.
+  useEffect(() => {
+    const supabase = createClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        router.refresh();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  const session = useMemo<AuthSession>(
+    () => ({ ...serverSession, phone: pendingPhone }),
+    [serverSession, pendingPhone],
+  );
 
   const signInWithSocial = useCallback(
     async (provider: SocialProviderId) => {
-      const user = await client.signInWithSocial(provider);
-      return setStoredSession(sessionForIdentity(getSnapshot(), user));
+      // Navigates away on success; the callback route finishes the job.
+      await client.signInWithSocial(provider);
     },
     [client],
   );
 
   const signInWithEmail = useCallback(
     async (email: string) => {
-      const user = await client.signInWithEmail(email);
-      return setStoredSession(sessionForIdentity(getSnapshot(), user));
+      await client.signInWithEmail(email);
     },
     [client],
   );
@@ -137,74 +112,53 @@ export function AuthSessionProvider({
   const sendVerificationCode = useCallback(
     async (phone: PhoneNumber) => {
       await client.sendVerificationCode(phone);
-      return setStoredSession({ ...getSnapshot(), phone });
+      setPendingPhone(phone);
     },
     [client],
   );
 
   const resendVerificationCode = useCallback(async () => {
-    const phone = getSnapshot().phone;
+    const phone = getPendingPhone();
     if (!phone) return;
     await client.sendVerificationCode(phone);
   }, [client]);
 
   const verifyCode = useCallback(
     async (code: string) => {
-      const current = getSnapshot();
-      if (!current.phone) return current;
-      await client.verifyCode(current.phone, code);
-      const latest = getSnapshot();
-      return setStoredSession({
-        ...latest,
-        stage: advanceStage(latest.stage, "phoneVerified"),
-      });
+      const phone = getPendingPhone();
+      if (!phone) {
+        throw new Error("No phone number is awaiting verification.");
+      }
+      await client.verifyCode(phone, code);
     },
     [client],
   );
 
-  const updateProfile = useCallback((patch: Partial<OnboardingProfile>) => {
-    const current = getSnapshot();
-    return setStoredSession({
-      ...current,
-      stage: advanceStage(current.stage, "onboardingStarted"),
-      profile: { ...current.profile, ...patch },
-    });
-  }, []);
-
-  const completeOnboarding = useCallback(
-    () => setStoredSession({ ...getSnapshot(), stage: "onboardingCompleted" }),
-    [],
-  );
-
-  const signOut = useCallback(() => {
-    resetStoredSession();
-  }, []);
+  const signOut = useCallback(async () => {
+    clearPendingPhone();
+    await client.signOut();
+    router.refresh();
+  }, [client, router]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       ready,
-      setIntent,
       signInWithSocial,
       signInWithEmail,
       sendVerificationCode,
       resendVerificationCode,
       verifyCode,
-      updateProfile,
-      completeOnboarding,
       signOut,
     }),
     [
       session,
       ready,
-      setIntent,
       signInWithSocial,
       signInWithEmail,
       sendVerificationCode,
       resendVerificationCode,
       verifyCode,
-      updateProfile,
-      completeOnboarding,
       signOut,
     ],
   );

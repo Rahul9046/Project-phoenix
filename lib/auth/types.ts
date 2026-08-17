@@ -69,13 +69,13 @@ export type OnboardingProfile = {
   languages: string[];
 };
 
-/** Whether the person arrived through "log in" or "create an account". */
-export type AuthIntent = "login" | "signup";
-
 export type AuthSession = {
   stage: AuthStage;
-  intent: AuthIntent;
   user: AuthUser | null;
+  /**
+   * The number awaiting verification. Client-only and transient — it is not a
+   * stored column. See `lib/auth/pending-phone.ts`.
+   */
   phone: PhoneNumber | null;
   profile: OnboardingProfile;
 };
@@ -92,7 +92,6 @@ export const emptyProfile: OnboardingProfile = {
 
 export const anonymousSession: AuthSession = {
   stage: "unauthenticated",
-  intent: "login",
   user: null,
   phone: null,
   profile: emptyProfile,
@@ -107,6 +106,8 @@ export type AuthErrorKind =
   | "network"
   | "invalid_code"
   | "rate_limited"
+  /** The provider exists in the UI but is not configured in Supabase yet. */
+  | "provider_unavailable"
   | "generic";
 
 export class AuthError extends Error {
@@ -122,14 +123,57 @@ export class AuthError extends Error {
 /**
  * The seam between Eraya's UI and whoever actually verifies identity.
  *
- * Swap the implementation in `lib/auth/AuthSessionProvider.tsx` for a real one
- * (OAuth redirects, an SMS gateway) and the screens keep working.
+ * Real OAuth *navigates away* rather than returning a user, and email sign-in
+ * sends a link rather than completing inline, so neither resolves with an
+ * `AuthUser`. The session arrives afterwards, from the server, via the auth
+ * callback — which is why nothing here returns one.
  */
 export interface AuthClient {
-  signInWithSocial(provider: SocialProviderId): Promise<AuthUser>;
-  signInWithEmail(email: string): Promise<AuthUser>;
+  /** Redirects to the provider. Resolves only if the redirect fails. */
+  signInWithSocial(provider: SocialProviderId): Promise<void>;
+  /** Sends a sign-in link. The person continues from their inbox. */
+  signInWithEmail(email: string): Promise<void>;
   sendVerificationCode(phone: PhoneNumber): Promise<void>;
   verifyCode(phone: PhoneNumber, code: string): Promise<void>;
+  signOut(): Promise<void>;
+}
+
+/** Maps the database enum onto the stage names the UI has always used. */
+export function stageFromDatabase(
+  value: string | null | undefined,
+): AuthStage {
+  switch (value) {
+    case "onboarding_completed":
+      return "onboardingCompleted";
+    case "onboarding_started":
+      return "onboardingStarted";
+    case "phone_verified":
+      return "phoneVerified";
+    case "authenticated":
+      return "authenticated";
+    default:
+      return "unauthenticated";
+  }
+}
+
+/** The inverse, for writing back. */
+export function stageToDatabase(
+  stage: Exclude<AuthStage, "unauthenticated">,
+):
+  | "authenticated"
+  | "phone_verified"
+  | "onboarding_started"
+  | "onboarding_completed" {
+  switch (stage) {
+    case "authenticated":
+      return "authenticated";
+    case "phoneVerified":
+      return "phone_verified";
+    case "onboardingStarted":
+      return "onboarding_started";
+    case "onboardingCompleted":
+      return "onboarding_completed";
+  }
 }
 
 export function formatPhone(phone: PhoneNumber): string {

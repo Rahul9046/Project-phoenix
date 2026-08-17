@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LoginScreen } from "@/components/auth/screens/LoginScreen";
+import { getEnabledSocialProviders } from "@/lib/data/auth-settings";
 
 export const metadata: Metadata = {
   title: "Log in",
@@ -8,6 +9,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function LoginPage() {
-  return <LoginScreen />;
+export default async function LoginPage() {
+  // Only offer providers Supabase actually has configured.
+  const providers = await getEnabledSocialProviders();
+
+  return <LoginScreen providers={providers} />;
 }

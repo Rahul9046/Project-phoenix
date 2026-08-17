@@ -3,20 +3,25 @@
 import { SelectableOption } from "@/components/auth/SelectableOption";
 import { inputClasses } from "@/components/auth/FormField";
 import { cityStep } from "@/content/auth";
-import { launchCities } from "@/content/site";
-
-export const OTHER_CITY = cityStep.otherLabel;
+import type { CityOption } from "@/lib/data/reference";
 
 /**
- * The seven cities Eraya is opening in, plus anywhere else.
+ * The sentinel value for "somewhere else". Not a city id, so it can never
+ * collide with one.
+ */
+export const OTHER_CITY = "other";
+
+/**
+ * The cities Eraya is opening in, read from the database, plus anywhere else.
  *
- * Choosing "Another city" is not a dead end and never blocks the Continue
- * button — it reveals a free-text field and a note that Eraya is still growing.
- * Deciding who gets full access is a later problem; refusing an account here
- * would be the wrong answer to it.
+ * Choosing "Another city" is not a dead end and never disables Continue — it
+ * reveals a free-text field and a note that Eraya is still growing. Who gets
+ * full access is a later problem; refusing an account here would be the wrong
+ * answer to it.
  */
 export function CitySelector({
   id,
+  cities,
   value,
   otherCity,
   onChange,
@@ -24,6 +29,8 @@ export function CitySelector({
   disabled = false,
 }: {
   id: string;
+  cities: CityOption[];
+  /** A city id, or `OTHER_CITY`. */
   value: string | null;
   otherCity: string;
   onChange: (city: string) => void;
@@ -34,15 +41,19 @@ export function CitySelector({
 
   return (
     <div>
-      <div className="grid gap-2.5" role="radiogroup" aria-label={cityStep.title}>
-        {launchCities.map((city) => (
+      <div
+        className="grid gap-2.5"
+        role="radiogroup"
+        aria-label={cityStep.title}
+      >
+        {cities.map((city) => (
           <SelectableOption
-            key={city}
+            key={city.id}
             type="radio"
             name="city"
-            value={city}
-            label={city}
-            checked={value === city}
+            value={city.id}
+            label={city.name}
+            checked={value === city.id}
             onChange={onChange}
           />
         ))}
@@ -50,7 +61,7 @@ export function CitySelector({
           type="radio"
           name="city"
           value={OTHER_CITY}
-          label={OTHER_CITY}
+          label={cityStep.otherLabel}
           description="Somewhere else in India, or outside it."
           checked={isOther}
           onChange={onChange}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { SignupScreen } from "@/components/auth/screens/SignupScreen";
+import { getEnabledSocialProviders } from "@/lib/data/auth-settings";
 
 export const metadata: Metadata = {
   title: "Create an account",
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function SignupPage() {
-  return <SignupScreen />;
+export default async function SignupPage() {
+  const providers = await getEnabledSocialProviders();
+
+  return <SignupScreen providers={providers} />;
 }

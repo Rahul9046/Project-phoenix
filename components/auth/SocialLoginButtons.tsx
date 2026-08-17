@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ErrorMessage } from "@/components/auth/ErrorMessage";
@@ -9,10 +8,10 @@ import { SecondaryButton } from "@/components/ui/SecondaryButton";
 import { connecting, providerLabels } from "@/content/auth";
 import { useAuth } from "@/lib/auth/AuthSessionProvider";
 import { describeAuthError } from "@/lib/auth/describeAuthError";
-import { nextRoute } from "@/lib/auth/flow";
 import type { SocialProviderId } from "@/lib/auth/types";
 
-const providers: readonly SocialProviderId[] = ["google", "apple", "facebook"];
+// Which providers to offer is decided by the server from Supabase's own
+// settings — see lib/data/auth-settings.ts for why it cannot be hardcoded.
 
 /**
  * Google, Apple and Facebook, in that order.
@@ -21,8 +20,11 @@ const providers: readonly SocialProviderId[] = ["google", "apple", "facebook"];
  * which pauses briefly and reports success. Swapping in real OAuth changes the
  * client, not this component.
  */
-export function SocialLoginButtons() {
-  const router = useRouter();
+export function SocialLoginButtons({
+  providers,
+}: {
+  providers: readonly SocialProviderId[];
+}) {
   const { signInWithSocial } = useAuth();
   const [pending, setPending] = useState<SocialProviderId | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,14 +34,14 @@ export function SocialLoginButtons() {
     setPending(provider);
     setError(null);
     try {
-      const session = await signInWithSocial(provider);
-      router.push(nextRoute(session));
+      await signInWithSocial(provider);
+      // On success the browser is already leaving for the provider. `pending`
+      // stays set so nothing can be pressed during the hand-off; the session
+      // is established afterwards by /auth/callback.
     } catch (cause) {
       setError(describeAuthError(cause));
       setPending(null);
     }
-    // On success `pending` stays set so the button cannot be pressed again
-    // while the next screen loads.
   }
 
   return (
