@@ -10,8 +10,11 @@ Copy `.env.example` to `.env.local` and fill it in. `.env.local` is git-ignored
 and must stay that way — it holds a key that bypasses every security policy.
 
 ```
-cp .env.example .env.local
+cd apps/web && cp .env.example .env.local
 ```
+
+The env files live beside the app that reads them, not at the repo root — Next.js
+loads them from its own project directory.
 
 | Variable | Where it comes from | Exposed to the browser |
 | --- | --- | --- |
@@ -28,7 +31,7 @@ secret key is a different thing entirely: it ignores those policies. It must
 never be prefixed `NEXT_PUBLIC_`, never appear in client code, and never be
 committed.
 
-`lib/supabase/env.ts` accepts either key generation, so a rotation from anon to
+`apps/web/src/lib/supabase/env.ts` accepts either key generation, so a rotation from anon to
 publishable needs no code change.
 
 ## Migrations
@@ -60,11 +63,11 @@ project cannot be reproduced, reviewed, or rolled back.
 
 ## Types
 
-`lib/supabase/database.types.ts` is hand-written to match the migrations and is
+`apps/web/src/lib/supabase/database.types.ts` is hand-written to match the migrations and is
 shaped exactly like the generated file, so it can be replaced once linked:
 
 ```
-supabase gen types typescript --linked > lib/supabase/database.types.ts
+supabase gen types typescript --linked > apps/web/src/lib/supabase/database.types.ts
 ```
 
 Do that after any schema change, in the same commit.
@@ -73,12 +76,13 @@ Do that after any schema change, in the same commit.
 
 | Module | Runs in | Notes |
 | --- | --- | --- |
-| `lib/supabase/client.ts` | Browser | Singleton |
-| `lib/supabase/server.ts` → `createClient` | Server Components, actions, route handlers | Per request, never shared |
-| `lib/supabase/server.ts` → `createAdminClient` | Server only | Bypasses RLS. Administrative use only |
-| `lib/supabase/proxy.ts` | `proxy.ts` | Refreshes the session on every request |
+| `apps/web/src/lib/supabase/client.ts` | Browser | Singleton |
+| `apps/web/src/lib/supabase/server.ts` → `createClient` | Server Components, actions, route handlers | Per request, never shared |
+| `apps/web/src/lib/supabase/server.ts` → `createAdminClient` | Server only | Bypasses RLS. Administrative use only |
+| `apps/web/src/lib/supabase/proxy.ts` | `apps/web/src/proxy.ts` | Refreshes the session on every request |
 
-`proxy.ts` is the Next.js 16 name for what used to be `middleware.ts`.
+`proxy.ts` is the Next.js 16 name for what used to be `middleware.ts`. It must
+sit beside `app/`, which in this layout means `apps/web/src/proxy.ts`.
 
 ## Authentication
 
@@ -125,8 +129,8 @@ technical one.
 
 ### Phone verification
 
-Still mocked, in `lib/auth/phone-verification.ts`. Any plausible number and any
-six-digit code are accepted, and `app/actions/profile.ts` writes
+Still mocked, in `apps/web/src/features/auth/phone-verification.ts`. Any plausible number and any
+six-digit code are accepted, and `apps/web/src/features/auth/actions.ts` writes
 `phone_verified_at` directly.
 
 That file documents exactly what to change once an SMS provider is chosen. The
@@ -135,7 +139,7 @@ schema is already ready for it: `on_auth_user_phone_confirmed` mirrors
 stops writing the column.
 
 The number being verified is deliberately **not** stored. It lives in
-`sessionStorage` between the two screens (`lib/auth/pending-phone.ts`) because
+`sessionStorage` between the two screens (`apps/web/src/features/auth/pending-phone.ts`) because
 an unverified number means nothing, and once Supabase phone auth is live the
 number belongs to `auth.users.phone`.
 
@@ -151,7 +155,7 @@ The stages the UI has always used map onto the database:
 | `onboardingStarted` | `'onboarding_started'` |
 | `onboardingCompleted` | `'onboarding_completed'` |
 
-`lib/auth/load-session.ts` reads this on the server and the `(auth)` layout
+`apps/web/src/features/auth/load-session.ts` reads this on the server and the `(auth)` layout
 passes it down. The browser no longer decides who it is, so a tampered client
 store cannot manufacture a stage. The stage only ever moves forward — revisiting
 an earlier screen to change an answer does not demote anyone.

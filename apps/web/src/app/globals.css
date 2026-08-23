@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/*
+  Eraya design tokens.
+  Everything visual is expressed through these variables so the brand can be
+  refined in one place. Tailwind v4 turns each `--color-*` entry into a utility
+  (e.g. `bg-canvas`, `text-ink`, `border-line`).
+*/
+@theme {
+  /* Surfaces — warm cream and soft earthy neutrals */
+  --color-canvas: #fbf7f2;
+  --color-surface: #ffffff;
+  --color-sand: #f4ece2;
+  --color-sand-deep: #ece0d1;
+
+  /* Lines — subtle borders instead of shadows */
+  --color-line: #e6dacb;
+  --color-line-strong: #d7c7b3;
+
+  /* Text — dark warm brown through to muted clay */
+  --color-ink: #2a211c;
+  --color-ink-muted: #6b5b51;
+  --color-ink-subtle: #7b6a5e;
+
+  /*
+    Accent — terracotta, taken from the approved logo (`assets/brand/`).
+    `ember` is a fill and only ever carries cream/white text (4.8:1).
+    `ember-text` is the darker cut used when terracotta is the text itself,
+    because `ember` on cream lands at 4.4:1 — just under AA.
+  */
+  --color-ember: #bd4f33;
+  --color-ember-strong: #a34129;
+  --color-ember-text: #a8452c;
+  --color-ember-tint: #f7e6de;
+
+  /* Secondary brand colours carried by the mark itself. */
+  --color-brand-brown: #5a3328;
+  --color-brand-peach: #f4cfae;
+
+  /* Dark warm ground for the closing section */
+  --color-night: #241c18;
+  --color-night-soft: #3b2e26;
+  --color-night-line: #4a3a30;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
+    serif;
+}
+
+/*
+  Light-only by design. The warm cream palette is the brand; a dark inversion
+  would read as a different product, so we tell the browser not to expect one.
+*/
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Next.js 16 only neutralises smooth scrolling on route changes when asked. */
+  scroll-padding-top: 6rem;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Fraunces is optical-size aware; let the browser pick the right cut. */
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible, on-brand focus for keyboard users on every interactive element. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/*
+  The only entrance motion in the product: a short settle on the hero.
+  Everything below the fold is static so nothing appears to "pop" as you read.
+*/
+@keyframes eraya-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: eraya-rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-rise {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

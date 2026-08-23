@@ -20,16 +20,16 @@ should feel like it was made by adults, for adults, with care.
 The approved mark is a phoenix-inspired form built from three sweeping paths,
 set in a solid rounded-corner square.
 
-**The asset pack in `app/assets/` is the source of truth.** Ten variants are
+**The asset pack in `assets/brand/` is the source of truth.** Ten variants are
 supplied: primary, dark, light, reversed, monochrome, favicon, horizontal, and
 three mark-only cuts (transparent, terracotta, white).
 
 The geometry used by the site is generated from
-`app/assets/eraya-approved-favicon.svg` into `components/brand/mark.ts`, and is
+`assets/brand/eraya-approved-favicon.svg` into `apps/web/src/shared/brand/mark.ts`, and is
 byte-identical to it. **Do not hand-edit those paths.** If the logo is revised,
 replace the asset and regenerate.
 
-That one module feeds the on-page logo, the favicon (`app/icon.svg`) and the
+That one module feeds the on-page logo, the favicon (`apps/web/src/app/icon.svg`) and the
 Open Graph image, so the three can never drift apart.
 
 Construction, for reference:

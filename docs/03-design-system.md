@@ -2,31 +2,37 @@
 
 ## Where things live
 
+All paths below are relative to `apps/web/src/`.
+
 ```
-app/globals.css          design tokens (single source of truth)
-components/brand/        Logo, ErayaMark, mark geometry, DawnVisual
-components/ui/           Button, Container, Section, SectionHeading, Eyebrow,
-                         Icon, TrustCard, FeatureCard, Step
-components/layout/       SiteHeader, SiteFooter, PageShell
-components/sections/     one component per landing-page section
-content/site.ts          every string on the page
+app/globals.css                design tokens (single source of truth)
+shared/brand/                  Logo, ErayaMark, mark geometry, DawnVisual
+shared/ui/                     Button, Container, Section, SectionHeading,
+                               Eyebrow, Icon, Spinner
+features/marketing/components/ TrustCard, FeatureCard, Step
+features/marketing/layout/     SiteHeader, SiteFooter, PageShell
+features/marketing/sections/   one component per landing-page section
+features/marketing/content.ts  every string on the page
 ```
+
+`shared/` holds the primitives more than one feature uses; the composites that
+only the landing page assembles sit with the feature that assembles them.
 
 Three rules hold this together:
 
 1. **No colour literal outside `globals.css`.** Everything else refers to
    tokens. Rebranding is a single-file edit. The two exceptions are declared and
-   deliberate: `app/icon.svg` (a static file, no CSS available) and
-   `components/brand/mark.ts` (`brandColors`, for the Open Graph image, which
+   deliberate: `apps/web/src/app/icon.svg` (a static file, no CSS available) and
+   `apps/web/src/shared/brand/mark.ts` (`brandColors`, for the Open Graph image, which
    Satori renders without stylesheets).
-2. **No copy inside components.** All strings come from `content/site.ts`, so
+2. **No copy inside components.** All strings come from `apps/web/src/features/marketing/content.ts`, so
    wording can be revised without touching layout.
 3. **No page-level layout in a section.** Sections use `Section` and `Container`
    and never set their own page margins, so the horizontal rhythm cannot drift.
 
 ## Tokens
 
-Defined in the Tailwind v4 `@theme` block in `app/globals.css`. Each `--color-*`
+Defined in the Tailwind v4 `@theme` block in `apps/web/src/app/globals.css`. Each `--color-*`
 entry becomes a utility automatically — `--color-ink` gives `text-ink`,
 `bg-ink`, `border-ink`. Values are tabulated in [02-brand.md](02-brand.md).
 

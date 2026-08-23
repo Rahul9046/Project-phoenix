@@ -23,12 +23,12 @@ limiting per IP, and probably a challenge, before it is publicly linked.
 documents are being prepared. Real ones are required before collecting
 significant personal data, and India's DPDP Act applies.
 
-**Contact address.** `hello@eraya.app` is used throughout, from `content/site.ts`.
+**Contact address.** `hello@eraya.app` is used throughout, from `apps/web/src/features/marketing/content.ts`.
 It must exist and be monitored, or be changed in that one place.
 
 ## Brand — defects in the supplied logo pack
 
-Two problems in `app/assets/` that need a corrected export. The mark geometry
+Two problems in `assets/brand/` that need a corrected export. The mark geometry
 itself is fine and is used as supplied; these concern the framing.
 
 **`eraya-approved-horizontal.svg` is unusable as delivered.** Three faults:
