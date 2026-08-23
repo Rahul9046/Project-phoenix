@@ -91,8 +91,33 @@ Do that after any schema change, in the same commit.
 | Phone OTP | **Mocked** — no SMS provider chosen |
 
 OAuth returns to `/auth/callback`, which exchanges the code for a session.
-Email links land on `/auth/confirm`, which verifies the token hash. Both are
-route handlers, because only those can set cookies.
+Email links land on `/auth/confirm`. Both are route handlers, because only those
+can set cookies. Each redirects to `nextRoute(session)` rather than a fixed
+screen, so someone returning mid-onboarding resumes where they stopped.
+
+### The two shapes an email link can arrive in
+
+`/auth/confirm` accepts both, and which one turns up depends on the email
+template rather than on anything in this codebase:
+
+| Query | Comes from | Completed with | Works across devices |
+| --- | --- | --- | --- |
+| `token_hash` + `type` | A template linking straight to `/auth/confirm` | `verifyOtp` | Yes |
+| `code` | The **default** template, via Supabase's own `/auth/v1/verify` | `exchangeCodeForSession` | No — needs the PKCE verifier cookie |
+
+Handling only one of them fails in a way that wastes an afternoon: Supabase
+verifies the token itself and marks the address confirmed, so the account is
+genuinely created and `email_confirmed_at` is set — while the route reports an
+invalid link and no session cookie is ever written. The account exists; the
+person is not signed in.
+
+Prefer the `token_hash` template, because magic links are commonly opened on a
+different device from the one that requested them, and the PKCE verifier does not
+travel:
+
+```
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
+```
 
 Eraya has no passwords. Email sign-in sends a link; there is no password field
 anywhere in the product, and adding one would be a product decision, not a

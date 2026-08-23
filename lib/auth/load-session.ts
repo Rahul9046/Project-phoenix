@@ -30,8 +30,13 @@ function providerOf(raw: string | undefined): AuthProviderId {
   }
 }
 
-export async function loadAuthSession(): Promise<AuthSession> {
-  const supabase = await createClient();
+export async function loadAuthSession(
+  // The route handlers that establish a session pass their own client. Reusing
+  // it matters: they have just written the auth cookies, and a client built
+  // before those writes land would read the request as still signed out.
+  client?: Awaited<ReturnType<typeof createClient>>,
+): Promise<AuthSession> {
+  const supabase = client ?? (await createClient());
 
   // `getUser` validates the token with Supabase rather than trusting the
   // cookie, which matters because everything below keys off it.
