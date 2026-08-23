@@ -40,8 +40,11 @@ Primary CTA "Begin your journey", secondary "How Eraya works". A line beneath
 notes that Eraya opens in a few cities first, so the city constraint is known
 before anyone invests attention.
 
-Artwork: `DawnVisual` — an arch onto a sunrise with a single figure. No couple,
-no rings, no hearts.
+Artwork: the approved mark itself, via `ErayaMark`. It is capped well below the
+column width — the tile is a solid terracotta field, and at full width it stops
+reading as a logo and becomes a coloured panel. Decorative, so it is hidden from
+assistive technology: the headline beside it carries the meaning. No couple, no
+rings, no hearts.
 
 ### 3. Trust — `Trust`
 *Trust comes before connection.* Five items: phone and email verification,

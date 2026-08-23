@@ -1,4 +1,4 @@
-import { DawnVisual } from "@/shared/brand/DawnVisual";
+import { ErayaMark } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { Eyebrow } from "@/shared/ui/SectionHeading";
@@ -33,8 +33,18 @@ export function Hero() {
           <p className="mt-8 text-sm text-ink-subtle">{hero.note}</p>
         </div>
 
-        <div className="animate-rise [animation-delay:120ms]">
-          <DawnVisual className="mx-auto h-auto w-full max-w-md lg:max-w-none" />
+        {/*
+          The mark, at the one size in the product where it is the subject
+          rather than a label. Capped well below the column width: the tile is a
+          solid terracotta field, and at full width it stops reading as a logo
+          and starts reading as a coloured panel.
+
+          Decorative on purpose — aria-hidden inside ErayaMark. The headline
+          beside it already carries the meaning, and the header names the brand,
+          so announcing it a third time would only add noise for a screen reader.
+        */}
+        <div className="animate-rise flex justify-center [animation-delay:120ms]">
+          <ErayaMark className="h-auto w-full max-w-[15rem] sm:max-w-xs" />
         </div>
       </Container>
     </section>
