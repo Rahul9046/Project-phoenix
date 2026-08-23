@@ -1,0 +1,109 @@
+"use client";
+
+import { SelectableOption } from "@/features/auth/components/SelectableOption";
+import { inputClasses } from "@/features/auth/components/FormField";
+import { cityStep } from "@/features/auth/content";
+import type { CityOption } from "@/shared/data/reference";
+
+/**
+ * The sentinel value for "somewhere else". Not a city id, so it can never
+ * collide with one.
+ */
+export const OTHER_CITY = "other";
+
+/**
+ * The cities Eraya is opening in, read from the database, plus anywhere else.
+ *
+ * Choosing "Another city" is not a dead end and never disables Continue — it
+ * reveals a free-text field and a note that Eraya is still growing. Who gets
+ * full access is a later problem; refusing an account here would be the wrong
+ * answer to it.
+ */
+export function CitySelector({
+  id,
+  cities,
+  value,
+  otherCity,
+  onChange,
+  onOtherCityChange,
+  disabled = false,
+}: {
+  id: string;
+  cities: CityOption[];
+  /** A city id, or `OTHER_CITY`. */
+  value: string | null;
+  otherCity: string;
+  onChange: (city: string) => void;
+  onOtherCityChange: (city: string) => void;
+  disabled?: boolean;
+}) {
+  const isOther = value === OTHER_CITY;
+
+  return (
+    <div>
+      <div
+        className="grid gap-2.5"
+        role="radiogroup"
+        aria-label={cityStep.title}
+      >
+        {cities.map((city) => (
+          <SelectableOption
+            key={city.id}
+            type="radio"
+            name="city"
+            value={city.id}
+            label={city.name}
+            checked={value === city.id}
+            onChange={onChange}
+          />
+        ))}
+        <SelectableOption
+          type="radio"
+          name="city"
+          value={OTHER_CITY}
+          label={cityStep.otherLabel}
+          description="Somewhere else in India, or outside it."
+          checked={isOther}
+          onChange={onChange}
+        />
+      </div>
+
+      {isOther ? (
+        <div className="mt-5">
+          <label
+            htmlFor={`${id}-other`}
+            className="block text-[0.95rem] font-medium text-ink"
+          >
+            {cityStep.otherFieldLabel}
+          </label>
+          <input
+            id={`${id}-other`}
+            type="text"
+            autoComplete="address-level2"
+            value={otherCity}
+            onChange={(event) => onOtherCityChange(event.target.value)}
+            placeholder={cityStep.otherFieldPlaceholder}
+            disabled={disabled}
+            className={`mt-2.5 ${inputClasses}`}
+          />
+
+          {/*
+            Informational, not a rejection. Announced politely rather than
+            assertively — it is context, not an error.
+          */}
+          <aside
+            role="status"
+            className="mt-4 rounded-xl border border-line bg-sand/60 px-5 py-4"
+          >
+            <p className="text-[0.95rem] font-medium text-ink">
+              {cityStep.elsewhereTitle}
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+              {cityStep.elsewhereBody}
+            </p>
+          </aside>
+        </div>
+      ) : null}
+    </div>
+  );
+}

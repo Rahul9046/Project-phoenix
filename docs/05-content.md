@@ -1,6 +1,6 @@
 # Content and voice
 
-All copy lives in `content/site.ts`. Nothing user-facing is written inside a
+All copy lives in `apps/web/src/features/marketing/content.ts`. Nothing user-facing is written inside a
 component.
 
 ## Voice
