@@ -121,10 +121,18 @@ to be noticed.
 
 ## Imagery
 
-The hero artwork is drawn, not photographed: an arch — a threshold — opening
-onto a sunrise, with a single figure standing in the opening. It is an SVG, so
-it carries no stock-photography tells, stays sharp at any size and costs a few
-kilobytes.
+The hero carries the approved mark itself rather than an illustration. It is the
+one place in the product where the mark is the subject rather than a label, so it
+is set large and alone — which the wordmark rule already permits: the mark may
+appear without the wordmark, never the reverse.
+
+It is an SVG built from the same geometry as the favicon and the Open Graph
+image, so all three are byte-identical and cannot drift. It carries no
+stock-photography tells, stays sharp at any size and costs a few hundred bytes.
+
+An earlier drawn illustration — an arch opening onto a sunrise, with a single
+figure in the opening — was replaced by this. It is in the history if the
+question is ever reopened.
 
 If photography is introduced later it must be: one person or a group, never a
 romantic pair; mature and unposed; warm natural light; documentary rather than

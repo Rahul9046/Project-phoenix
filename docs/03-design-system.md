@@ -6,7 +6,7 @@ All paths below are relative to `apps/web/src/`.
 
 ```
 app/globals.css                design tokens (single source of truth)
-shared/brand/                  Logo, ErayaMark, mark geometry, DawnVisual
+shared/brand/                  Logo, ErayaMark, mark geometry
 shared/ui/                     Button, Container, Section, SectionHeading,
                                Eyebrow, Icon, Spinner
 features/marketing/components/ TrustCard, FeatureCard, Step
