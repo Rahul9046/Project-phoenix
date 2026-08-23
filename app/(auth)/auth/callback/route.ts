@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { nextRoute } from "@/lib/auth/flow";
+import { loadAuthSession } from "@/lib/auth/load-session";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -42,7 +44,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Signed in. Phone verification is the next step for everyone; if they have
-  // already done it, that screen forwards them on.
-  return NextResponse.redirect(`${origin}/auth/phone`);
+  // Signed in. Where that lands depends on how far they had already come — a
+  // new account goes to phone verification, someone returning mid-onboarding
+  // resumes at the screen they stopped on.
+  const session = await loadAuthSession(supabase);
+
+  return NextResponse.redirect(`${origin}${nextRoute(session)}`);
 }
