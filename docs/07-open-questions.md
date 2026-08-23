@@ -5,14 +5,16 @@ that no invented answer leaks into the product.
 
 ## Must be resolved before launch
 
-**Signup storage.** Submissions currently append to `data/waitlist.jsonl`. That
-works in development and on a single long-lived server, and nowhere else. It
-needs a real datastore (or an email provider's list API) before the page takes
-live traffic. `app/actions/waitlist.ts` is the only file that has to change.
+**Email delivery.** Supabase's built-in email service delivers only to addresses
+belonging to members of the project, and caps sending at two messages an hour.
+Magic-link sign-in therefore works for the team and silently fails for everyone
+else — the "Check your email" screen has no way to tell the difference, so it
+reports success either way. Custom SMTP is required before anyone outside the
+project can sign in at all, which makes this the first blocker, not one of many.
 
-**Email confirmation.** Nobody receives anything after signing up. At minimum
-this needs a confirmation email; double opt-in would be better, and makes the
-list defensible under consent rules.
+**Email confirmation.** Nobody receives anything after joining the waitlist. At
+minimum this needs a confirmation email; double opt-in would be better, and makes
+the list defensible under consent rules. Blocked on the delivery question above.
 
 **Abuse protection.** The form has a honeypot and nothing else. It needs rate
 limiting per IP, and probably a challenge, before it is publicly linked.
