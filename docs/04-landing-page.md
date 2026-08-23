@@ -16,7 +16,7 @@ the objection that stops everything else from landing.
 
 ## Sections
 
-Each is a component in `components/sections/`, composed in `app/page.tsx`.
+Each is a component in `apps/web/src/features/marketing/sections/`, composed in `apps/web/src/app/(marketing)/page.tsx`.
 
 ### 1. Navigation — `SiteHeader`
 Logo, three links (How it works, Safety & Trust, About Eraya), Log in, and one

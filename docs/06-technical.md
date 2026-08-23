@@ -19,19 +19,32 @@ Version-specific things this codebase relies on:
 
 ## Structure
 
+A workspace monorepo. One app today, room for more.
+
 ```
-app/
-  layout.tsx              fonts, metadata, header/footer, skip link
-  page.tsx                composes the landing-page sections
-  globals.css             design tokens
-  icon.svg                favicon
-  opengraph-image.tsx     generated OG image
-  actions/waitlist.ts     signup server action
-  login|privacy|terms|contact/page.tsx
-components/               brand/, ui/, layout/, sections/
-content/site.ts           all copy
+apps/web/                 the Next.js app
+  src/
+    app/                  routing only — a folder here defines a URL
+      layout.tsx          fonts, metadata, skip link
+      globals.css         design tokens
+      icon.svg            favicon
+      opengraph-image.tsx generated OG image
+      (marketing)/        page, privacy, terms, contact
+      (auth)/             login, signup, logout, auth/*, onboarding/*
+    features/
+      auth/               screens, components, copy, flow, actions
+      marketing/          sections, layout, components, copy
+      waitlist/           the signup server action
+    shared/               ui/, brand/, data/ — only what two features use
+    lib/supabase/         client construction, generated types
+  proxy.ts is at src/proxy.ts, beside app/, as Next.js requires
+supabase/                 migrations — the contract between apps
+assets/brand/             logo source artwork, not served
 docs/                     this specification
 ```
+
+Run commands from the root (`npm run dev`) or from `apps/web`. Adding a second
+app means a sibling under `apps/`; nothing in `apps/web/` moves.
 
 ## Rendering
 
@@ -59,7 +72,7 @@ require an `images.localPatterns` entry.
 
 ## The signup form
 
-`app/actions/waitlist.ts` is a Server Action. It validates on the server —
+`apps/web/src/features/waitlist/actions.ts` is a Server Action. It validates on the server —
 client validation is a convenience, never the boundary — and appends to
 `data/waitlist.jsonl`.
 
@@ -105,7 +118,7 @@ npm run lint    # eslint
 
 - No colour literals outside `globals.css` — the two exceptions are documented
   in [03-design-system.md](03-design-system.md).
-- No user-facing copy inside components; it belongs in `content/site.ts`.
+- No user-facing copy inside components; it belongs in `apps/web/src/features/marketing/content.ts`.
 - Sections compose `Section` + `Container`; they never set page margins.
 - Prefer a Server Component. Reach for `"use client"` only when there is state
   or an event handler, and push it to the smallest component that needs it.
