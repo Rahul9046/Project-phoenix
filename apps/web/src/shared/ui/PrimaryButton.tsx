@@ -16,6 +16,19 @@ type Props = Omit<ComponentProps<"button">, "className" | "children"> & {
  * comfortably above the 44px touch target minimum, and easy to hit on a phone
  * without looking.
  */
+/**
+ * The primary action's skin, exported so a link can wear it.
+ *
+ * Same reasoning as `secondaryButtonClasses`: a control that changes routes
+ * must be an anchor, and a `<button>` inside an `<a>` is invalid markup that
+ * confuses assistive technology. Sharing the string keeps the two identical.
+ */
+export const primaryButtonClasses =
+  "inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full " +
+  "bg-ember px-7 text-base font-medium text-canvas transition-colors " +
+  "duration-200 hover:bg-ember-strong disabled:cursor-not-allowed " +
+  "disabled:opacity-60";
+
 export function PrimaryButton({
   children,
   loading = false,
@@ -33,7 +46,7 @@ export function PrimaryButton({
       // Double submission is prevented here rather than in every caller.
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-ember px-7 text-base font-medium text-canvas transition-colors duration-200 hover:bg-ember-strong disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`${primaryButtonClasses} ${
         fullWidth ? "w-full" : ""
       } ${className}`.trim()}
     >

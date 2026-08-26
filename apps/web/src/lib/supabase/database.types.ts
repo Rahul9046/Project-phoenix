@@ -1,9 +1,3 @@
-﻿/**
- * Generated from the live schema. Do not edit by hand.
- *
- * Regenerate after every migration, in the same commit:
- *   supabase gen types typescript --linked > lib/supabase/database.types.ts
- */
 export type Json =
   | string
   | number
@@ -16,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -75,6 +69,39 @@ export type Database = {
         }
         Relationships: []
       }
+      entitlements: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          kind: Database["public"]["Enums"]["entitlement_kind"]
+          tier: Database["public"]["Enums"]["membership_tier"]
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          kind: Database["public"]["Enums"]["entitlement_kind"]
+          tier: Database["public"]["Enums"]["membership_tier"]
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          kind?: Database["public"]["Enums"]["entitlement_kind"]
+          tier?: Database["public"]["Enums"]["membership_tier"]
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       languages: {
         Row: {
           code: string
@@ -99,6 +126,57 @@ export type Database = {
           is_active?: boolean
           name?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      membership_plans: {
+        Row: {
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          intro_period_months: number | null
+          intro_price_paise: number | null
+          is_active: boolean
+          is_recurring: boolean
+          name: string
+          period_months: number
+          price_paise: number
+          sort_order: number
+          tier: Database["public"]["Enums"]["membership_tier"]
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intro_period_months?: number | null
+          intro_price_paise?: number | null
+          is_active?: boolean
+          is_recurring?: boolean
+          name: string
+          period_months: number
+          price_paise: number
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["membership_tier"]
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          intro_period_months?: number | null
+          intro_price_paise?: number | null
+          is_active?: boolean
+          is_recurring?: boolean
+          name?: string
+          period_months?: number
+          price_paise?: number
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["membership_tier"]
         }
         Relationships: []
       }
@@ -194,6 +272,78 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          cancel_at: string | null
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          ended_at: string | null
+          id: string
+          is_introductory: boolean
+          periods_billed: number
+          plan_id: string
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_subscription_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+        }
+        Insert: {
+          cancel_at?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          ended_at?: string | null
+          id?: string
+          is_introductory?: boolean
+          periods_billed?: number
+          plan_id: string
+          profile_id: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_subscription_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Update: {
+          cancel_at?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          ended_at?: string | null
+          id?: string
+          is_introductory?: boolean
+          periods_billed?: number
+          plan_id?: string
+          profile_id?: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_subscription_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist: {
         Row: {
           city: string
@@ -229,13 +379,28 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      entitlement_kind: "boolean" | "number"
       gender: "woman" | "man" | "non_binary" | "prefer_not_to_say"
+      membership_tier: "free" | "premium"
       onboarding_stage:
         | "authenticated"
         | "phone_verified"
         | "onboarding_started"
         | "onboarding_completed"
+      payment_provider:
+        | "none"
+        | "razorpay"
+        | "stripe"
+        | "apple_app_store"
+        | "google_play"
       relationship_status: "divorced" | "separated" | "widowed"
+      subscription_status:
+        | "pending"
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "cancelled"
+        | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -366,14 +531,31 @@ export const Constants = {
   },
   public: {
     Enums: {
+      entitlement_kind: ["boolean", "number"],
       gender: ["woman", "man", "non_binary", "prefer_not_to_say"],
+      membership_tier: ["free", "premium"],
       onboarding_stage: [
         "authenticated",
         "phone_verified",
         "onboarding_started",
         "onboarding_completed",
       ],
+      payment_provider: [
+        "none",
+        "razorpay",
+        "stripe",
+        "apple_app_store",
+        "google_play",
+      ],
       relationship_status: ["divorced", "separated", "widowed"],
+      subscription_status: [
+        "pending",
+        "trialing",
+        "active",
+        "past_due",
+        "cancelled",
+        "expired",
+      ],
     },
   },
 } as const
