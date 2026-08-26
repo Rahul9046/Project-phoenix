@@ -232,6 +232,21 @@ export const pricing = {
   premiumPriceNote: "from ₹199 for your first month",
   premiumIntro: "Everything in Free, and:",
 
+  /**
+   * Premium is one membership sold over four lengths, not four products. The
+   * card has to say so: priced from the cheapest entry point, with the terms
+   * named, or someone reads "199 first month, then 299" and concludes monthly
+   * billing is the only way to buy it.
+   */
+  premiumFrom: "from",
+  premiumTerms:
+    "One membership, four lengths: monthly, quarterly, half-yearly or annual.",
+  premiumCta: "Choose how long",
+
+  /** On each term. Disabled until a payment provider exists. */
+  chooseCta: (name: string) => `Choose ${name}`,
+  chooseUnavailable: "Opens when payments do",
+
   includedTitle: "Included with every account",
   plansTitle: "Choose how long",
   plansLede:

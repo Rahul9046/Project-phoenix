@@ -128,15 +128,16 @@ export default async function PricingPage() {
               </h2>
 
               <p className="mt-4 font-serif text-4xl text-ink">
+                <span className="mr-1.5 align-middle font-sans text-base font-normal text-ink-subtle">
+                  {pricing.premiumFrom}
+                </span>
                 {monthlyIntro !== null ? formatRupees(monthlyIntro) : "—"}
                 <span className="ml-2 align-middle font-sans text-base font-normal text-ink-subtle">
                   first month
                 </span>
               </p>
               <p className="mt-2 text-[0.95rem] text-ink-subtle">
-                {monthly
-                  ? `then ${formatRupees(monthly.pricePaise)} a month, or pay for a longer term below`
-                  : null}
+                {pricing.premiumTerms}
               </p>
 
               <p className="mt-7 text-[0.95rem] font-medium text-ink">
@@ -163,15 +164,17 @@ export default async function PricingPage() {
                 ))}
               </ul>
 
-              <p className="mt-8 text-sm leading-relaxed text-ink-subtle">
-                {pricing.notYetBody}
-              </p>
+              <div className="mt-8">
+                <Button href="#plans" size="lg">
+                  {pricing.premiumCta}
+                </Button>
+              </div>
             </div>
           </div>
         </Container>
       </Section>
 
-      <Section tone="sand">
+      <Section id="plans" tone="sand">
         <Container>
           <SectionHeading title={pricing.plansTitle} lede={pricing.plansLede} />
 
@@ -223,6 +226,33 @@ export default async function PricingPage() {
                           formatPeriod(plan.periodMonths),
                         )}
                   </p>
+
+                  {/*
+                    Present but disabled, deliberately.
+
+                    Without a control on each term, there is no visible way to
+                    pick one and the four read as a price list rather than a
+                    choice. A working button would be worse: no payment provider
+                    exists, so it could only pretend. Disabled and labelled with
+                    the reason is the honest middle -- the selection model is
+                    obvious, and this becomes live when payments do.
+                  */}
+                  <div className="mt-5">
+                    <button
+                      type="button"
+                      disabled
+                      aria-describedby={`plan-${plan.code}-unavailable`}
+                      className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-line-strong bg-canvas px-5 text-[0.95rem] font-medium text-ink-subtle"
+                    >
+                      {pricing.chooseCta(plan.name)}
+                    </button>
+                    <p
+                      id={`plan-${plan.code}-unavailable`}
+                      className="mt-2 text-center text-sm text-ink-subtle"
+                    >
+                      {pricing.chooseUnavailable}
+                    </p>
+                  </div>
 
                 </li>
               );
