@@ -49,6 +49,13 @@ Everything about the schema lives in `supabase/migrations/`, in order:
 | `…090700_create_triggers` | Profile on signup, phone mirror, `updated_at` |
 | `…090800_enable_rls` | RLS on every table, with policies |
 | `…090900_seed_reference_data` | The seven launch cities and the languages |
+| `…101500_restrict_function_execute` | Revokes EXECUTE on the trigger functions |
+| `…100100_create_membership_enums` | `membership_tier`, `subscription_status`, `payment_provider` |
+| `…100200_create_membership_plans` | The catalogue and its prices |
+| `…100300_create_entitlements` | Per-tier capabilities |
+| `…100400_create_subscriptions` | One row per term |
+| `…100500_membership_rls` | RLS for the three membership tables |
+| `…100600_seed_membership` | The four plans and every entitlement |
 
 Apply them with the Supabase CLI:
 
@@ -171,6 +178,13 @@ On for every table. Anything not granted is denied.
 | `profiles` | — | select/insert/update **own row** |
 | `profile_languages` | — | select/insert/delete **own rows** |
 | `waitlist` | insert | insert |
+| `membership_plans` | select (active only) | select (active only) |
+| `entitlements` | select | select |
+| `subscriptions` | — | select **own rows** |
+
+`subscriptions` has no write policy for anybody — see the membership section.
+Pricing is readable by `anon` on purpose: hiding what a product costs behind a
+login is hostile.
 
 Nobody can read the waitlist without the secret key — it is personal data
 belonging to people who are not members. Nobody can read another member's
@@ -186,3 +200,67 @@ an insert, not a deploy.
 anywhere can create an account, and a city outside the list is stored as free
 text on `profiles.other_city` with a null `city_id`. There is no screen in this
 product that turns anyone away.
+
+## Membership and entitlements
+
+Eraya is freemium. The paid tier exists in the database today; payments do not.
+
+| Table | Holds | Who may write |
+| --- | --- | --- |
+| `membership_plans` | The catalogue and its prices, in paise | Migrations only |
+| `entitlements` | What each tier may do, as `(tier, key) -> jsonb` | Migrations only |
+| `subscriptions` | One row per term, per member | **Service role only** |
+
+### Why `subscriptions` has no write policy
+
+Not an oversight. A browser that can insert its own subscription row can award
+itself premium, which makes every check downstream decorative. Membership is
+granted by whatever takes the money — a payment webhook running with the service
+role — and read back through RLS, which allows a member to see their own rows and
+nobody else's.
+
+### Entitlements are data, not code
+
+Nothing outside `features/membership/entitlements.ts` should compare a tier.
+Components ask for a named capability:
+
+```ts
+const { entitlements } = await loadMembership();
+if (entitlements.canSeeInteresters) { ... }
+```
+
+Adding a capability from the future pool — boosts, read receipts, travel mode —
+is two rows in `entitlements` and the feature itself. It is not a change to the
+membership system. Every capability is seeded for **both** tiers, including the
+ones free members do not get: a missing row and a deliberate `false` are
+indistinguishable to calling code, and "the key was absent" is not a decision
+anyone made.
+
+If the table cannot be read, the module falls back to the free tier. The safe
+failure is to withhold paid features, never to hand them out.
+
+### Pricing
+
+Prices are fixed and stored exactly as charged. Nothing is computed at runtime,
+and the twelve-month plan is a price rather than a saving — describing it as a
+discount would invent a claim the product does not make.
+
+| Plan | Price | Note |
+| --- | --- | --- |
+| Monthly | ₹199 first month, then ₹299 | The only recurring plan |
+| 3 months | ₹699 | One-off term |
+| 6 months | ₹1,299 | One-off term |
+| 12 months | ₹2,399 | One-off term |
+
+The renewal price is shown beside the introductory one, never behind a click.
+
+### What is not built
+
+No payment provider is configured. `subscriptions.provider` defaults to `'none'`,
+and a row in that state records intent and must never be read as money received —
+which is why `'pending'` is excluded from `ENTITLING_STATUSES`. The membership
+page says payments are not open rather than showing a button that would not
+charge.
+
+`'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
+the current term.

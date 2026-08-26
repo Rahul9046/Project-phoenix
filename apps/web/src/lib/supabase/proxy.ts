@@ -12,7 +12,15 @@ import { tryGetPublicSupabaseConfig } from "@/lib/supabase/env";
  * and answering that here would mean a database round-trip on every request;
  * `lib/auth/flow.ts` resolves it from profile data already loaded by the page.
  */
-const PROTECTED_PREFIXES = ["/auth/phone", "/auth/otp", "/onboarding"];
+const PROTECTED_PREFIXES = [
+  "/auth/phone",
+  "/auth/otp",
+  "/onboarding",
+  // The signed-in application. The layout redirects too — this only spares
+  // an unauthenticated visitor from rendering a shell they cannot use.
+  "/home",
+  "/account",
+];
 
 /** Entry screens a signed-in member has no reason to see. */
 const ENTRY_ROUTES = ["/login", "/signup"];
