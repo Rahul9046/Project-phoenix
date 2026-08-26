@@ -42,6 +42,48 @@ enable_signup = true
 # Eraya has no passwords: members receive a link or a code.
 enable_confirmations = true
 
+# Custom SMTP.
+#
+# Not optional for Eraya, and not only about deliverability. Supabase's built-in
+# email service delivers solely to addresses belonging to members of the project,
+# caps sending at two messages an hour, AND refuses template customisation
+# entirely -- "Email template modification is not available for free tier
+# projects using the default email provider". Configuring SMTP lifts all three at
+# once, on the free plan.
+#
+# Sent from no-reply@, because this mailbox is not read. The address that IS read
+# is named in the body of the email, so a reply is never silently lost.
+#
+# Credentials come from the environment. Nothing secret is written here.
+[auth.email.smtp]
+enabled = true
+host = "env(SUPABASE_SMTP_HOST)"
+port = 587
+user = "env(SUPABASE_SMTP_USER)"
+pass = "env(SUPABASE_SMTP_PASS)"
+admin_email = "no-reply@eraya.app"
+sender_name = "Eraya"
+
+# The sign-in email, kept in version control rather than edited in the dashboard.
+# Same reasoning as the migrations: a template that exists in one project only
+# cannot be reviewed, reproduced or rolled back, and this is the first thing a
+# new member sees of Eraya.
+#
+# The link deliberately targets /auth/confirm with a token_hash instead of
+# Supabase's own verify endpoint. The default template returns a PKCE code, which
+# needs a verifier cookie from the browser that requested the link -- so a link
+# requested on a laptop and opened on a phone fails. token_hash works anywhere.
+[auth.email.template.magic_link]
+subject = "Your Eraya sign-in link"
+content_path = "./supabase/templates/magic-link.html"
+
+# Sent when an address signs up for the first time. Supabase uses this rather
+# than the magic link template on first contact, so leaving it as the default
+# would mean a new member sees stock wording and a returning one sees Eraya's.
+[auth.email.template.confirmation]
+subject = "Confirm your email for Eraya"
+content_path = "./supabase/templates/magic-link.html"
+
 # Phone auth stays off until an SMS provider is chosen. The application mocks
 # this step; see lib/auth/phone-verification.ts.
 [auth.sms]
@@ -49,17 +91,28 @@ enable_signup = false
 enable_confirmations = false
 
 # OAuth providers. Secrets are read from the environment, never written here.
+#
+# All three are OFF until real credentials exist, and that is not a placeholder
+# -- it is load-bearing. `lib/data/auth-settings.ts` asks the live project which
+# providers are configured and renders only those buttons, because
+# signInWithOAuth does not fail on a disabled provider: it navigates to Supabase,
+# which answers with raw JSON as a page, stranding someone outside the site with
+# no error handler able to run.
+#
+# Enabling one here without a client_id would therefore put a button on the login
+# screen that breaks. Register the OAuth app first, set the environment
+# variables, then flip `enabled` to true and run `supabase config push`.
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
 [auth.external.apple]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_APPLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 
 [auth.external.facebook]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
