@@ -178,3 +178,64 @@ export async function loadPlans() {
     isRecurring: p.is_recurring,
   }));
 }
+
+export type TierCapability = {
+  key: string;
+  /** Human label, straight from the table so the page and the data agree. */
+  description: string;
+  kind: "boolean" | "number";
+  free: boolean | number;
+  premium: boolean | number;
+  /** True when premium gives more than free — a flag turned on, or a bigger number. */
+  isUpgrade: boolean;
+};
+
+/**
+ * Both tiers side by side, for the public pricing page.
+ *
+ * No session required: `entitlements` and `membership_plans` are both readable
+ * by `anon` on purpose. Someone deciding whether to join has to be able to see
+ * what they would get, and hiding that behind a login is hostile.
+ *
+ * The comparison is computed from the values rather than written out again, so
+ * the pricing page cannot drift from what the application actually enforces.
+ * Changing what premium includes is a row edit, and this page follows.
+ */
+export async function loadTierComparison(): Promise<TierCapability[]> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("entitlements")
+    .select("tier, key, kind, value, description");
+
+  const rows = data ?? [];
+  const keys = [...new Set(rows.map((row) => row.key))];
+
+  return keys
+    .map((key) => {
+      const free = rows.find((r) => r.key === key && r.tier === "free");
+      const premium = rows.find((r) => r.key === key && r.tier === "premium");
+      if (!free || !premium) return null;
+
+      const freeValue = free.value as boolean | number;
+      const premiumValue = premium.value as boolean | number;
+
+      const isUpgrade =
+        typeof premiumValue === "number" && typeof freeValue === "number"
+          ? premiumValue > freeValue
+          : premiumValue === true && freeValue === false;
+
+      return {
+        key,
+        description: premium.description ?? key,
+        kind: premium.kind,
+        free: freeValue,
+        premium: premiumValue,
+        isUpgrade,
+      } satisfies TierCapability;
+    })
+    .filter((row): row is TierCapability => row !== null)
+    // Shared capabilities first, then what premium adds — the order someone
+    // reads it in: "here is what you get anyway, here is what more costs".
+    .sort((a, b) => Number(a.isUpgrade) - Number(b.isUpgrade));
+}

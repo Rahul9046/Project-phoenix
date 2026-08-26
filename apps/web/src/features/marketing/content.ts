@@ -27,6 +27,7 @@ export const otherCityValue = "Another city";
 export const navLinks = [
   { label: "How it works", href: "#how-it-works" },
   { label: "Safety & Trust", href: "#trust" },
+  { label: "Pricing", href: "/pricing" },
   { label: "About Eraya", href: "#about" },
 ] as const;
 
@@ -204,4 +205,64 @@ export const footer = {
     },
   ],
   social: ["Instagram", "LinkedIn", "YouTube"],
+} as const;
+
+/**
+ * The public pricing page.
+ *
+ * Public on purpose. Someone deciding whether Eraya is for them has to be able
+ * to see what it costs without creating an account first — and the RLS policies
+ * allow `anon` to read plans and entitlements precisely so this page can exist.
+ *
+ * Nothing here is a claim the product does not honour: the feature lists are
+ * generated from the `entitlements` table rather than written out again, so they
+ * cannot drift from what the application enforces.
+ */
+export const pricing = {
+  eyebrow: "Membership",
+  title: "Everything you need to meet someone is free.",
+  lede: "Browsing, filters, expressing interest and messaging the people you connect with cost nothing, and will not start costing something later. Eraya Premium adds a few things on top for those who want them.",
+
+  freeName: "Free",
+  freePrice: "₹0",
+  freePriceNote: "Always. No card, no trial period.",
+  freeCta: "Create your account",
+
+  premiumName: "Eraya Premium",
+  premiumPriceNote: "from ₹199 for your first month",
+  premiumIntro: "Everything in Free, and:",
+
+  includedTitle: "Included with every account",
+  plansTitle: "Choose how long",
+  plansLede:
+    "The same Premium membership either way — only the length of the term changes. Prices are fixed; there is nothing to work out.",
+
+  recurringNote: (first: string, thereafter: string) =>
+    `${first} for your first month, then ${thereafter} per month. Cancel any time.`,
+  oneOffNote: (price: string, period: string) =>
+    `${price} for ${period}, paid once. Not a recurring subscription.`,
+
+  /**
+   * Stated plainly rather than hidden. A price with a buy button that cannot
+   * take money would be worse than saying where things stand.
+   */
+  notYetTitle: "Premium is not on sale yet",
+  notYetBody:
+    "We are still choosing how payments are handled, so nothing here can be purchased today and nothing will charge you. Create your account now — it is free — and we will tell you when Premium opens. You will always see the renewal price before agreeing to anything.",
+
+  faqTitle: "Before you ask",
+  faq: [
+    {
+      q: "Will the free features start costing money later?",
+      a: "No. Browsing, filters, expressing interest and messaging someone you have connected with are free, and are meant to stay that way. Premium adds to that rather than taking anything away.",
+    },
+    {
+      q: "Can I cancel?",
+      a: "Yes, at any time. Cancelling stops the next payment; it does not end the term you have already paid for, and you keep Premium until that term runs out.",
+    },
+    {
+      q: "What happens after the first month at ₹199?",
+      a: "The monthly plan renews at ₹299 a month. That is the only plan that renews on its own — the three, six and twelve month terms are paid once and simply end.",
+    },
+  ],
 } as const;
