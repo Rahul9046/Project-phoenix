@@ -235,7 +235,7 @@ export const pricing = {
   includedTitle: "Included with every account",
   plansTitle: "Choose how long",
   plansLede:
-    "The same Premium membership either way — only the length of the term changes. Prices are fixed; there is nothing to work out.",
+    "The same Premium membership either way — only the length of the term changes. Prices are fixed. There is nothing to work out.",
 
   /**
    * Stated as a plain fact, never as a saving. The prices are fixed and
@@ -248,6 +248,20 @@ export const pricing = {
     `${first} for your first month, then ${thereafter} per month. Cancel any time.`,
   oneOffNote: (price: string, period: string) =>
     `${price} for ${period}, paid once. Not a recurring subscription.`,
+
+  /**
+   * What happens when a term ends.
+   *
+   * Written carefully, because only one of the four plans recurs. Saying
+   * "nothing renews" outright would be false for the monthly plan and would be
+   * the exact kind of small untruth that costs a product its credibility with an
+   * audience already wary of being signed up to things.
+   */
+  renewalPromiseTitle: "Nothing renews behind your back",
+  renewalPromiseBody:
+    "The quarterly, half-yearly and annual terms are paid once and simply end. Nothing continues on its own, and no card is charged again. The monthly plan is the only one that renews, and you can stop it whenever you like.",
+  renewalPromiseNudge:
+    "We will not ring you or fill your inbox asking you to come back. If a term ends and you would like to carry on, that is entirely your decision to make, in your own time.",
 
   /**
    * Stated plainly rather than hidden. A price with a buy button that cannot

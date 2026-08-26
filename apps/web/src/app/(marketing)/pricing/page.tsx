@@ -229,7 +229,25 @@ export default async function PricingPage() {
             })}
           </ul>
 
-          <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-line-strong bg-canvas p-6 text-center">
+          {/*
+            Placed directly under the terms, where the question actually occurs
+            to someone: "what happens when this runs out". Answering it beside
+            the prices rather than in a policy page is the difference between a
+            reassurance and a disclaimer.
+          */}
+          <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-line bg-surface p-6">
+            <p className="font-medium text-ink">
+              {pricing.renewalPromiseTitle}
+            </p>
+            <p className="mt-2 text-[0.95rem] leading-relaxed text-ink-muted">
+              {pricing.renewalPromiseBody}
+            </p>
+            <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-muted">
+              {pricing.renewalPromiseNudge}
+            </p>
+          </div>
+
+          <div className="mx-auto mt-5 max-w-2xl rounded-2xl border border-line-strong bg-canvas p-6 text-center">
             <p className="font-medium text-ink">{pricing.notYetTitle}</p>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-ink-muted">
               {pricing.notYetBody}
