@@ -237,6 +237,13 @@ export const pricing = {
   plansLede:
     "The same Premium membership either way — only the length of the term changes. Prices are fixed; there is nothing to work out.",
 
+  /**
+   * Stated as a plain fact, never as a saving. The prices are fixed and
+   * independent, so "x a month" is here to make the four terms easy to compare
+   * -- not to imply the longer ones are discounted, which they are not.
+   */
+  perMonth: (amount: string) => `${amount} a month`,
+
   recurringNote: (first: string, thereafter: string) =>
     `${first} for your first month, then ${thereafter} per month. Cancel any time.`,
   oneOffNote: (price: string, period: string) =>

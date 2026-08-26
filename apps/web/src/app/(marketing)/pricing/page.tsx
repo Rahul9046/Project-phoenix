@@ -181,6 +181,18 @@ export default async function PricingPage() {
               const hasIntro =
                 introPaise !== null && plan.introPeriodMonths !== null;
 
+              /*
+               * The monthly rate for every term, so the four can be compared
+               * without arithmetic. For the recurring plan that is simply the
+               * ongoing price -- the introductory month is a one-off and would
+               * misrepresent the rate. Rounded to the paise, so 2399 over twelve
+               * months reads as the 199.92 it actually is rather than a tidier
+               * number nobody is charged.
+               */
+              const perMonthPaise = plan.isRecurring
+                ? plan.pricePaise
+                : Math.round(plan.pricePaise / plan.periodMonths);
+
               return (
                 <li
                   key={plan.id}
@@ -194,6 +206,10 @@ export default async function PricingPage() {
                   ) : null}
                   <p className="mt-3 font-serif text-3xl text-ink">
                     {formatRupees(hasIntro ? introPaise : plan.pricePaise)}
+                  </p>
+
+                  <p className="mt-1 text-[0.95rem] text-ink-subtle">
+                    {pricing.perMonth(formatRupees(perMonthPaise))}
                   </p>
 
                   <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-muted">
