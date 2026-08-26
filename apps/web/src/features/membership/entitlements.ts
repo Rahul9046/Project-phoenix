@@ -161,7 +161,7 @@ export async function loadPlans() {
   const { data } = await supabase
     .from("membership_plans")
     .select(
-      "id, code, name, tier, period_months, price_paise, intro_price_paise, intro_period_months, is_recurring",
+      "id, code, name, description, tier, period_months, price_paise, intro_price_paise, intro_period_months, is_recurring",
     )
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
@@ -170,6 +170,7 @@ export async function loadPlans() {
     id: p.id,
     code: p.code,
     name: p.name,
+    description: p.description,
     tier: p.tier,
     periodMonths: p.period_months,
     pricePaise: p.price_paise,

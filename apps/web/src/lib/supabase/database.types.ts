@@ -134,6 +134,7 @@ export type Database = {
           code: string
           created_at: string
           currency: string
+          description: string | null
           id: string
           intro_period_months: number | null
           intro_price_paise: number | null
@@ -149,6 +150,7 @@ export type Database = {
           code: string
           created_at?: string
           currency?: string
+          description?: string | null
           id?: string
           intro_period_months?: number | null
           intro_price_paise?: number | null
@@ -164,6 +166,7 @@ export type Database = {
           code?: string
           created_at?: string
           currency?: string
+          description?: string | null
           id?: string
           intro_period_months?: number | null
           intro_price_paise?: number | null

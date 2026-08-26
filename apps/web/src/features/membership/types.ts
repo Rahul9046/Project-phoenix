@@ -38,6 +38,8 @@ export type MembershipPlan = {
   id: string;
   code: string;
   name: string;
+  /** One line on who the term suits. */
+  description: string | null;
   tier: MembershipTier;
   periodMonths: number;
   pricePaise: number;

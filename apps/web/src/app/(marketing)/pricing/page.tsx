@@ -16,14 +16,18 @@ export const metadata: Metadata = {
   description: `What ${site.name} costs, and what is free.`,
 };
 
-/** A tick for something included, a dash for something that is not. */
-function Mark({ on }: { on: boolean }) {
+/**
+ * A tick beside something included.
+ *
+ * Only ever affirmative. An earlier version also listed what Free does *not*
+ * include, with a dash — accurate, but it reads as a list of things being
+ * withheld, and someone scanning quickly cannot always tell the two columns
+ * apart. Each tier now states only what it gives.
+ */
+function Tick() {
   return (
-    <span
-      aria-hidden="true"
-      className={on ? "text-ember-text" : "text-ink-subtle/50"}
-    >
-      {on ? "✓" : "—"}
+    <span aria-hidden="true" className="text-ember-text">
+      ✓
     </span>
   );
 }
@@ -46,8 +50,18 @@ export default async function PricingPage() {
     loadTierComparison(),
   ]);
 
-  const shared = capabilities.filter((capability) => !capability.isUpgrade);
-  const premiumOnly = capabilities.filter((capability) => capability.isUpgrade);
+  /*
+   * Free lists every capability it actually has: the ones both tiers share, plus
+   * any numeric limit. A number is not withheld from free members, it is simply
+   * smaller -- omitting it would imply they get no reverts at all, which is not
+   * what the entitlements table says.
+   */
+  const freeHas = capabilities.filter(
+    (capability) => !capability.isUpgrade || capability.kind === "number",
+  );
+
+  /* Premium lists only what it adds on top. */
+  const premiumAdds = capabilities.filter((capability) => capability.isUpgrade);
 
   const monthly = plans.find((plan) => plan.introPricePaise !== null);
   const monthlyIntro = monthly?.introPricePaise ?? null;
@@ -80,12 +94,12 @@ export default async function PricingPage() {
               </p>
 
               <ul className="mt-7 grid gap-3">
-                {shared.map((capability) => (
+                {freeHas.map((capability) => (
                   <li
                     key={capability.key}
                     className="flex items-start gap-3 text-[0.95rem] leading-relaxed text-ink-muted"
                   >
-                    <Mark on />
+                    <Tick />
                     <span>
                       {capability.description}
                       {capability.kind === "number" ? (
@@ -98,20 +112,6 @@ export default async function PricingPage() {
                   </li>
                 ))}
 
-                {/*
-                  What free does not include, shown rather than left out. An
-                  omission makes someone hunt for the catch; a dash answers the
-                  question before it is asked.
-                */}
-                {premiumOnly.map((capability) => (
-                  <li
-                    key={capability.key}
-                    className="flex items-start gap-3 text-[0.95rem] leading-relaxed text-ink-subtle/80"
-                  >
-                    <Mark on={false} />
-                    <span>{capability.description}</span>
-                  </li>
-                ))}
               </ul>
 
               <div className="mt-8">
@@ -143,12 +143,12 @@ export default async function PricingPage() {
                 {pricing.premiumIntro}
               </p>
               <ul className="mt-3 grid gap-3">
-                {premiumOnly.map((capability) => (
+                {premiumAdds.map((capability) => (
                   <li
                     key={capability.key}
                     className="flex items-start gap-3 text-[0.95rem] leading-relaxed text-ink-muted"
                   >
-                    <Mark on />
+                    <Tick />
                     <span>
                       {capability.description}
                       {capability.kind === "number" ? (
@@ -187,6 +187,11 @@ export default async function PricingPage() {
                   className="rounded-2xl border border-line bg-surface p-6"
                 >
                   <p className="font-medium text-ink">{plan.name}</p>
+                  {plan.description ? (
+                    <p className="mt-1 text-sm text-ink-subtle">
+                      {plan.description}
+                    </p>
+                  ) : null}
                   <p className="mt-3 font-serif text-3xl text-ink">
                     {formatRupees(hasIntro ? introPaise : plan.pricePaise)}
                   </p>

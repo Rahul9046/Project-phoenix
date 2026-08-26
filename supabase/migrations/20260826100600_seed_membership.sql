@@ -11,10 +11,10 @@ insert into public.membership_plans
 values
   -- 199 for the first month, 299 every month after. The only recurring plan,
   -- and the only one with introductory pricing.
-  ('premium_monthly',     'Monthly',    'premium',  1,  29900, 19900, 1, true,  10),
-  ('premium_quarterly',   '3 months',   'premium',  3,  69900, null,  null, false, 20),
-  ('premium_half_yearly', '6 months',   'premium',  6, 129900, null,  null, false, 30),
-  ('premium_annual',      '12 months',  'premium', 12, 239900, null,  null, false, 40)
+  ('premium_monthly',     'Monthly',     'premium',  1,  29900, 19900, 1, true,  10),
+  ('premium_quarterly',   'Quarterly',   'premium',  3,  69900, null,  null, false, 20),
+  ('premium_half_yearly', 'Half-yearly', 'premium',  6, 129900, null,  null, false, 30),
+  ('premium_annual',      'Annual',      'premium', 12, 239900, null,  null, false, 40)
 on conflict (code) do update
   set name                = excluded.name,
       tier                = excluded.tier,
