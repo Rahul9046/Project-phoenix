@@ -125,6 +125,34 @@ export const cityStep = {
   cta: "Continue",
 } as const;
 
+/**
+ * What to say when someone arrives back at sign-in after something failed.
+ *
+ * Keyed on what the provider or Supabase actually reports. These are the
+ * outcomes people hit in practice — cancelling a consent screen is the second
+ * most common thing that happens after succeeding at it — and returning someone
+ * to a blank login page with no explanation is how a working product looks
+ * broken.
+ */
+export const signInProblems: Record<string, string> = {
+  access_denied:
+    "Sign-in was cancelled, so nothing happened. You can try again, or continue with email.",
+  server_error:
+    "That sign-in provider had a problem on its end. Please try again, or continue with email.",
+  temporarily_unavailable:
+    "That sign-in provider is briefly unavailable. Please try again in a moment, or continue with email.",
+  invalid_link:
+    "That sign-in link is not valid any more. Links work once and expire after an hour — request a new one below.",
+  missing_code:
+    "The sign-in did not complete. Please try again, or continue with email.",
+  provider_not_enabled:
+    "That sign-in option is not available yet. Please continue with email.",
+} as const;
+
+/** Anything not in the list above. Deliberately vague; it is genuinely unknown. */
+export const signInProblemFallback =
+  "That sign-in did not complete. Please try again, or continue with email.";
+
 export const relationshipStep = {
   title: "Which chapter are you in?",
   lede: "Eraya is built for people beginning again. This helps us introduce you to people who understand.",

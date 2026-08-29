@@ -4,9 +4,10 @@ import { AuthError } from "@/features/auth/types";
 /**
  * Turns whatever went wrong into a sentence a person can act on.
  *
- * The mocked provider never fails, so today this only runs if something
- * genuinely unexpected happens. It exists so that swapping in a real provider —
- * which will fail, and will fail in specific ways — needs no UI changes.
+ * Handles a failure thrown inside the browser — a dead network, a provider
+ * Supabase does not have configured. Its counterpart is
+ * `describeSignInProblem`, which handles the other direction: a redirect back
+ * from the callback carrying an error in the URL.
  */
 export function describeAuthError(error: unknown): string {
   if (error instanceof AuthError) {

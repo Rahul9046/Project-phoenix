@@ -16,9 +16,10 @@ import type { SocialProviderId } from "@/features/auth/types";
 /**
  * Google, Apple and Facebook, in that order.
  *
- * Nothing leaves the browser: `signInWithSocial` runs the mocked provider,
- * which pauses briefly and reports success. Swapping in real OAuth changes the
- * client, not this component.
+ * `signInWithSocial` hands off to Supabase OAuth: the browser navigates away to
+ * the provider and comes back through /auth/callback, which establishes the
+ * session. `pending` therefore never clears on success — the page is already
+ * leaving — and only resets when the hand-off itself fails.
  */
 export function SocialLoginButtons({
   providers,
