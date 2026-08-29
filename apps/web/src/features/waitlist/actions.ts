@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getActiveCities } from "@/shared/data/reference";
+import { getCityById } from "@/shared/data/reference";
 
 export type WaitlistState =
   | { status: "idle" }
@@ -35,8 +35,9 @@ export async function joinWaitlist(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
-  const city = String(formData.get("city") ?? "").trim();
-  const otherCity = String(formData.get("otherCity") ?? "").trim();
+  // A city id now, chosen from the searchable field. Registration is open
+  // across India, so there is no "somewhere else" branch left.
+  const cityId = String(formData.get("cityId") ?? "").trim();
 
   const fieldErrors: Record<string, string> = {};
 
@@ -50,18 +51,12 @@ export async function joinWaitlist(
     fieldErrors.email = "Please enter a valid email address.";
   }
 
-  // The list of cities comes from the database, so the form and the validation
-  // can never disagree about what is on offer.
-  const cities = await getActiveCities();
-  const chosen = cities.find((entry) => entry.name === city);
-  const isOther = city === OTHER_CITY_LABEL;
+  // Resolved server-side rather than trusted: the id arrives from a hidden
+  // field, and a hidden field is a suggestion.
+  const city = cityId ? await getCityById(cityId) : null;
 
-  if (!chosen && !isOther) {
-    fieldErrors.city = "Please choose your city.";
-  }
-
-  if (isOther && (otherCity.length < 2 || otherCity.length > 80)) {
-    fieldErrors.otherCity = "Please tell us which city you are in.";
+  if (!city) {
+    fieldErrors.city = "Search for your city and choose it from the list.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -72,8 +67,10 @@ export async function joinWaitlist(
     };
   }
 
-  const resolvedCity = isOther ? otherCity : city;
-  const list = isOther || !chosen?.isLaunchCity ? "waitlist" : "early_access";
+  // Everyone is welcome; this only records which list they belong on for
+  // sequencing invitations. It has never gated registration and does not now.
+  const resolvedCity = city!.state ? `${city!.name}, ${city!.state}` : city!.name;
+  const list = city!.isFocusCity ? "early_access" : "waitlist";
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -93,11 +90,6 @@ export async function joinWaitlist(
   // way, and saying so would only tell a stranger which addresses we hold.
   return {
     status: "success",
-    message: isOther
-      ? `Thank you, ${name}. You are on the waitlist — we will email you as soon as Eraya opens in ${resolvedCity}.`
-      : `Thank you, ${name}. You are on the early access list for ${resolvedCity} — we will email you when Eraya opens there.`,
+    message: `Thank you, ${name}. You are on the list for ${resolvedCity} — we will email you as soon as Eraya opens there.`,
   };
 }
-
-/** Matches the option rendered by the landing page form. */
-const OTHER_CITY_LABEL = "Another city";

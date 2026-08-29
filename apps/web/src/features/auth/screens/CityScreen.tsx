@@ -1,43 +1,50 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { saveCity } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
-import { CitySelector, OTHER_CITY } from "@/features/auth/components/CitySelector";
+import { CitySearch } from "@/shared/ui/CitySearch";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { cityStep } from "@/features/auth/content";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
-import type { CityOption } from "@/shared/data/reference";
+import { getCityById, type CityResult } from "@/shared/data/cities";
 import type { OnboardingProfile } from "@/features/auth/types";
 
-export function CityScreen({ cities }: { cities: CityOption[] }) {
+export function CityScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.city);
   if (!allowed) return <AuthLoading />;
-  return <CityForm cities={cities} profile={session.profile} />;
+  return <CityForm profile={session.profile} />;
 }
 
-function CityForm({
-  cities,
-  profile,
-}: {
-  cities: CityOption[];
-  profile: OnboardingProfile;
-}) {
+function CityForm({ profile }: { profile: OnboardingProfile }) {
   const router = useRouter();
-  const fieldId = useId();
 
-  // `profile.city` holds a city id, or the OTHER_CITY sentinel.
-  const [city, setCity] = useState<string | null>(profile.city);
-  const [otherCity, setOtherCity] = useState(profile.otherCity ?? "");
+  const [city, setCity] = useState<CityResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  // The profile stores a city id. Someone returning to change an answer should
+  // see the city they already chose, not an empty box implying it was lost.
+  useEffect(() => {
+    const storedId = profile.city;
+    if (!storedId) return;
+
+    let cancelled = false;
+    void getCityById(storedId).then((found) => {
+      if (!cancelled && found) setCity(found);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.city]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,13 +58,9 @@ function CityForm({
     setError(null);
     setPending(true);
 
-    // Somewhere unlisted is stored as free text against a null city_id, and is
-    // never a reason to stop. Naming the city is optional too.
-    const isOther = city === OTHER_CITY;
-    const result = await saveCity({
-      cityId: isOther ? null : city,
-      otherCity: isOther ? otherCity.trim() || null : null,
-    });
+    // Always a real city id now. Registration is open across India, so there is
+    // no "somewhere else" case left to record as free text.
+    const result = await saveCity({ cityId: city.id, otherCity: null });
 
     if (!result.ok) {
       setError(result.message);
@@ -78,18 +81,22 @@ function CityForm({
       <AuthHeader title={cityStep.title} lede={cityStep.lede} showLogo={false} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
-        <CitySelector
-          id={fieldId}
-          cities={cities}
+        <CitySearch
+          labels={cityStep}
           value={city}
-          otherCity={otherCity}
-          onChange={(value) => {
-            setCity(value);
+          onChange={(next) => {
+            setCity(next);
             if (error) setError(null);
           }}
-          onOtherCityChange={setOtherCity}
           disabled={pending}
+          autoFocus
         />
+
+        {!city ? (
+          <p className="mt-2.5 text-sm leading-relaxed text-ink-subtle">
+            {cityStep.hint}
+          </p>
+        ) : null}
 
         {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
 

@@ -7,7 +7,7 @@ import { genderOptions, relationshipOptions } from "@/features/auth/content";
 import { authRoutes } from "@/features/auth/flow";
 import { loadAuthSession } from "@/features/auth/load-session";
 import { loadMembership } from "@/features/membership/entitlements";
-import { getActiveCities } from "@/shared/data/reference";
+import { getCityById } from "@/shared/data/reference";
 import { Button } from "@/shared/ui/Button";
 
 export const metadata = { title: "Your account" };
@@ -28,19 +28,22 @@ function ageFrom(iso: string | null): number | null {
 }
 
 export default async function AccountPage() {
-  const [session, membership, cities] = await Promise.all([
+  const [session, membership] = await Promise.all([
     loadAuthSession(),
     loadMembership(),
-    getActiveCities(),
   ]);
 
   const { profile, user } = session;
   const isPremium = membership.tier === "premium";
 
-  const cityName =
-    profile.otherCity ??
-    cities.find((city) => city.id === profile.city)?.name ??
-    null;
+  // One lookup by id rather than loading every city and filtering. `otherCity`
+  // survives only for accounts created before registration opened nationwide.
+  const city = profile.city ? await getCityById(profile.city) : null;
+  const cityName = city
+    ? city.state
+      ? `${city.name}, ${city.state}`
+      : city.name
+    : profile.otherCity;
 
   const genderLabel =
     genderOptions.find((option) => option.value === profile.gender)?.label ??

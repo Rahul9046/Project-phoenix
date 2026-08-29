@@ -193,13 +193,59 @@ the safe default until they do is that nobody sees anybody.
 
 ## Cities
 
-Availability lives in the `cities` table, not in the codebase. Adding a city is
-an insert, not a deploy.
+Registration is open across **all of India**. No city restricts it, and no screen
+turns anyone away for where they live.
 
-`is_launch_city` marks full availability. It never gates registration: someone
-anywhere can create an account, and a city outside the list is stored as free
-text on `profiles.other_city` with a null `city_id`. There is no screen in this
-product that turns anyone away.
+493 cities across all 28 states and 8 union territories, seeded from
+`scripts/cities-india.mjs`. Edit the dataset there and regenerate rather than
+hand-editing SQL:
+
+```
+node scripts/cities-india.mjs > supabase/migrations/<timestamp>_seed_cities_india.sql
+supabase db push
+```
+
+### `is_launch_city` no longer gates anything
+
+It survives as **marketing and community-density metadata** — where Eraya is
+concentrating first — and the landing page lists those seven. It affects the
+*order* of search results and nothing else. It must never be used to decide who
+may register; that was the old model and it is gone.
+
+The distinction worth keeping is **registration availability** (everywhere)
+against **community density** (seven cities, for now). Discovery can later
+prioritise people who are geographically close without either concept moving.
+
+### Search
+
+`search_cities(query, max_results)` is a SECURITY INVOKER function, readable by
+`anon` because the landing page offers city selection before anyone signs in.
+
+Ranking happens in the database: exact name, then name-prefix, then a word inside
+the name, then anything in `search_terms`. Sorting in the browser would mean
+fetching a large set to sort, which is the thing worth avoiding.
+
+`search_terms` holds the lowercased name, its state, and the spellings people
+actually type. Someone who has said "Bangalore" for forty years will not type
+"Bengaluru", so both find it — as do bombay, calcutta, madras, gurgaon, vizag,
+trivandrum and poona.
+
+Names repeat across states — Udaipur in Rajasthan and Tripura, Bilaspur in
+Chhattisgarh and Himachal Pradesh — so slugs carry the state code and every
+result displays its state. There is no population data here, so same-name ties
+break alphabetically by state rather than by an invented prominence.
+
+### Coordinates
+
+`latitude`/`longitude` are populated only where verified, and null everywhere
+else. A guessed coordinate is worse than an absent one: a wrong distance is
+indistinguishable from a right one, and discovery would quietly mis-rank people.
+
+### `profiles.other_city`
+
+Retained but no longer written. Every member now resolves to a real `city_id`,
+which is what lets discovery reason about distance. The column holds free text
+for accounts created before registration opened nationwide.
 
 ## Membership and entitlements
 
