@@ -24,7 +24,10 @@ enabled = true
 port = 54323
 
 # Local inbox for magic links and OTP emails during development.
-[inbucket]
+# The local mail catcher, used by `supabase start`. Renamed from [inbucket],
+# which the CLI now warns is deprecated. Local only -- it has no bearing on the
+# linked project, which sends through Resend.
+[local_smtp]
 enabled = true
 port = 54324
 
@@ -116,3 +119,15 @@ secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 enabled = false
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
+
+# Storage is off, matching the project.
+#
+# Declared explicitly rather than left to the CLI's defaults. Without this,
+# `supabase config push` tries to enable storage with vector buckets, which the
+# free tier refuses with a 402 -- so every push ended in an error that had
+# nothing to do with what was being pushed, and the real result got lost in it.
+#
+# Turn this on when profile photos arrive; they will need a bucket and its own
+# RLS policies.
+[storage]
+enabled = false
