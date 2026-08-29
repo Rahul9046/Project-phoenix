@@ -108,9 +108,9 @@ enable_confirmations = false
 # Live. Credentials are in .env.local and read through env() below; nothing
 # secret is written here.
 #
-# Apple and Facebook stay off until their credentials exist. Enabling a provider
-# without a client id puts a button on the login screen that leads to a raw JSON
-# error page -- see lib/data/auth-settings.ts.
+# Apple stays off until its credentials exist. Enabling a provider without a
+# client id puts a button on the login screen that leads to a raw JSON error
+# page -- see lib/data/auth-settings.ts.
 [auth.external.google]
 enabled = true
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
@@ -121,8 +121,12 @@ enabled = false
 client_id = "env(SUPABASE_AUTH_APPLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 
+# Live, in Meta's Development mode: only app admins, developers and testers can
+# sign in until Business Verification and App Review are done. The button is
+# shown regardless, because Supabase reports the provider as enabled -- a
+# non-tester who presses it is refused by Facebook, not by Eraya.
 [auth.external.facebook]
-enabled = false
+enabled = true
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
 
