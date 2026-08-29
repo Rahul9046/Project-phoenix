@@ -8,8 +8,10 @@ import { AuthLoading } from "@/features/auth/components/AuthLoading";
 import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
 import { WebAppNote } from "@/features/auth/components/WebAppNote";
+import { primaryButtonClasses } from "@/shared/ui/PrimaryButton";
 import { secondaryButtonClasses } from "@/shared/ui/SecondaryButton";
 import { completeStep } from "@/features/auth/content";
+import { appRoutes } from "@/features/app-shell/nav";
 import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 
@@ -42,10 +44,14 @@ export function CompleteScreen() {
 
       <div className="mt-9 grid gap-3">
         {/*
-          Profile setup is the next phase of work and has no route yet. Rather
-          than link to a 404, this returns to Eraya — and the button will point
-          at the profile builder the moment it exists.
+          The handover into the product. This used to point at "/" because the
+          signed-in application did not exist; it does now, so the primary
+          action goes there and the marketing site becomes the secondary way out.
         */}
+        <Link href={appRoutes.home} className={`${primaryButtonClasses} w-full`}>
+          {completeStep.cta}
+        </Link>
+
         <Link href="/" className={`${secondaryButtonClasses} w-full`}>
           {completeStep.secondaryCta}
         </Link>
