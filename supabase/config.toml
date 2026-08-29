@@ -105,11 +105,14 @@ enable_confirmations = false
 # Enabling one here without a client_id would therefore put a button on the login
 # screen that breaks. Register the OAuth app first, set the environment
 # variables, then flip `enabled` to true and run `supabase config push`.
-# Flip to true only once SUPABASE_AUTH_GOOGLE_CLIENT_ID and _SECRET are set in
-# .env.local, then `supabase config push`. Enabling it without credentials puts a
-# Google button on the login screen that leads to a raw JSON error page.
+# Live. Credentials are in .env.local and read through env() below; nothing
+# secret is written here.
+#
+# Apple and Facebook stay off until their credentials exist. Enabling a provider
+# without a client id puts a button on the login screen that leads to a raw JSON
+# error page -- see lib/data/auth-settings.ts.
 [auth.external.google]
-enabled = false
+enabled = true
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
