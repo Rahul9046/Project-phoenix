@@ -264,3 +264,68 @@ charge.
 
 `'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
 the current term.
+
+## Email
+
+### Custom SMTP is not optional
+
+Supabase's built-in email service does three things that make it unusable beyond
+development, and configuring SMTP lifts all three at once, on the free plan:
+
+| Built-in | With custom SMTP |
+| --- | --- |
+| Delivers only to project members | Delivers to anyone |
+| Two messages an hour | Provider's limit |
+| **Templates cannot be edited at all** | Templates apply |
+
+That third one is not documented anywhere obvious. Pushing a template without
+SMTP fails with: *"Email template modification is not available for free tier
+projects using the default email provider."* Configuring SMTP is therefore a
+prerequisite for branding the email at all, not merely for delivering it.
+
+SMTP is configured. `SUPABASE_SMTP_HOST`, `SUPABASE_SMTP_USER` and
+`SUPABASE_SMTP_PASS` live in `.env.local`; apply any template change with:
+
+```
+supabase config push
+```
+
+The sending domain needs SPF and DKIM records. The sender mailbox does not need
+to receive anything: mail goes out as `no-reply@eraya.app`, and the address that
+is actually read, `hello@eraya.app`, is named in the body so a reply is never
+silently lost.
+
+### Templates live in the repository
+
+`supabase/config.toml` points `[auth.email.template.*]` at
+`supabase/templates/magic-link.html`. Same reasoning as the migrations: a
+template that exists only in one project's dashboard cannot be reviewed,
+reproduced or rolled back — and this is the first thing a new member sees of
+Eraya.
+
+The template links to `/auth/confirm?token_hash=…` rather than Supabase's verify
+endpoint, which is what makes a link requested on one device work when opened on
+another. See "The two shapes an email link can arrive in" above.
+
+The logo is a PNG, generated from `mark.ts` by
+`scripts/build-email-logo.mjs` — the same geometry as the favicon and the site
+header, so it cannot drift. Regenerate it if the mark is ever revised:
+
+```
+node scripts/build-email-logo.mjs
+```
+
+It sits beside a text wordmark rather than replacing it, because most clients
+block images by default and an image-only header arrives as a broken icon.
+
+### A trap in `supabase config push`
+
+It pushes the **whole** file, not just the section you changed. `config.toml`
+previously declared all three OAuth providers `enabled = true` with empty
+credentials, so a push would have switched Google on with no client id — and
+`auth-settings.ts` renders a button for any provider the live project reports as
+enabled. The result would have been a Google button that ejects people onto a raw
+JSON error page.
+
+They are now `enabled = false`, matching the live project. Register the OAuth
+app, set the environment variables, then flip the flag.

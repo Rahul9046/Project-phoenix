@@ -1,0 +1,113 @@
+<!--
+  Eraya sign-in link.
+
+  Table-based layout with inline styles, because email clients are not browsers:
+  Outlook renders through Word, Gmail strips <style> blocks in some contexts, and
+  flexbox and CSS variables are unreliable across the field. The brand palette is
+  written out as literals here for that reason — the one place in this project
+  where duplicating a token is correct.
+
+  No web fonts. Fraunces cannot be relied on to load in an inbox, so the wordmark
+  uses a Georgia-first serif stack, the closest widely-installed match to the
+  brand's voice.
+
+  The link targets /auth/confirm with a token_hash rather than Supabase's own
+  verify endpoint. That matters: the default template returns a PKCE code, which
+  needs a verifier cookie from the browser that requested the link — so a link
+  requested on a laptop and opened on a phone fails. token_hash works anywhere.
+-->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fbf7f2;margin:0;padding:32px 12px;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e6dacb;border-radius:16px;">
+        <tr>
+          <td style="padding:32px 36px 0 36px;">
+            <!--
+              The mark and the wordmark, exactly as the site pairs them.
+
+              Two elements rather than one image on purpose. Most clients block
+              images by default, so an image-only header would arrive as a broken
+              icon and nothing else. The mark carries an empty alt because the
+              wordmark beside it already says "Eraya" — announcing it twice would
+              be noise for a screen reader.
+
+              The PNG is generated from the same geometry as the favicon by
+              scripts/build-email-logo.mjs, so it cannot drift from the site.
+            -->
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle;">
+                  <img src="{{ .SiteURL }}/brand/eraya-mark.png"
+                       width="44" height="44" alt=""
+                       style="display:block;width:44px;height:44px;border:0;border-radius:10px;" />
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#2a211c;">
+                    Eraya
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 36px 0 36px;">
+            <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.25;font-weight:600;letter-spacing:-0.02em;color:#2a211c;">
+              Your sign-in link
+            </h1>
+            <p style="margin:14px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#6b5b51;">
+              Use the button below to sign in to Eraya. It works once, and expires in an hour.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 36px 0 36px;">
+            <!--
+              A padded anchor rather than a styled table cell: the most widely
+              supported option that still degrades to a plain link when a client
+              strips the styling.
+            -->
+            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email"
+               style="display:inline-block;background-color:#bd4f33;color:#fbf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1;text-decoration:none;padding:16px 30px;border-radius:999px;">
+              Sign in to Eraya
+            </a>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 36px 0 36px;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+              If the button does not work, copy this address into your browser:
+            </p>
+            <p style="margin:8px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;word-break:break-all;color:#a8452c;">
+              {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 36px 34px 36px;">
+            <div style="border-top:1px solid #e6dacb;padding-top:20px;">
+              <!--
+                Said plainly. An unexpected sign-in email is alarming, and the
+                reassurance is the useful part rather than the boilerplate.
+              -->
+              <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+                If you did not ask to sign in, you can ignore this email. Nothing will happen, and nobody can use this link but you.
+              </p>
+              <!--
+                This address is sent from a no-reply mailbox, so the one that
+                does read replies is named here rather than left to be guessed.
+              -->
+              <p style="margin:14px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+                Need a hand? Write to <a href="mailto:hello@eraya.app" style="color:#a8452c;text-decoration:underline;">hello@eraya.app</a> and a person will answer.
+              </p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
