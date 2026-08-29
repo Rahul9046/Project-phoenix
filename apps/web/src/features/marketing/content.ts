@@ -22,7 +22,6 @@ export const site = {
  */
 
 /** Value used by the form when someone is not in a launch city. */
-export const otherCityValue = "Another city";
 
 export const navLinks = [
   { label: "How it works", href: "#how-it-works" },
@@ -30,6 +29,17 @@ export const navLinks = [
   { label: "Pricing", href: "/pricing" },
   { label: "About Eraya", href: "#about" },
 ] as const;
+
+/** Wording for the searchable city field on the landing form. */
+export const citySearch = {
+  fieldLabel: "Where do you live?",
+  hint: "Every city in India. Type a few letters to find yours.",
+  searchLabel: "Search for your city",
+  searchPlaceholder: "Start typing your city",
+  searching: "Searching…",
+  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
+  changeCta: "Change",
+} as const;
 
 export const hero = {
   eyebrow: "For those beginning again",
@@ -180,7 +190,7 @@ export const finalCta = {
 export const begin = {
   eyebrow: "Begin your journey",
   title: "Tell us where to find you.",
-  lede: "If you are in one of our first cities, you will be among the first invited when Eraya opens. If you are elsewhere, we will add you to the waitlist and let you know when we reach your city.",
+  lede: "Eraya is welcoming members across India as we build our community, city by city. Tell us where you are and we will let you know as soon as we open.",
   reassurance:
     "We will only contact you about Eraya. Your details are never sold or shared.",
 } as const;

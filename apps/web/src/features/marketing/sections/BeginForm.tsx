@@ -5,7 +5,9 @@ import { useFormStatus } from "react-dom";
 
 import { joinWaitlist, type WaitlistState } from "@/features/waitlist/actions";
 import { Button } from "@/shared/ui/Button";
-import { begin, otherCityValue } from "@/features/marketing/content";
+import { begin, citySearch } from "@/features/marketing/content";
+import { CitySearch } from "@/shared/ui/CitySearch";
+import type { CityResult } from "@/shared/data/cities";
 
 const initialState: WaitlistState = { status: "idle" };
 
@@ -53,18 +55,18 @@ function SubmitButton() {
   );
 }
 
-export function BeginForm({ cities }: { cities: string[] }) {
+export function BeginForm() {
   const [state, formAction] = useActionState(joinWaitlist, initialState);
-  const [city, setCity] = useState("");
+  // The whole city, not just its name: the server stores an id so the waitlist
+  // can be reconciled against real places rather than free text.
+  const [city, setCity] = useState<CityResult | null>(null);
   const ids = {
     name: useId(),
     email: useId(),
     city: useId(),
-    otherCity: useId(),
   };
 
   const errors = state.status === "error" ? state.fieldErrors : {};
-  const isOther = city === otherCityValue;
 
   if (state.status === "success") {
     return (
@@ -118,50 +120,24 @@ export function BeginForm({ cities }: { cities: string[] }) {
 
         <Field
           htmlFor={ids.city}
-          label="Where do you live?"
-          hint="Choose your city, or select “Another city” if it is not listed."
+          label={citySearch.fieldLabel}
+          hint={city ? undefined : citySearch.hint}
           error={errors.city}
         >
-          <select
-            id={ids.city}
-            name="city"
-            required
-            value={city}
-            onChange={(event) => setCity(event.target.value)}
-            aria-invalid={Boolean(errors.city)}
-            className={fieldClasses}
-          >
-            <option value="" disabled>
-              Select a city
-            </option>
-            {cities.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-            <option value={otherCityValue}>{otherCityValue}</option>
-          </select>
-        </Field>
-
-        {isOther ? (
-          <Field
-            htmlFor={ids.otherCity}
-            label="Which city?"
-            hint="Eraya is not open here yet — we will let you know when it is."
-            error={errors.otherCity}
-          >
-            <input
-              id={ids.otherCity}
-              name="otherCity"
-              type="text"
-              autoComplete="address-level2"
-              required
-              aria-invalid={Boolean(errors.otherCity)}
-              className={fieldClasses}
-              placeholder="Your city"
+          {/*
+            The id travels, not the name. Two Indian cities share a name often
+            enough that a string is ambiguous, and the waitlist is more useful
+            reconciled against real rows than against what someone typed.
+          */}
+          <input type="hidden" name="cityId" value={city?.id ?? ""} />
+          <div className="mt-2">
+            <CitySearch
+              labels={citySearch}
+              value={city}
+              onChange={setCity}
             />
-          </Field>
-        ) : null}
+          </div>
+        </Field>
       </div>
 
       {/* Honeypot — hidden from people, tempting to bots. */}

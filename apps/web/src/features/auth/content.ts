@@ -105,15 +105,23 @@ export const genderOptions = [
 
 export const cityStep = {
   title: "Where are you based?",
-  lede: "Your city helps us create meaningful local communities.",
-  otherLabel: "Another city",
-  otherFieldLabel: "Which city?",
-  otherFieldPlaceholder: "Your city",
-  /** Shown when someone picks a city Eraya has not reached yet. Never a refusal. */
-  elsewhereTitle: "Eraya is growing city by city.",
-  elsewhereBody:
-    "You can still create your account today. We'll let you know as Eraya becomes available in your area.",
-  error: "Choose your city to continue.",
+  lede: "Eraya is welcoming members across India as we build our community, city by city.",
+
+  searchLabel: "Search for your city",
+  searchPlaceholder: "Start typing your city",
+  searching: "Searching…",
+  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
+  changeCta: "Change",
+
+  /**
+   * The hint under the field. It exists to answer the question someone from a
+   * smaller city is actually asking — "is this for me?" — before they have to
+   * wonder. Everywhere in India is registerable, so there is nothing to soften
+   * and nothing to apologise for.
+   */
+  hint: "Every city in India is open. Type a few letters to find yours.",
+
+  error: "Search for your city and choose it to continue.",
   cta: "Continue",
 } as const;
 

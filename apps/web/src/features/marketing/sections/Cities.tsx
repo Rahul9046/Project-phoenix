@@ -3,12 +3,12 @@ import { Container } from "@/shared/ui/Container";
 import { Section } from "@/shared/ui/Section";
 import { SectionHeading } from "@/shared/ui/SectionHeading";
 import { cities } from "@/features/marketing/content";
-import { getActiveCities } from "@/shared/data/reference";
+import { getFocusCities } from "@/shared/data/reference";
 
 export async function Cities() {
-  const launchCities = (await getActiveCities()).filter(
-    (city) => city.isLaunchCity,
-  );
+  // Where the community is densest, not where registration is allowed. Anyone
+  // in India can join from anywhere; this list is about focus, not permission.
+  const focusCities = await getFocusCities();
 
   return (
     <Section id="cities" tone="sand">
@@ -32,7 +32,7 @@ export async function Cities() {
             First cities
           </h3>
           <ul className="mt-6">
-            {launchCities.map((city) => (
+            {focusCities.map((city) => (
               <li
                 key={city.id}
                 className="flex items-baseline justify-between gap-4 border-b border-line py-4 last:border-b-0"
@@ -40,7 +40,7 @@ export async function Cities() {
                 <span className="font-serif text-xl tracking-[-0.01em] text-ink">
                   {city.name}
                 </span>
-                <span className="text-sm text-ink-subtle">India</span>
+                <span className="text-sm text-ink-subtle">{city.state ?? "India"}</span>
               </li>
             ))}
           </ul>

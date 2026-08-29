@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -41,31 +41,49 @@ export type Database = {
     Tables: {
       cities: {
         Row: {
+          country_code: string
           created_at: string
           id: string
           is_active: boolean
           is_launch_city: boolean
+          latitude: number | null
+          longitude: number | null
           name: string
+          search_terms: string | null
           slug: string
           sort_order: number
+          state: string | null
+          state_code: string | null
         }
         Insert: {
+          country_code?: string
           created_at?: string
           id?: string
           is_active?: boolean
           is_launch_city?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name: string
+          search_terms?: string | null
           slug: string
           sort_order?: number
+          state?: string | null
+          state_code?: string | null
         }
         Update: {
+          country_code?: string
           created_at?: string
           id?: string
           is_active?: boolean
           is_launch_city?: boolean
+          latitude?: number | null
+          longitude?: number | null
           name?: string
+          search_terms?: string | null
           slug?: string
           sort_order?: number
+          state?: string | null
+          state_code?: string | null
         }
         Relationships: []
       }
@@ -376,7 +394,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      search_cities: {
+        Args: { max_results?: number; query: string }
+        Returns: {
+          id: string
+          is_launch_city: boolean
+          name: string
+          state: string
+          state_code: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       entitlement_kind: "boolean" | "number"
