@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Scratch previews served through public/ during development. Regenerate with:
+#   sed -e 's|{{ .SiteURL }}|http://localhost:3000|g' #       supabase/templates/magic-link.html > apps/web/public/__preview.html
+apps/web/public/__*
