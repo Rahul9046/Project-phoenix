@@ -42,6 +42,12 @@ is mocked -- any six digits pass, no SMS is sent -- so no member is shown a
 that runs ahead of the system is worse than none, because the person relying on
 it is a stranger deciding whether to meet someone.
 
+**Never run `supabase config push` directly. Use `npm run config:push`.** The
+config refers to OAuth credentials as `env(NAME)`, and when a variable is missing
+the CLI pushes the literal text `env(NAME)` as the value rather than failing --
+silently breaking Google and Facebook sign-in with a completely successful-looking
+push. The wrapper refuses when a required value is absent.
+
 **Revoke from `public`, not from `anon`.** `create function` grants EXECUTE to
 PUBLIC and `anon` inherits it, so `revoke ... from anon` does nothing. Every
 member-facing function must `revoke execute ... from public, anon` and then

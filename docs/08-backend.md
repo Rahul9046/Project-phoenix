@@ -332,6 +332,38 @@ charge.
 `'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
 the current term.
 
+## Pushing config: never use the CLI directly
+
+Use `npm run config:push`, not `supabase config push`.
+
+`supabase/config.toml` refers to the OAuth credentials as
+`env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)` and so on, which is right -- the file is
+committed and the credentials must not be. The trap is what the CLI does when one
+of those variables is missing from the environment. It does not fail and it does
+not warn: it pushes the **literal string** `env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)`
+as the client id, and the project stores it. Anyone pressing "Continue with
+Google" is then sent to Google with that text as the client id and told the app
+is misconfigured, while the push output looks entirely successful.
+
+That is not hypothetical. Several pushes for unrelated reasons -- redirect URLs,
+mostly -- silently wiped both providers, and it surfaced only when someone tried
+to sign in.
+
+The variables live in `apps/web/.env.local`, which the CLI does not read.
+`scripts/supabase-config.mjs` reads them, works out which are actually required
+(only from sections where `enabled = true`, so a disabled provider like Apple
+does not block anything), refuses to push if any is missing, and prints the names
+it substituted -- never the values.
+
+After changing anything about a provider, check it rather than trusting the
+output:
+
+```
+curl -si "$SUPABASE_URL/auth/v1/authorize?provider=google&redirect_to=http://localhost:3000/auth/callback" | grep -i location
+```
+
+A `client_id=env%28...%29` in that redirect means the credentials were wiped.
+
 ## Email
 
 ### Custom SMTP is not optional
