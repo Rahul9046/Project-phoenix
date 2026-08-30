@@ -24,6 +24,36 @@ import type { OnboardingProfile } from "@/features/auth/types";
  * ever mounts once the stored profile is known. Its `useState` can then seed
  * itself directly — no effect copying store state into component state.
  */
+/**
+ * The latest date of birth that makes someone 18 today, as yyyy-mm-dd.
+ *
+ * Used for both the picker's `max` and the check below, so the two can never
+ * disagree about where the line is.
+ */
+function latestAdultBirthDate(): string {
+  const today = new Date();
+  const boundary = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate(),
+  );
+
+  /*
+   * Formatted from local parts, not toISOString().
+   *
+   * toISOString() converts to UTC first, so east of Greenwich midnight local
+   * becomes the previous day — in IST this produced a boundary one day stricter
+   * than the database's, quietly turning away anyone whose eighteenth birthday
+   * is today. The check compares against a date the picker also uses, so both
+   * have to agree with Postgres, not merely with each other.
+   */
+  const year = boundary.getFullYear();
+  const month = String(boundary.getMonth() + 1).padStart(2, "0");
+  const day = String(boundary.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export function BasicsScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.basics);
   if (!allowed) return <AuthLoading />;
@@ -54,12 +84,24 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
     event.preventDefault();
     if (pending) return;
 
-    // Presence only. The database enforces what actually matters — that a date
-    // of birth is 18 or more years ago, and that gender is one of the known
-    // values — so the form does not duplicate those rules.
+    /*
+     * The database remains the authority on these rules — it must, since an API
+     * call can skip this screen entirely. But it cannot be the only place they
+     * are checked.
+     *
+     * A rejected constraint arrives here as a generic failure, and the member is
+     * told to "try again in a moment": advice that cannot work, for a problem
+     * they were never told about. Checking the age here is not duplication, it
+     * is the difference between a person being told what is wrong and a person
+     * retrying forever.
+     */
     const next: typeof errors = {};
     if (!firstName.trim()) next.firstName = basicsStep.firstName.error;
-    if (!dateOfBirth) next.dateOfBirth = basicsStep.dateOfBirth.error;
+    if (!dateOfBirth) {
+      next.dateOfBirth = basicsStep.dateOfBirth.error;
+    } else if (dateOfBirth > latestAdultBirthDate()) {
+      next.dateOfBirth = basicsStep.dateOfBirth.tooYoung;
+    }
     if (!gender) next.gender = basicsStep.gender.error;
 
     setErrors(next);
@@ -131,6 +173,10 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               {...props}
               type="date"
               autoComplete="bday"
+              // The picker cannot offer a date that would be refused. Without
+              // this it happily defaults to the current month, which is how a
+              // birth date three weeks in the past gets submitted.
+              max={latestAdultBirthDate()}
               value={dateOfBirth}
               onChange={(event) => setDateOfBirth(event.target.value)}
               className={inputClasses}
