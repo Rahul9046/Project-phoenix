@@ -147,7 +147,18 @@ export async function reportMember(
 
   const { error } = await supabase
     .from("member_reports")
-    .insert({ reporter_id: user.id, reported_id: targetId, reason: trimmed });
+    .insert({
+      reporter_id: user.id,
+      reported_id: targetId,
+      /*
+       * The web has no category picker, so everything it files is "other" with
+       * the person's own words in `description`. That is the honest mapping:
+       * inventing a category from free text would put a label on a report that
+       * the reporter did not choose.
+       */
+      reason_code: "other",
+      description: trimmed,
+    });
 
   return { ok: !error };
 }
