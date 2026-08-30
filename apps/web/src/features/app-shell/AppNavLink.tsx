@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { LinkPending } from "@/shared/ui/LinkPending";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -31,6 +33,8 @@ export function AppNavLink({
       }`}
     >
       {children}
+      {/* Confirms the tap during the gap before loading.tsx appears. */}
+      <LinkPending className="ml-1.5" />
     </Link>
   );
 }

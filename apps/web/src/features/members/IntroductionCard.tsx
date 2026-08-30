@@ -13,6 +13,7 @@ import {
 } from "@/features/members/MemberPresentation";
 import type { MemberCard } from "@/features/members/data";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
+import { Spinner } from "@/shared/ui/Spinner";
 
 /**
  * One introduction, and the two things you can do about it.
@@ -31,9 +32,12 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
     "idle" | "working" | "interested" | "connected" | "passed"
   >("idle");
   const [error, setError] = useState<string | null>(null);
+  /* Which of the two was pressed, so only that button shows the spinner. */
+  const [pressed, setPressed] = useState<"interested" | "passed" | null>(null);
 
   async function decide(interested: boolean) {
     if (state === "working") return;
+    setPressed(interested ? "interested" : "passed");
     setState("working");
     setError(null);
 
@@ -44,6 +48,7 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
     if (!result.ok) {
       setError(result.message);
       setState("idle");
+      setPressed(null);
       return;
     }
 
@@ -108,20 +113,29 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
         "not for me" a grey whisper is how an interface leans on someone.
       */}
       <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        {/*
+          Both buttons show which one was pressed. Disabling them without saying
+          why leaves someone unsure whether the tap registered -- and the write
+          involves a database round trip, so the pause is real.
+        */}
         <button
           type="button"
           onClick={() => decide(true)}
           disabled={state === "working"}
-          className="inline-flex min-h-13 items-center justify-center rounded-full border border-ember bg-ember px-5 py-3.5 text-[0.95rem] font-medium text-canvas transition-colors hover:bg-ember-strong disabled:opacity-60"
+          aria-busy={pressed === "interested" || undefined}
+          className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full border border-ember bg-ember px-5 py-3.5 text-[0.95rem] font-medium text-canvas transition-colors hover:bg-ember-strong disabled:opacity-60"
         >
+          {pressed === "interested" ? <Spinner className="h-4 w-4" /> : null}
           {discovery.interested}
         </button>
         <button
           type="button"
           onClick={() => decide(false)}
           disabled={state === "working"}
-          className="inline-flex min-h-13 items-center justify-center rounded-full border border-line-strong bg-surface px-5 py-3.5 text-[0.95rem] font-medium text-ink transition-colors hover:border-ink hover:bg-sand disabled:opacity-60"
+          aria-busy={pressed === "passed" || undefined}
+          className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full border border-line-strong bg-surface px-5 py-3.5 text-[0.95rem] font-medium text-ink transition-colors hover:border-ink hover:bg-sand disabled:opacity-60"
         >
+          {pressed === "passed" ? <Spinner className="h-4 w-4" /> : null}
           {discovery.pass}
         </button>
       </div>

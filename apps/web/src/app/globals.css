@@ -96,6 +96,50 @@ body {
   animation: eraya-rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
+/*
+  Skeleton shimmer.
+
+  A slow sweep rather than a pulse. Pulsing draws the eye rhythmically and makes
+  a half-second wait feel like an event; a sweep reads as "this is arriving" and
+  stops being noticed almost immediately -- which is the point. Two seconds is
+  deliberately slower than most implementations, for the same reason.
+
+  The gradient is built from the palette so a loading screen looks like Eraya
+  rather than a grey wireframe borrowed from somewhere else.
+*/
+/*
+  Used to delay a pending spinner by a fraction of a second.
+
+  A navigation that resolves quickly should not flash a spinner on the way past.
+  A control that flickers on every tap reads as unreliable; one that stays still
+  until the wait is real reads as solid.
+*/
+@keyframes eraya-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes eraya-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-sand) 25%,
+    var(--color-line) 37%,
+    var(--color-sand) 63%
+  );
+  background-size: 200% 100%;
+  animation: eraya-shimmer 2s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -103,6 +147,17 @@ body {
 
   .animate-rise {
     animation: none;
+  }
+
+  /*
+    Reduced motion keeps the placeholder, drops the movement. Removing the
+    skeleton entirely would leave a blank screen, which is the problem it was
+    added to solve.
+  */
+  .animate-shimmer {
+    animation: none;
+    background-image: none;
+    background-color: var(--color-sand);
   }
 
   *,
