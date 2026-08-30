@@ -3,16 +3,23 @@ import { Container } from "@/shared/ui/Container";
 import { Section } from "@/shared/ui/Section";
 import { SectionHeading } from "@/shared/ui/SectionHeading";
 import { cities } from "@/features/marketing/content";
-import { getFocusCities } from "@/shared/data/reference";
+import { getCityCoverage } from "@/shared/data/reference";
 
+/**
+ * Where Eraya is available.
+ *
+ * This used to list seven cities under "Where the community is densest" — a
+ * claim about member distribution, drawn from a hardcoded flag, on a page that
+ * says anyone in India can join. Both the claim and the implied restriction are
+ * gone. What is shown instead is a number counted from the cities table, which
+ * cannot drift away from what the search field will actually accept.
+ */
 export async function Cities() {
-  // Where the community is densest, not where registration is allowed. Anyone
-  // in India can join from anywhere; this list is about focus, not permission.
-  const focusCities = await getFocusCities();
+  const coverage = await getCityCoverage();
 
   return (
     <Section id="cities" tone="sand">
-      <Container className="grid gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-20">
+      <Container className="grid gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-20">
         <div>
           <SectionHeading
             eyebrow={cities.eyebrow}
@@ -28,25 +35,16 @@ export async function Cities() {
         </div>
 
         <div className="border border-line-strong bg-canvas p-8 sm:p-10">
-          <h3 className="text-xs font-medium uppercase tracking-[0.2em] text-ink-subtle">
-            Where the community is densest
-          </h3>
-          <ul className="mt-6">
-            {focusCities.map((city) => (
-              <li
-                key={city.id}
-                className="flex items-baseline justify-between gap-4 border-b border-line py-4 last:border-b-0"
-              >
-                <span className="font-serif text-xl tracking-[-0.01em] text-ink">
-                  {city.name}
-                </span>
-                <span className="text-sm text-ink-subtle">{city.state ?? "India"}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 text-sm leading-relaxed text-ink-subtle">
-            Anyone in India can join from anywhere. This is where you are most
-            likely to meet someone today.
+          <p className="font-serif text-6xl leading-none tracking-[-0.03em] text-ink sm:text-7xl">
+            {coverage.cities}
+          </p>
+          <p className="mt-4 text-lg leading-relaxed text-ink-muted">
+            cities and towns to choose from, across all {coverage.states} states
+            and union territories.
+          </p>
+          <p className="mt-6 border-t border-line pt-6 text-sm leading-relaxed text-ink-subtle">
+            Your city is on the list. It decides who you are likely to meet
+            nearby — never whether you can join.
           </p>
         </div>
       </Container>

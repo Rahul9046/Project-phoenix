@@ -20,12 +20,14 @@ import {
  * line of text — which is needed here, since several Indian cities share a name
  * and only the state tells them apart.
  *
- * Nothing here filters by availability. Every city is selectable; the focus
- * cities affect result *order* and nothing else.
+ * Nothing here filters by availability. Every one of the 493 cities is
+ * selectable, and where someone lives gates nothing — not registration, not
+ * onboarding, not who they are introduced to.
  *
- * Lives in shared/ because two features need it — onboarding and the landing
- * page waitlist. Its wording is passed in rather than imported, so neither
- * feature has to reach into the other's copy file to change a placeholder.
+ * Lives in shared/ and takes its wording as a prop. Only onboarding uses it
+ * today; the landing page had a second copy of this field, above a waitlist
+ * form, and both are gone. The prop stays because the alternative is a shared
+ * component reaching into one feature's copy file.
  */
 
 export type CitySearchLabels = {

@@ -253,7 +253,7 @@ export async function getProfileCompleteness(): Promise<{
       label: "Languages",
       done: Boolean(profile?.languages_undisclosed) || (languages?.length ?? 0) > 0,
     },
-    { label: "Phone verified", done: Boolean(profile?.phone_verified_at) },
+    { label: "Phone number added", done: Boolean(profile?.phone_verified_at) },
   ];
 
   return {

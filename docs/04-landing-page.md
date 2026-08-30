@@ -83,25 +83,29 @@ States the principle and stops. Mechanics belong in the product, not on a
 landing page.
 
 ### 7. Cities — `Cities`
-Explains why Eraya opens in a few cities: a community needs people in it to be
-worth joining, so a handful of cities grown properly beats a national launch
-into empty profiles.
+Says that Eraya is open everywhere in India, and shows how much of it is
+selectable: a count of cities and states read from the `cities` table at request
+time.
 
-Lists Hyderabad, Delhi, Kolkata, Mumbai, Pune, Aizawl and Chennai — read from
-the `cities` table at request time rather than hardcoded,
-and tells anyone elsewhere in India to join the waitlist. This is the section
-that makes the waitlist mean something specific rather than a generic email
-capture.
+This section used to explain why Eraya was opening in a few cities first and
+listed seven of them under "Where the community is densest". Both halves stopped
+being true. Registration is open India-wide, and `discover_members` applies no
+city filter at all, so there was no restriction for the copy to describe — and
+the density claim came from a hardcoded `is_launch_city` seed flag rather than
+from where members actually are. A count cannot drift the way that list could:
+add a city to the table and the page says 494.
 
-### 8. Begin — `Begin` / `BeginForm`
-One form serving both audiences. Name, email, city.
+### 8. Begin — `Begin`
+The closing invitation: create an account, or sign in if you already have one.
 
-- A launch city → early access list.
-- "Another city" → reveals a free-text city field, and the person joins the
-  **waitlist**.
+This was a waitlist form — name, email, city — and every call to action on the
+page pointed at it. That was coherent when Eraya opened in seven cities and
+everyone else was genuinely waiting. Once registration opened across India the
+page contradicted itself: it said anyone could join while the button collected an
+address and promised to be in touch "as soon as we open".
 
-The confirmation message differs accordingly, so nobody in a launch city is told
-they are waiting, and nobody outside one is told they are about to be let in.
+The `waitlist` table is kept and its rows with it; it is simply no longer
+reachable from any client. Every CTA on the page now leads to `/signup`.
 
 ### 9. Final CTA — `FinalCta`
 *Your next chapter doesn't have to begin alone.* The mark, the line, one button,

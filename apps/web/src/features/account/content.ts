@@ -12,13 +12,24 @@ export const account = {
   membershipTitle: "Membership",
 
   privacyTitle: "Privacy",
+  /*
+   * Rewritten when discovery shipped.
+   *
+   * This previously said "Eraya shows your profile to no one else yet" and
+   * "nobody can browse or search for your profile". Both were true when written
+   * and became false the day introductions started -- which is the failure mode
+   * of privacy copy: it is written once, describes a temporary state, and is not
+   * revisited when the state changes.
+   */
   privacyLede:
-    "Eraya shows your profile to no one else yet. Cross-member discovery is still being designed, and until the rules exist, nobody sees anybody.",
+    "What other members can see, and what they never can. These are enforced by the database, not by settings you have to find.",
   privacyPoints: [
-    "Your phone number is never shown on your profile.",
+    "You are introduced to a few people at a time, and appear in theirs. There is no directory and no way to search for you.",
+    "Your first name, age, city, chapter and languages are what another member sees.",
     "Your exact date of birth is never shown — only your age.",
-    "Your email address is never shown to another member.",
-    "Nobody can browse or search for your profile today.",
+    "Your email address and phone number are never shown to another member.",
+    "If someone passes on your profile, you are never told.",
+    "Nobody can message you unless you have both expressed interest.",
   ],
 
   settingsTitle: "Settings",
@@ -71,8 +82,13 @@ export const account = {
     signInMethod: "Sign-in method",
     memberSince: "Member since",
   },
-  phoneVerified: "Verified",
-  phoneUnverified: "Not verified",
+  /*
+   * Not "Verified". The OTP step is mocked -- any six digits pass and no SMS is
+   * sent -- so the only honest thing this pill can report is that the step was
+   * completed, which is exactly what it now says.
+   */
+  phoneVerified: "Added",
+  phoneUnverified: "Not added",
   languagesUndisclosed: "Prefer not to say",
   editCta: "Edit",
 } as const;

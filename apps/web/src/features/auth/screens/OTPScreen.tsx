@@ -16,14 +16,14 @@ import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describeAuthError } from "@/features/auth/describeAuthError";
 import { authRoutes, nextRoute } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
-import { maskPhone } from "@/features/auth/types";
+import { formatPhone } from "@/features/auth/types";
 
 /** Long enough to register as confirmation, short enough not to be a wait. */
 const SUCCESS_PAUSE_MS = 1100;
 
 export function OTPScreen() {
   const router = useRouter();
-  const { verifyCode, resendVerificationCode } = useAuth();
+  const { verifyCode } = useAuth();
   const fieldId = useId();
 
   const [verified, setVerified] = useState(false);
@@ -35,8 +35,6 @@ export function OTPScreen() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
 
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -83,23 +81,8 @@ export function OTPScreen() {
     }
   }
 
-  async function handleResend() {
-    if (resending) return;
-    setResending(true);
-    setResent(false);
-    setError(null);
-    try {
-      await resendVerificationCode();
-      setResent(true);
-    } catch (cause) {
-      setError(describeAuthError(cause));
-    } finally {
-      setResending(false);
-    }
-  }
-
   const lede = session.phone
-    ? `${otpStep.ledePrefix} ${maskPhone(session.phone)}.`
+    ? `${otpStep.ledePrefix} ${formatPhone(session.phone)}.`
     : otpStep.ledePrefix;
 
   return (
@@ -145,26 +128,12 @@ export function OTPScreen() {
         )}
       </form>
 
-      {verified ? null : (
-        <div className="mt-8 text-center text-[0.95rem] text-ink-muted">
-          <p>
-            {otpStep.resendPrompt}{" "}
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={resending}
-              className="rounded-full px-1 font-medium text-ember-text underline underline-offset-4 hover:text-ember-strong disabled:opacity-60"
-            >
-              {resending ? otpStep.resendPending : otpStep.resendCta}
-            </button>
-          </p>
-          {resent ? (
-            <p role="status" className="mt-2 text-sm text-ink-subtle">
-              {otpStep.resendConfirmation}
-            </p>
-          ) : null}
-        </div>
-      )}
+      {/*
+        No resend control while verification is mocked. Nothing is sent, so a
+        "Resend code" button would send nothing and then say it had. Restore it
+        along with the rest of the SMS path -- see
+        features/auth/phone-verification.ts.
+      */}
     </AuthLayout>
   );
 }

@@ -117,6 +117,13 @@ export function AuthSessionProvider({
     [client],
   );
 
+  /*
+   * No caller while phone verification is mocked -- the OTP screen dropped its
+   * resend control rather than offer a button that sends nothing. Kept because
+   * it is one half of the SMS seam described in
+   * features/auth/phone-verification.ts, and deleting it would only mean
+   * writing it again.
+   */
   const resendVerificationCode = useCallback(async () => {
     const phone = getPendingPhone();
     if (!phone) return;
