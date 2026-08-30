@@ -14,6 +14,7 @@ import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { saveBasics } from "@/features/auth/actions";
 import { basicsStep, genderOptions } from "@/features/auth/content";
+import type { Gender } from "@/features/auth/types";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { OnboardingProfile } from "@/features/auth/types";
@@ -38,7 +39,9 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
 
   const [firstName, setFirstName] = useState(profile.firstName ?? "");
   const [dateOfBirth, setDateOfBirth] = useState(profile.dateOfBirth ?? "");
-  const [gender, setGender] = useState<string | null>(profile.gender);
+  const [gender, setGender] = useState<Gender | null>(
+    (profile.gender as Gender | null) ?? null,
+  );
   const [errors, setErrors] = useState<{
     firstName?: string;
     dateOfBirth?: string;
@@ -60,7 +63,10 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
     if (!gender) next.gender = basicsStep.gender.error;
 
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    // `|| !gender` is redundant at runtime — the check above already set an
+    // error for it — but it is what narrows the type for the call below, so the
+    // compiler can see that a null gender never reaches the database.
+    if (Object.keys(next).length > 0 || !gender) return;
 
     setPending(true);
     setFormError(null);
@@ -68,7 +74,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
     const result = await saveBasics({
       firstName: firstName.trim(),
       dateOfBirth,
-      gender: gender as string,
+      gender,
     });
 
     if (!result.ok) {
@@ -149,7 +155,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
                 value={option.value}
                 label={option.label}
                 checked={gender === option.value}
-                onChange={setGender}
+                onChange={(value) => setGender(value as Gender)}
               />
             ))}
           </div>

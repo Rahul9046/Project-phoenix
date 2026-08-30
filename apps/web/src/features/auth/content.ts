@@ -1,4 +1,4 @@
-import type { RelationshipStatus } from "@/features/auth/types";
+import type { Gender, RelationshipStatus } from "@/features/auth/types";
 
 /**
  * Every word the sign-in and sign-up screens say.
@@ -96,12 +96,23 @@ export const basicsStep = {
   cta: "Continue",
 } as const;
 
-export const genderOptions = [
+/**
+ * The values here are the database's enum values, not display slugs.
+ *
+ * They used to be hyphenated ("non-binary") because this screen was written
+ * against a mocked provider that accepted any string. When the real enum arrived
+ * it used underscores, and nothing reconciled the two -- so choosing Non-binary
+ * or Prefer not to say failed for a fortnight while Woman and Man worked.
+ *
+ * The `Gender` annotation is the guard: this list can no longer drift from the
+ * database without failing the build.
+ */
+export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "woman", label: "Woman" },
   { value: "man", label: "Man" },
-  { value: "non-binary", label: "Non-binary" },
-  { value: "prefer-not-to-say", label: "Prefer not to say" },
-] as const;
+  { value: "non_binary", label: "Non-binary" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
 
 export const cityStep = {
   title: "Where are you based?",

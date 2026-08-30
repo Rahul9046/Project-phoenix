@@ -63,7 +63,7 @@ async function advanceStage(
 export async function saveBasics(input: {
   firstName: string;
   dateOfBirth: string;
-  gender: string;
+  gender: Gender;
 }): Promise<ActionResult> {
   const userId = await requireUserId();
   if (!userId) return { ok: false, message: "Please sign in again." };
@@ -75,7 +75,9 @@ export async function saveBasics(input: {
     .update({
       first_name: input.firstName.trim(),
       date_of_birth: input.dateOfBirth,
-      gender: input.gender as Gender,
+      // No cast. `input.gender` is typed as Gender by the caller, so a value the
+      // enum does not accept is now a build error rather than a runtime 22P02.
+      gender: input.gender,
       onboarding_stage: await advanceStage(userId, "onboarding_started"),
     })
     .eq("id", userId);

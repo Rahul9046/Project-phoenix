@@ -1,3 +1,5 @@
+import type { Database } from "@/lib/supabase/database.types";
+
 /**
  * The shape of Eraya's account state.
  *
@@ -42,6 +44,16 @@ export function stageAtLeast(stage: AuthStage, required: AuthStage): boolean {
  * this is not a general-purpose dating product.
  */
 export type RelationshipStatus = "divorced" | "separated" | "widowed";
+
+/**
+ * Taken from the generated database types rather than restated here.
+ *
+ * Restating it is what caused the bug this replaced: the screen offered
+ * "non-binary" while the enum held "non_binary", and a cast in the save action
+ * hid the difference from the compiler. Anything that must equal a database enum
+ * should be derived from it.
+ */
+export type Gender = Database["public"]["Enums"]["gender"];
 
 export type AuthUser = {
   id: string;
