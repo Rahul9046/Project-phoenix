@@ -20,6 +20,58 @@ export type ActionResult = { ok: true } | { ok: false; message: string };
 const GENERIC_FAILURE =
   "We couldn't save that just now. Please try again in a moment.";
 
+/**
+ * Says what actually went wrong, on the server.
+ *
+ * These actions returned a generic sentence and discarded the database error
+ * entirely, which is fine for the member and useless for anyone trying to work
+ * out why a save failed -- the message is identical whether the cause is an
+ * invalid enum, a constraint, an expired session or a dropped connection.
+ *
+ * The member still sees the generic sentence. Postgres error text is written for
+ * developers and can name columns and constraints, which is not something to put
+ * in front of someone.
+ */
+/**
+ * Turns a database rejection into something the member can act on.
+ *
+ * "Please try again in a moment" is the right sentence for a dropped connection
+ * and precisely the wrong one for a violated constraint: the value is the
+ * problem, so retrying is guaranteed to fail. Someone following that advice
+ * retries forever and concludes the product is broken.
+ *
+ * Only constraints whose cause a member can actually fix are named. Everything
+ * else stays generic, because Postgres error text is written for developers.
+ */
+function describeSaveFailure(error: unknown): string {
+  const code = (error as { code?: string } | null)?.code;
+  const message = (error as { message?: string } | null)?.message ?? "";
+
+  if (code === "23514" && message.includes("profiles_date_of_birth_adult")) {
+    return "Eraya is for people aged 18 and over. Please check the year in your date of birth.";
+  }
+
+  if (code === "22P02") {
+    return "One of those answers was not recognised. Please reselect it and try again.";
+  }
+
+  return GENERIC_FAILURE;
+}
+
+function logFailure(where: string, error: unknown) {
+  const detail =
+    error && typeof error === "object"
+      ? {
+          code: (error as { code?: string }).code,
+          message: (error as { message?: string }).message,
+          details: (error as { details?: string }).details,
+          hint: (error as { hint?: string }).hint,
+        }
+      : { message: String(error) };
+
+  console.error(`[eraya] ${where} failed:`, detail);
+}
+
 type Gender = Database["public"]["Enums"]["gender"];
 type RelationshipStatus = Database["public"]["Enums"]["relationship_status"];
 
@@ -63,7 +115,7 @@ async function advanceStage(
 export async function saveBasics(input: {
   firstName: string;
   dateOfBirth: string;
-  gender: string;
+  gender: Gender;
 }): Promise<ActionResult> {
   const userId = await requireUserId();
   if (!userId) return { ok: false, message: "Please sign in again." };
@@ -75,12 +127,17 @@ export async function saveBasics(input: {
     .update({
       first_name: input.firstName.trim(),
       date_of_birth: input.dateOfBirth,
-      gender: input.gender as Gender,
+      // No cast. `input.gender` is typed as Gender by the caller, so a value the
+      // enum does not accept is now a build error rather than a runtime 22P02.
+      gender: input.gender,
       onboarding_stage: await advanceStage(userId, "onboarding_started"),
     })
     .eq("id", userId);
 
-  if (error) return { ok: false, message: GENERIC_FAILURE };
+  if (error) {
+    logFailure("profile action", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
 
   revalidatePath("/onboarding", "layout");
   return { ok: true };
@@ -111,7 +168,10 @@ export async function saveCity(input: {
     })
     .eq("id", userId);
 
-  if (error) return { ok: false, message: GENERIC_FAILURE };
+  if (error) {
+    logFailure("profile action", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
 
   revalidatePath("/onboarding", "layout");
   return { ok: true };
@@ -133,7 +193,10 @@ export async function saveRelationshipStatus(
     })
     .eq("id", userId);
 
-  if (error) return { ok: false, message: GENERIC_FAILURE };
+  if (error) {
+    logFailure("saveRelationshipStatus", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
 
   revalidatePath("/onboarding", "layout");
   return { ok: true };
@@ -184,7 +247,10 @@ export async function saveLanguages(input: {
     })
     .eq("id", userId);
 
-  if (error) return { ok: false, message: GENERIC_FAILURE };
+  if (error) {
+    logFailure("profile action", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
 
   revalidatePath("/onboarding", "layout");
   return { ok: true };
@@ -212,7 +278,10 @@ export async function markPhoneVerified(): Promise<ActionResult> {
     })
     .eq("id", userId);
 
-  if (error) return { ok: false, message: GENERIC_FAILURE };
+  if (error) {
+    logFailure("markPhoneVerified", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
 
   revalidatePath("/", "layout");
   return { ok: true };

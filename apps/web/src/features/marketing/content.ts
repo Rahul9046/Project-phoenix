@@ -44,10 +44,16 @@ export const citySearch = {
 export const hero = {
   eyebrow: "For those beginning again",
   headline: ["Every ending can be", "a new beginning."],
-  lede: "Eraya is a trusted community for people who are divorced, separated or widowed — and ready for their next chapter. Take it at your own pace, among people who understand.",
+  /*
+   * One sentence, not three. The first viewport has to land new beginnings,
+   * trust and calm before anyone decides whether to read on -- and a paragraph
+   * is what people skip. The longer explanation still exists further down for
+   * those who want it; it just no longer carries the differentiation.
+   */
+  lede: "Meet people who understand what starting again means.",
   primaryCta: { label: "Begin your journey", href: "#begin" },
   secondaryCta: { label: "How Eraya works", href: "#how-it-works" },
-  note: "Opening first in a few cities across India.",
+  note: "Open across India. Verified members. A considered few, never an endless list.",
 } as const;
 
 export const trust = {
@@ -171,14 +177,20 @@ export const builtDifferently = {
 } as const;
 
 export const cities = {
-  eyebrow: "Where we're opening",
-  title: "Opening in a few cities first.",
+  eyebrow: "Where Eraya is",
+  /*
+   * This section used to say "Opening in a few cities first" and offered a
+   * waitlist to everyone else. Registration is open across India now, so the
+   * section keeps the honest half -- community grows city by city -- and drops
+   * the half that turned people away.
+   */
+  title: "Open across India, growing city by city.",
   body: [
-    "A community only works when there are real people in it. Rather than launching everywhere at once and leaving you looking at empty profiles, Eraya is opening in a few Indian cities and growing each one properly.",
+    "Anyone in India can join today. A community only works when there are real people in it, so Eraya is concentrating on a few cities first — but that shapes who you are likely to meet, not whether you are welcome.",
   ],
   elsewhere:
-    "Somewhere else in India? Join the waitlist and we will let you know as soon as Eraya opens in your city.",
-  cta: { label: "Join the Eraya waitlist", href: "#begin" },
+    "Wherever you are, you can create your account and take your time. Introductions arrive as the community reaches you.",
+  cta: { label: "Begin your journey", href: "#begin" },
 } as const;
 
 export const finalCta = {

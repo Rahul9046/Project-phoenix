@@ -1,4 +1,4 @@
-import type { RelationshipStatus } from "@/features/auth/types";
+import type { Gender, RelationshipStatus } from "@/features/auth/types";
 
 /**
  * Every word the sign-in and sign-up screens say.
@@ -76,8 +76,8 @@ export const otpStep = {
 } as const;
 
 export const basicsStep = {
-  title: "Let's start with the basics.",
-  lede: "This is what other members will see first. You can change any of it later.",
+  title: "Let's start with your name.",
+  lede: "This is how other members will know you. Nothing here is final — you can change any of it later.",
   firstName: {
     label: "First name",
     hint: "This is the name shown on your profile.",
@@ -88,6 +88,8 @@ export const basicsStep = {
     label: "Date of birth",
     hint: "Used to confirm you're over 18. Only your age is ever shown.",
     error: "Enter your date of birth to continue.",
+    /* Names the actual problem. "Try again in a moment" cannot fix a birth date. */
+    tooYoung: "Eraya is for people aged 18 and over. Please check the year.",
   },
   gender: {
     label: "Gender",
@@ -96,12 +98,23 @@ export const basicsStep = {
   cta: "Continue",
 } as const;
 
-export const genderOptions = [
+/**
+ * The values here are the database's enum values, not display slugs.
+ *
+ * They used to be hyphenated ("non-binary") because this screen was written
+ * against a mocked provider that accepted any string. When the real enum arrived
+ * it used underscores, and nothing reconciled the two -- so choosing Non-binary
+ * or Prefer not to say failed for a fortnight while Woman and Man worked.
+ *
+ * The `Gender` annotation is the guard: this list can no longer drift from the
+ * database without failing the build.
+ */
+export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "woman", label: "Woman" },
   { value: "man", label: "Man" },
-  { value: "non-binary", label: "Non-binary" },
-  { value: "prefer-not-to-say", label: "Prefer not to say" },
-] as const;
+  { value: "non_binary", label: "Non-binary" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
 
 export const cityStep = {
   title: "Where are you based?",
@@ -154,8 +167,8 @@ export const signInProblemFallback =
   "That sign-in did not complete. Please try again, or continue with email.";
 
 export const relationshipStep = {
-  title: "Which chapter are you in?",
-  lede: "Eraya is built for people beginning again. This helps us introduce you to people who understand.",
+  title: "Where are you in your journey?",
+  lede: "However you arrived here, someone else did too. This is only so we introduce you to people who understand.",
   error: "Choose the option that fits you best.",
   cta: "Continue",
 } as const;
@@ -208,10 +221,18 @@ export const languageOptions = [
 ] as const;
 
 export const completeStep = {
-  title: "You're all set.",
-  lede: "Your Eraya account is ready. We'll take you through building your profile next — there's no rush, and you can stop and come back at any time.",
-  cta: "Continue to your profile",
-  secondaryCta: "Back to Eraya",
+  /**
+   * The end of signup, treated as a beginning.
+   *
+   * Not "Welcome to Eraya" -- that is a greeting from a company to a customer.
+   * This is about the person: what they have just done is start again, and the
+   * screen should be quiet enough for that to land.
+   */
+  eyebrow: "Your Eraya begins",
+  title: "You're ready for your next chapter.",
+  lede: "Take it at whatever pace suits you. Nothing here expects anything of you today, and nobody can reach you until you both choose it.",
+  cta: "See who's here",
+  secondaryCta: "Not just yet",
 } as const;
 
 /**

@@ -6,6 +6,8 @@
  */
 export const appRoutes = {
   home: "/home",
+  discovery: "/discovery",
+  connections: "/connections",
   account: "/account",
   membership: "/account/membership",
   privacy: "/account/privacy",
@@ -13,9 +15,18 @@ export const appRoutes = {
   logout: "/logout",
 } as const;
 
-/** Primary navigation, in header order. */
+/**
+ * Primary navigation, in header order.
+ *
+ * Four destinations, not five. Conversations live inside a connection rather
+ * than in a separate Messages tab: a message only ever exists between two people
+ * who have both chosen it, so a standalone inbox would suggest an inbox anyone
+ * can write to. "Connections" is where both the people and what was said live.
+ */
 export const primaryNav = [
   { href: appRoutes.home, label: "Home" },
+  { href: appRoutes.discovery, label: "Discover" },
+  { href: appRoutes.connections, label: "Connections" },
   { href: appRoutes.account, label: "Account" },
 ] as const;
 
