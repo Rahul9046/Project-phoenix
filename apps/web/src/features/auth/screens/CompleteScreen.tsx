@@ -43,7 +43,7 @@ export function CompleteScreen() {
           {completeStep.eyebrow}
         </p>
 
-        <h1 className="mt-5 font-serif text-[2.1rem] leading-[1.15] tracking-[-0.02em] text-ink sm:text-[2.5rem]">
+        <h1 className="mt-5 text-heading text-ink">
           {firstName
             ? `You're ready, ${firstName}.`
             : completeStep.title}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Platform, View } from "react-native";
+import { Platform, View, type ColorValue } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -7,7 +7,8 @@ import { useSession } from "@/features/auth/SessionProvider";
 import { isOnboarded, nextRouteFor, routes } from "@/features/auth/routing";
 import { getHomeSummary } from "@/features/members/data";
 import { colors, hit, radius, space } from "@/theme/tokens";
-import { fontFamily } from "@/theme/typography";
+import { Text } from "@/ui/Text";
+import { text } from "@/theme/typography";
 
 /**
  * The signed-in app.
@@ -22,6 +23,35 @@ import { fontFamily } from "@/theme/typography";
  * visible -- a long-press or a swipe is a shortcut for people who already know
  * it is there, never the only way in.
  */
+/**
+ * A tab label that cannot clip.
+ *
+ * `tabBarLabelStyle` has no way to say "shrink rather than overflow", so the
+ * label becomes a component. Everything about how it looks still comes from the
+ * type scale.
+ */
+function tabLabel(title: string) {
+  return function TabLabel({ color }: { color: ColorValue }) {
+    return (
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+        style={{
+          ...text.labelSm,
+          fontSize: 10,
+          lineHeight: 14,
+          letterSpacing: 0,
+          color,
+          textAlign: "center",
+        }}
+      >
+        {title}
+      </Text>
+    );
+  };
+}
+
 export default function TabsLayout() {
   const { loading, session, profile } = useSession();
 
@@ -48,19 +78,29 @@ export default function TabsLayout() {
           paddingBottom: Platform.OS === "ios" ? space.xxl : space.sm,
         },
         /*
-         * Sized for the longest label at the narrowest phone. "Connections" is
-         * eleven characters and five tabs on a 360pt screen give each of them
-         * about 64pt of usable width; at 11pt with the 0.2 tracking used
-         * elsewhere it overflowed by two points and was clipped. Tracking is the
-         * first thing to go -- it buys 2pt on its own and is decoration at this
-         * size -- and the point size drops half a step for margin.
+         * The label is a component rather than a style, because a point size
+         * tuned to one typeface does not survive a change of typeface.
+         *
+         * "Connections" is the constraint: eleven characters, and five tabs on a
+         * 360pt screen leave each about 68pt. It was tuned to 10.5pt for Inter
+         * and clipped by two points the moment Manrope arrived, which is wider
+         * at the same size. Chasing the number again would only defer the same
+         * failure to the next change -- or to the first person who turns their
+         * system font size up.
+         *
+         * Two things make it fit, rather than one:
+         *
+         * The item's horizontal padding is zeroed, which hands the label the
+         * whole 68pt of the tab instead of 58pt, and the size is 10pt -- what
+         * iOS uses for its own tab labels. "Connections" then measures about
+         * 61pt against 68 available, so it fits with real slack rather than by a
+         * point.
+         *
+         * And `tabLabel` below still shrinks to 85% before it would ever wrap or
+         * clip, which is the floor under someone who has turned their system
+         * font size up. Nothing shrinks at the default size.
          */
-        tabBarLabelStyle: {
-          fontFamily: fontFamily.sansMedium,
-          fontSize: 10.5,
-          letterSpacing: 0,
-        },
-        tabBarItemStyle: { minHeight: hit.min },
+        tabBarItemStyle: { minHeight: hit.min, paddingHorizontal: 0 },
         sceneStyle: { backgroundColor: colors.canvas },
       }}
     >
@@ -68,6 +108,7 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "My Eraya",
+          tabBarLabel: tabLabel("My Eraya"),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
@@ -81,6 +122,7 @@ export default function TabsLayout() {
         name="discover"
         options={{
           title: "Discover",
+          tabBarLabel: tabLabel("Discover"),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "compass" : "compass-outline"}
@@ -94,6 +136,7 @@ export default function TabsLayout() {
         name="connections"
         options={{
           title: "Connections",
+          tabBarLabel: tabLabel("Connections"),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "people" : "people-outline"}
@@ -107,6 +150,7 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: "Messages",
+          tabBarLabel: tabLabel("Messages"),
           tabBarIcon: ({ color, focused }) => (
             <View>
               <Ionicons
@@ -123,6 +167,7 @@ export default function TabsLayout() {
         name="you"
         options={{
           title: "You",
+          tabBarLabel: tabLabel("You"),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person" : "person-outline"}

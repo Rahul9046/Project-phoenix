@@ -51,9 +51,14 @@ Sizes: `sm` (36px tile) in the header and footer, `md` (44px) default, `lg`
 
 ## Wordmark
 
-"Eraya" set in Fraunces, semibold, tight tracking, typeset live rather than
-drawn. The mark sits to its left with a 12px gap. The mark may appear alone; the
+"Eraya" set in Manrope Bold with tight tracking, typeset live rather than drawn.
+The mark sits to its left with a 12px gap. The mark may appear alone; the
 wordmark may not.
+
+It was Fraunces until the type system was settled, and that was a UI choice
+rather than brand artwork -- the supplied lockup sets the wordmark in a generic
+system serif, not in Fraunces at all. Setting it in the product's own face keeps
+one typeface across the whole product.
 
 The pack's `eraya-approved-horizontal.svg` is **not** used — see
 [07-open-questions.md](07-open-questions.md) for why. It also sets the wordmark
@@ -101,14 +106,36 @@ Never: bright pink, purple, neon, or any colour outside this table.
 
 ## Typography
 
-- **Fraunces** — headlines, the wordmark, step titles, feature titles.
-  Variable, with the optical-size axis enabled so large settings use the display
-  cut rather than scaled-up body type.
-- **Inter** — body copy, navigation, buttons, forms. Chosen for legibility at
-  small sizes for readers who may not have young eyes.
+**Manrope**, and only Manrope, at four weights: 400, 500, 600, 700.
 
-Body copy does not go below 15px. The lede under each section heading is 18px.
-Both faces are self-hosted by `next/font`; no request reaches Google at runtime.
+It replaced a Fraunces/Inter pairing. Two families is a reasonable way to build
+hierarchy and it was the wrong one here -- the serif read as editorial rather
+than as a product someone is using, and Inter underneath it read as any other
+SaaS. Manrope has enough character in its letterforms to feel warm at heading
+sizes and is a genuinely legible UI face at body sizes, which matters for readers
+who may not have young eyes.
+
+One family means hierarchy comes from weight, size and space rather than from a
+change of voice:
+
+| Role | Weight |
+| --- | --- |
+| Display, hero | 700 |
+| Page titles | 700 |
+| Screen and section headings | 600 |
+| Names, panel titles | 600 |
+| Buttons, navigation, labels | 600 |
+| Emphasised body, small metadata | 500 |
+| Body | 400 |
+
+Body copy does not go below 15px. Tracking is negative only above about 1.5rem,
+where default spacing looks loose; below that it is zero. Manrope is already
+fairly tight, and pulling body text in makes it harder to read rather than more
+designed.
+
+Self-hosted by `next/font` on the web and by `@expo-google-fonts/manrope` on
+mobile; no request reaches Google at runtime. Manrope is licensed under the SIL
+Open Font License.
 
 ## What to avoid
 

@@ -29,7 +29,7 @@ export function AuthHeader({
           </Link>
         </div>
       ) : null}
-      <h1 className="font-serif text-[1.9rem] leading-[1.15] tracking-[-0.02em] text-ink sm:text-4xl">
+      <h1 className="text-heading text-ink">
         {title}
       </h1>
       {lede ? (

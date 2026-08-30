@@ -23,7 +23,7 @@ export function PageShell({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="mt-5 font-serif text-4xl leading-[1.12] tracking-[-0.025em] text-ink sm:text-5xl">
+          <h1 className="mt-5 text-title text-ink">
             {title}
           </h1>
           <div className="mt-8 space-y-5 text-lg leading-relaxed text-ink-muted">

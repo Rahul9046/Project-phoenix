@@ -18,7 +18,7 @@ export default function YouLayout() {
       screenOptions={{
         headerShown: true,
         headerTitleStyle: {
-          fontFamily: fontFamily.serif,
+          fontFamily: fontFamily.semibold,
           fontSize: 18,
           color: colors.ink,
         },

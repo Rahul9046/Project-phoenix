@@ -11,7 +11,7 @@ export function Hero() {
         <div className="animate-rise">
           <Eyebrow>{hero.eyebrow}</Eyebrow>
 
-          <h1 className="mt-6 font-serif text-[2.6rem] leading-[1.08] tracking-[-0.025em] text-ink sm:text-6xl lg:text-[4.25rem]">
+          <h1 className="mt-6 text-display text-ink">
             {hero.headline[0]}
             <br className="hidden sm:block" />{" "}
             <span className="text-ember-text">{hero.headline[1]}</span>

@@ -41,7 +41,7 @@ itself is fine and is used as supplied; these concern the framing.
    — a system fallback, not a brand typeface. It would render differently on
    every machine and cannot be relied on.
 
-The site therefore typesets "Eraya" in Fraunces beside the mark instead. A
+The site therefore typesets "Eraya" in Manrope beside the mark instead. A
 corrected lockup with outlined text is needed before the logo is used anywhere
 outside this codebase.
 
@@ -63,9 +63,10 @@ drew it. Re-centring is a one-line change in `ErayaMark`.
 - The mark has not been reviewed at small sizes — favicon, app icon, a 32px
   header tile on a low-resolution screen. The three paths are fine strokes and
   may not hold below 24px.
-- Fraunces and Inter are a reasoned choice, not an approved one. If a type
-  system is commissioned, `--font-serif` and `--font-sans` in `globals.css` are
-  the only places to change.
+- Manrope is the settled choice and is now the only typeface, on both clients.
+  If a secondary editorial face is ever commissioned for marketing, `--font-sans`
+  and the `--text-*` scale in `globals.css`, plus `theme/typography.ts` on
+  mobile, are the only places to change.
 - No Devanagari, Telugu or Bengali type has been specified, which matters if the
   product is ever localised for the launch cities.
 
@@ -97,7 +98,7 @@ drew it. Re-centring is a one-line change in `ErayaMark`.
 - No analytics. Deliberate for now — but there is currently no way to know
   whether the page works.
 - No sitemap or `robots.txt`.
-- The Open Graph image renders in Satori's default font rather than Fraunces.
+- The Open Graph image renders in Satori's default font rather than Manrope.
   Fixing it means fetching the font at build time, which makes the build depend
   on the network. Deferred on purpose.
 - No screen-reader pass, and no testing at 200% zoom.

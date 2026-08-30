@@ -43,7 +43,7 @@ export function MemberRowLink({
         <MemberMonogram name={name} />
         <span className="min-w-0 flex-1">
           <span
-            className={`block font-serif text-lg ${
+            className={`block text-name ${
               muted ? "text-ink-muted" : "text-ink"
             }`}
           >

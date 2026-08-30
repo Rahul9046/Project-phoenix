@@ -52,7 +52,7 @@ export default async function HomePage() {
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-subtle">
         {home.eyebrow}
       </p>
-      <h1 className="mt-4 font-serif text-[2.1rem] leading-tight tracking-[-0.02em] text-ink sm:text-4xl">
+      <h1 className="mt-4 text-heading text-ink">
         {greeting}
         {name ? `, ${name}` : ""}.
       </h1>
@@ -62,7 +62,7 @@ export default async function HomePage() {
         {/* --- Introductions ------------------------------------------- */}
         <section>
           <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-serif text-xl tracking-[-0.01em] text-ink">
+            <h2 className="text-name text-ink">
               {home.introductionsTitle}
             </h2>
             {introductions.length > 0 ? (
@@ -103,7 +103,7 @@ export default async function HomePage() {
         {/* --- Connections --------------------------------------------- */}
         <section>
           <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-serif text-xl tracking-[-0.01em] text-ink">
+            <h2 className="text-name text-ink">
               {home.connectionsTitle}
             </h2>
             {openConnections.length > 0 ? (
@@ -142,7 +142,7 @@ export default async function HomePage() {
 
         {/* --- Interest received (premium) ------------------------------ */}
         <section>
-          <h2 className="font-serif text-xl tracking-[-0.01em] text-ink">
+          <h2 className="text-name text-ink">
             {home.interestTitle}
           </h2>
 
@@ -188,7 +188,7 @@ export default async function HomePage() {
 
         {/* --- Profile progress ----------------------------------------- */}
         <section>
-          <h2 className="font-serif text-xl tracking-[-0.01em] text-ink">
+          <h2 className="text-name text-ink">
             {home.profileTitle}
           </h2>
 

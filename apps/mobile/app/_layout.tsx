@@ -6,12 +6,12 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
-import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter";
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+} from "@expo-google-fonts/manrope";
 
 import { SessionProvider } from "@/features/auth/SessionProvider";
 import { completeSignInFromUrl } from "@/features/auth/sign-in";
@@ -25,19 +25,28 @@ import { colors } from "@/theme/tokens";
  * session provider is mounted so every screen can read who is signed in, and
  * incoming links are turned into sessions.
  *
- * The splash screen is held until the fonts resolve. Letting the app appear
- * first and swap fonts a moment later produces a visible reflow on the very
- * first screen someone sees, which is the worst possible place for one.
+ * The splash screen is held until the fonts resolve, so nothing renders in a
+ * fallback face and then reflows. On mobile that swap is worse than on the web:
+ * there is no progressive rendering to hide it, so the first screen someone sees
+ * would visibly jump. `fontError` releases the splash too -- a font that fails
+ * to load should give someone the app in the system face, not a splash screen
+ * they cannot get past.
  */
 
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  /*
+   * The four weights the scale in `theme/typography.ts` actually asks for. The
+   * keys are the family names that file writes, so a rename in one place without
+   * the other shows up as a silent fallback to the system face rather than as an
+   * error -- which is why both live so close together.
+   */
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_600SemiBold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
   });
 
   const ready = fontsLoaded || Boolean(fontError);

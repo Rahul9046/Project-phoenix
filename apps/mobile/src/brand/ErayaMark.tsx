@@ -63,8 +63,14 @@ export function ErayaMark({
 /**
  * Mark and wordmark together.
  *
- * The wordmark is set in Fraunces rather than imported as artwork, exactly as
- * the web lockup does, so it takes the same type as the headings beside it.
+ * The wordmark is live text in the product's own typeface -- now Manrope --
+ * rather than imported artwork, exactly as the web lockup does. It was Fraunces,
+ * and that was a UI choice rather than brand artwork: the approved lockup in
+ * `assets/brand/eraya-approved-horizontal.svg` sets "Eraya" in a generic system
+ * serif, not in Fraunces at all.
+ *
+ * The mark beside it is untouched -- the same three paths from the approved
+ * artwork, byte for byte.
  */
 export function ErayaLockup({
   size = "md",
@@ -91,12 +97,14 @@ export function ErayaLockup({
     >
       <ErayaMark size={markSize} tone={tone === "light" ? "dark" : "primary"} />
       <Text
-        variant="title"
+        variant="display"
         style={{
           fontSize: wordSize,
           lineHeight: wordSize * 1.15,
           color: tone === "light" ? colors.inkInverse : colors.ink,
-          letterSpacing: -0.4,
+          // Bold and slightly tightened, so it reads as a mark rather than as a
+          // word that happens to sit beside the logo.
+          letterSpacing: wordSize * -0.02,
         }}
       >
         Eraya

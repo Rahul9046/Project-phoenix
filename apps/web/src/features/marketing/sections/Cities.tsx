@@ -35,7 +35,7 @@ export async function Cities() {
         </div>
 
         <div className="border border-line-strong bg-canvas p-8 sm:p-10">
-          <p className="font-serif text-6xl leading-none tracking-[-0.03em] text-ink sm:text-7xl">
+          <p className="text-ink text-6xl font-bold leading-none tracking-[-0.02em] sm:text-7xl">
             {coverage.cities}
           </p>
           <p className="mt-4 text-lg leading-relaxed text-ink-muted">

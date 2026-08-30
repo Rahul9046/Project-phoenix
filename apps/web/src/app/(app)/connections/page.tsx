@@ -19,7 +19,7 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
-      <h1 className="font-serif text-[2rem] leading-tight tracking-[-0.02em] text-ink sm:text-4xl">
+      <h1 className="text-heading text-ink">
         {copy.title}
       </h1>
       <p className="mt-3 max-w-xl text-lg leading-relaxed text-ink-muted">
@@ -28,7 +28,7 @@ export default async function ConnectionsPage() {
 
       {all.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-line bg-surface p-8 text-center">
-          <p className="font-serif text-xl text-ink">{copy.empty.title}</p>
+          <p className="text-name text-ink">{copy.empty.title}</p>
           <p className="mx-auto mt-3 max-w-md leading-relaxed text-ink-muted">
             {copy.empty.body}
           </p>

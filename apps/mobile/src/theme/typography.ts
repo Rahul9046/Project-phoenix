@@ -1,106 +1,121 @@
-import { Platform, type TextStyle } from "react-native";
+import type { TextStyle } from "react-native";
 
 /**
- * Type, matching the web's pairing.
+ * Type, and only Manrope.
  *
- * Fraunces (serif) carries headings and anything that should feel written rather
- * than rendered; Inter carries everything else. Both are loaded at runtime --
- * see `src/theme/fonts.ts` -- and every family falls back to the platform's own
- * serif or system face, so a font that fails to load degrades to something
- * readable rather than to nothing.
+ * Eraya used to set headings in Fraunces and everything else in Inter. Two
+ * families is a reasonable way to build hierarchy and it was the wrong one here:
+ * the serif read as editorial rather than as a product someone is using, and
+ * Inter underneath it read as any other app.
  *
- * `display`, `title` and `headline` are serif. Body, labels and controls are
- * not: a serif button label reads as decorative, and a control should read as a
- * control.
+ * Manrope carries both jobs. It has enough character at heading sizes to feel
+ * warm, and it is a genuinely legible UI face at body sizes -- which matters for
+ * an audience that is not all young eyes.
+ *
+ * One family means hierarchy comes from weight, size and space rather than from
+ * a change of voice. That is what the scale below is for, and why every entry
+ * carries its own weight: a heading that differed from body text only by being
+ * larger would be flat.
+ *
+ * Four weights are loaded, matching the web exactly:
+ *
+ *   400  body, and long-form reading
+ *   500  emphasis, small metadata, tab labels
+ *   600  headings, names, buttons
+ *   700  the two largest display sizes, and the wordmark
+ *
+ * Family names are the literal strings `useFonts` registers in `app/_layout.tsx`.
+ * A name that does not match a loaded font silently falls back to the system
+ * face, which looks like nothing is wrong until someone compares two screens --
+ * so these are written once, here, and screens never name a family themselves.
  *
  * Line heights are absolute rather than multipliers. React Native measures
  * `lineHeight` in points, and leaving it to the platform gives iOS and Android
  * different rhythm for the same design; fixing it here is part of what keeps the
  * two builds looking like one product.
+ *
+ * Tracking is negative only where it earns it -- at display sizes, where default
+ * spacing looks loose. Below about 20pt it is zero. Manrope is already fairly
+ * tight, and pulling body text in makes it harder to read rather than more
+ * designed.
  */
 
 export const fontFamily = {
-  serif: Platform.select({
-    ios: "Fraunces_600SemiBold",
-    android: "Fraunces_600SemiBold",
-    default: "Georgia",
-  }) as string,
-  sans: Platform.select({
-    ios: "Inter_400Regular",
-    android: "Inter_400Regular",
-    default: "System",
-  }) as string,
-  sansMedium: Platform.select({
-    ios: "Inter_500Medium",
-    android: "Inter_500Medium",
-    default: "System",
-  }) as string,
-  sansSemibold: Platform.select({
-    ios: "Inter_600SemiBold",
-    android: "Inter_600SemiBold",
-    default: "System",
-  }) as string,
+  regular: "Manrope_400Regular",
+  medium: "Manrope_500Medium",
+  semibold: "Manrope_600SemiBold",
+  bold: "Manrope_700Bold",
 } as const;
 
 export const text = {
   /** Once per screen at most: the thing the screen is about. */
   display: {
-    fontFamily: fontFamily.serif,
-    fontSize: 32,
-    lineHeight: 39,
+    fontFamily: fontFamily.bold,
+    fontSize: 31,
+    lineHeight: 38,
     letterSpacing: -0.6,
   },
-  /** Screen and section headings. */
+  /** Screen headings. */
   title: {
-    fontFamily: fontFamily.serif,
+    fontFamily: fontFamily.semibold,
     fontSize: 24,
     lineHeight: 31,
-    letterSpacing: -0.3,
+    letterSpacing: -0.35,
   },
-  /** A person's name on a card, a panel heading. */
+  /**
+   * A person's name on a card, a panel heading.
+   *
+   * Prominent without being large -- this is the size a name is read at in a
+   * list, where making it bigger would crowd the line beneath it and make the
+   * list scan worse rather than better.
+   */
   headline: {
-    fontFamily: fontFamily.serif,
-    fontSize: 19,
-    lineHeight: 25,
+    fontFamily: fontFamily.semibold,
+    fontSize: 18,
+    lineHeight: 24,
     letterSpacing: -0.1,
   },
   /** Running text. */
   body: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.regular,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 25,
+  },
+  /** Body that needs to carry a little more weight without becoming a heading. */
+  bodyStrong: {
+    fontFamily: fontFamily.medium,
+    fontSize: 16,
+    lineHeight: 25,
   },
   /** Supporting text under a heading, and most secondary lines. */
   bodySm: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.regular,
     fontSize: 14.5,
+    lineHeight: 22,
+  },
+  /** Button and form labels. */
+  label: {
+    fontFamily: fontFamily.semibold,
+    fontSize: 15.5,
     lineHeight: 21,
   },
-  /** Button and tab labels. */
-  label: {
-    fontFamily: fontFamily.sansMedium,
-    fontSize: 15.5,
-    lineHeight: 20,
-    letterSpacing: 0.1,
-  },
   labelSm: {
-    fontFamily: fontFamily.sansMedium,
+    fontFamily: fontFamily.medium,
     fontSize: 13.5,
     lineHeight: 18,
-    letterSpacing: 0.1,
   },
-  /** Timestamps, counts, metadata. */
+  /** Timestamps, counts, captions. 500 so small text keeps its colour. */
   caption: {
-    fontFamily: fontFamily.sans,
+    fontFamily: fontFamily.medium,
     fontSize: 12.5,
     lineHeight: 17,
   },
-  /** The small uppercase eyebrow the brand sets above headings. */
+  /** The small uppercase line above a heading. */
   eyebrow: {
-    fontFamily: fontFamily.sansMedium,
+    fontFamily: fontFamily.semibold,
     fontSize: 11.5,
     lineHeight: 15,
-    letterSpacing: 1.6,
+    letterSpacing: 1.4,
     textTransform: "uppercase",
   },
 } as const satisfies Record<string, TextStyle>;

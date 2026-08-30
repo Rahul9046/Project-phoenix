@@ -79,7 +79,7 @@ export default function Interests() {
           headerShown: true,
           title: "Interested in you",
           headerTitleStyle: {
-            fontFamily: fontFamily.serif,
+            fontFamily: fontFamily.semibold,
             fontSize: 18,
             color: colors.ink,
           },

@@ -42,9 +42,93 @@
   --color-night-soft: #3b2e26;
   --color-night-line: #4a3a30;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
-    serif;
+  /*
+    Manrope, and only Manrope.
+    ---------------------------------------------------------------------------
+    Eraya used to set headings in Fraunces and everything else in Inter. Two
+    families is a reasonable way to build hierarchy and it was the wrong one
+    here: the serif read as editorial rather than as a product someone is using,
+    and Inter underneath it read as any other SaaS.
+
+    Manrope carries both jobs. It has enough character in its letterforms --
+    the open apertures, the slightly humanist curves -- to feel warm at heading
+    sizes, and it is a genuinely legible UI face at body sizes, which matters
+    for an audience that is not all young eyes.
+
+    One family means hierarchy comes from weight, size and space rather than
+    from a change of voice. The scale below is what makes that work; a heading
+    that differed from body text only by being larger would be flat.
+  */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+
+  /*
+    The type scale.
+    ---------------------------------------------------------------------------
+    Each entry carries its own line height, tracking and weight, so a screen
+    writes `text-heading` rather than four classes it has to keep in sync with
+    every other screen that meant the same thing. That was the actual problem
+    before this: `font-serif text-[2rem] leading-tight tracking-[-0.02em]`
+    appeared in several files with small variations nobody intended.
+
+    Sizes are fluid rather than stepped at a breakpoint. The clamp endpoints are
+    calibrated to what the stepped classes produced at a phone and at a wide
+    desktop, so nothing jumps at 640px any more but the extremes are unchanged.
+
+    Tracking is negative only where it earns it -- large sizes, where default
+    spacing looks loose. Below about 1.5rem it is zero. Manrope is already fairly
+    tight, and pulling body text in makes it harder to read, not more designed.
+  */
+
+  /* The landing hero. Once per site. */
+  --text-display: clamp(2.6rem, 5.4vw, 4.25rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.021em;
+  --text-display--font-weight: 700;
+
+  /* A marketing page's own h1. */
+  --text-title: clamp(2.15rem, 4.2vw, 3rem);
+  --text-title--line-height: 1.12;
+  --text-title--letter-spacing: -0.018em;
+  --text-title--font-weight: 700;
+
+  /* The h1 on a signed-in screen. Quieter than a marketing title. */
+  --text-heading: clamp(1.9rem, 3.4vw, 2.25rem);
+  --text-heading--line-height: 1.16;
+  --text-heading--letter-spacing: -0.015em;
+  --text-heading--font-weight: 600;
+
+  /* Section headings within a page. */
+  --text-subhead: 1.5rem;
+  --text-subhead--line-height: 1.28;
+  --text-subhead--letter-spacing: -0.012em;
+  --text-subhead--font-weight: 600;
+
+  /* A person's name, a panel title. Prominent without being large. */
+  --text-name: 1.25rem;
+  --text-name--line-height: 1.35;
+  --text-name--letter-spacing: -0.006em;
+  --text-name--font-weight: 600;
+
+  /* The supporting line under a heading. */
+  --text-lede: 1.125rem;
+  --text-lede--line-height: 1.62;
+  --text-lede--font-weight: 400;
+
+  /* Buttons, tabs, form labels. */
+  --text-label: 0.95rem;
+  --text-label--line-height: 1.35;
+  --text-label--font-weight: 600;
+
+  /* Timestamps, counts, captions. 500 so small text keeps its colour. */
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.45;
+  --text-meta--font-weight: 500;
+
+  /* The small uppercase line above a heading. */
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.3;
+  --text-eyebrow--letter-spacing: 0.18em;
+  --text-eyebrow--font-weight: 600;
 }
 
 /*
@@ -65,8 +149,6 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  /* Fraunces is optical-size aware; let the browser pick the right cut. */
-  font-optical-sizing: auto;
   text-rendering: optimizeLegibility;
 }
 

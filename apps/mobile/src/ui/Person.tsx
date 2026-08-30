@@ -105,7 +105,6 @@ export function Avatar({
           fontSize: px * 0.4,
           lineHeight: px * 0.5,
           color: tone.fg,
-          fontFamily: undefined,
         }}
         variant="headline"
       >

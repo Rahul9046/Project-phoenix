@@ -32,7 +32,7 @@ export default async function ConversationPage({
       <header className="mt-4 flex items-start gap-4 border-b border-line pb-6">
         <MemberMonogram name={connection.member.firstName} />
         <div className="min-w-0 pt-0.5">
-          <h1 className="font-serif text-2xl tracking-[-0.01em] text-ink">
+          <h1 className="text-subhead text-ink">
             {connection.member.firstName}
           </h1>
           <div className="mt-1">

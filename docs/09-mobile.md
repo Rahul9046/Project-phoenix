@@ -148,8 +148,10 @@ overwritten by a late response.
 **No screen may write a raw hex or a raw pixel number.** Colours are named by
 role, spacing by intent (`space.section`, not `32`).
 
-Type is Fraunces and Inter, the web's pairing, with absolute line heights so iOS
-and Android share one rhythm.
+Type is Manrope, the web's typeface, at the same four weights, with absolute
+line heights so iOS and Android share one rhythm. `theme/typography.ts` is the
+only place a family name is written -- screens choose a variant from the scale,
+never a font.
 
 The mark is copied byte-for-byte from `apps/web/src/shared/brand/mark.ts` and
 rendered as vector. The launcher and splash icons are the approved SVGs

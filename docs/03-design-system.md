@@ -36,8 +36,20 @@ Defined in the Tailwind v4 `@theme` block in `apps/web/src/app/globals.css`. Eac
 entry becomes a utility automatically — `--color-ink` gives `text-ink`,
 `bg-ink`, `border-ink`. Values are tabulated in [02-brand.md](02-brand.md).
 
-Fonts are exposed as `--font-sans` (Inter) and `--font-serif` (Fraunces), giving
-`font-sans` and `font-serif`.
+One typeface, exposed as `--font-sans` (Manrope). There is no `--font-serif`.
+
+The type scale is `@theme` too, so each `--text-*` entry becomes a utility that
+carries its own size, line height, tracking and weight: `text-display`,
+`text-title`, `text-heading`, `text-subhead`, `text-name`, `text-lede`,
+`text-label`, `text-meta`, `text-eyebrow`.
+
+A screen writes `text-heading`, not `font-serif text-[2rem] leading-tight
+tracking-[-0.02em]`. That cluster used to appear in several files with small
+variations nobody intended, which is exactly the problem a token solves.
+
+Sizes are fluid rather than stepped at a breakpoint -- the clamp endpoints match
+what the stepped classes produced at a phone and at a wide desktop, so nothing
+jumps at 640px.
 
 ## Components
 

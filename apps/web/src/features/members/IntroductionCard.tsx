@@ -77,7 +77,7 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
     const connected = state === "connected";
     return (
       <div className="rounded-2xl border border-ember/30 bg-surface p-6 sm:p-8">
-        <p className="font-serif text-xl text-ink">
+        <p className="text-name text-ink">
           {connected ? discovery.connected : discovery.interestSent}
         </p>
         <p className="mt-2.5 leading-relaxed text-ink-muted">
@@ -92,7 +92,7 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
       <div className="flex items-start gap-5">
         <MemberMonogram name={member.firstName} size="lg" />
         <div className="min-w-0 pt-1">
-          <h3 className="font-serif text-2xl tracking-[-0.01em] text-ink">
+          <h3 className="text-subhead text-ink">
             {member.firstName}
           </h3>
           <div className="mt-1.5">
