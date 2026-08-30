@@ -1,8 +1,6 @@
-import Link from "next/link";
-
 import { connections as copy } from "@/features/app-shell/content";
 import { appRoutes } from "@/features/app-shell/nav";
-import { MemberMonogram } from "@/features/members/MemberPresentation";
+import { MemberRowLink } from "@/features/members/MemberRowLink";
 import { getConnections } from "@/features/members/data";
 
 export const metadata = { title: "Connections" };
@@ -41,22 +39,16 @@ export default async function ConnectionsPage() {
             <ul className="grid gap-3">
               {open.map((connection) => (
                 <li key={connection.id}>
-                  <Link
+                  <MemberRowLink
                     href={`${appRoutes.connections}/${connection.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-line-strong sm:p-5"
+                    name={connection.member.firstName}
                   >
-                    <MemberMonogram name={connection.member.firstName} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg text-ink">
-                        {connection.member.firstName}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
-                        {connection.lastMessage
-                          ? connection.lastMessage.body
-                          : copy.noMessages}
-                      </span>
+                    <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
+                      {connection.lastMessage
+                        ? connection.lastMessage.body
+                        : copy.noMessages}
                     </span>
-                  </Link>
+                  </MemberRowLink>
                 </li>
               ))}
             </ul>
@@ -70,20 +62,15 @@ export default async function ConnectionsPage() {
               <ul className="mt-4 grid gap-3">
                 {ended.map((connection) => (
                   <li key={connection.id}>
-                    <Link
+                    <MemberRowLink
                       href={`${appRoutes.connections}/${connection.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-line bg-surface/60 p-4 sm:p-5"
+                      name={connection.member.firstName}
+                      muted
                     >
-                      <MemberMonogram name={connection.member.firstName} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-serif text-lg text-ink-muted">
-                          {connection.member.firstName}
-                        </span>
-                        <span className="mt-0.5 block text-[0.95rem] text-ink-subtle">
-                          {copy.ended}
-                        </span>
+                      <span className="mt-0.5 block text-[0.95rem] text-ink-subtle">
+                        {copy.ended}
                       </span>
-                    </Link>
+                    </MemberRowLink>
                   </li>
                 ))}
               </ul>

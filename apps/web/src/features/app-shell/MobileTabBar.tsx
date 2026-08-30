@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { LinkPending } from "@/shared/ui/LinkPending";
 import { usePathname } from "next/navigation";
 
 import { primaryNav } from "@/features/app-shell/nav";
@@ -35,7 +37,10 @@ export function MobileTabBar() {
                   active ? "font-medium text-ember-text" : "text-ink-muted"
                 }`}
               >
-                {item.label}
+                <span className="inline-flex items-center gap-1.5">
+                  {item.label}
+                  <LinkPending />
+                </span>
               </Link>
             </li>
           );

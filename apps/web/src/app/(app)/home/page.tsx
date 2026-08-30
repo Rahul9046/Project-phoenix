@@ -3,10 +3,8 @@ import Link from "next/link";
 import { greetingFor, home } from "@/features/app-shell/content";
 import { appRoutes } from "@/features/app-shell/nav";
 import { loadAuthSession } from "@/features/auth/load-session";
-import {
-  MemberMonogram,
-  MemberSummary,
-} from "@/features/members/MemberPresentation";
+import { MemberSummary } from "@/features/members/MemberPresentation";
+import { MemberRowLink } from "@/features/members/MemberRowLink";
 import {
   getConnections,
   getInterestsReceived,
@@ -85,18 +83,12 @@ export default async function HomePage() {
               <ul className="mt-6 grid gap-3">
                 {introductions.map((member) => (
                   <li key={member.id}>
-                    <Link
+                    <MemberRowLink
                       href={`${appRoutes.discovery}/${member.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-line-strong sm:p-5"
+                      name={member.firstName}
                     >
-                      <MemberMonogram name={member.firstName} />
-                      <span className="min-w-0">
-                        <span className="block font-serif text-lg text-ink">
-                          {member.firstName}
-                        </span>
-                        <MemberSummary member={member} />
-                      </span>
-                    </Link>
+                      <MemberSummary member={member} />
+                    </MemberRowLink>
                   </li>
                 ))}
               </ul>
@@ -128,22 +120,16 @@ export default async function HomePage() {
             <ul className="mt-6 grid gap-3">
               {openConnections.slice(0, 3).map((connection) => (
                 <li key={connection.id}>
-                  <Link
+                  <MemberRowLink
                     href={`${appRoutes.connections}/${connection.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-line-strong sm:p-5"
+                    name={connection.member.firstName}
                   >
-                    <MemberMonogram name={connection.member.firstName} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg text-ink">
-                        {connection.member.firstName}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
-                        {connection.lastMessage
-                          ? connection.lastMessage.body
-                          : "No messages yet"}
-                      </span>
+                    <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
+                      {connection.lastMessage
+                        ? connection.lastMessage.body
+                        : "No messages yet"}
                     </span>
-                  </Link>
+                  </MemberRowLink>
                 </li>
               ))}
             </ul>
@@ -165,18 +151,12 @@ export default async function HomePage() {
               <ul className="mt-6 grid gap-3">
                 {interested.map((member) => (
                   <li key={member.id}>
-                    <Link
+                    <MemberRowLink
                       href={`${appRoutes.discovery}/${member.id}`}
-                      className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-line-strong sm:p-5"
+                      name={member.firstName}
                     >
-                      <MemberMonogram name={member.firstName} />
-                      <span className="min-w-0">
-                        <span className="block font-serif text-lg text-ink">
-                          {member.firstName}
-                        </span>
-                        <MemberSummary member={member} />
-                      </span>
-                    </Link>
+                      <MemberSummary member={member} />
+                    </MemberRowLink>
                   </li>
                 ))}
               </ul>
