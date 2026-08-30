@@ -34,16 +34,30 @@ server will not pick up a change.
 
 ---
 
-## 2. Redirect URLs — already done
+## 2. Redirect URLs — done, with one consequence
 
-`eraya://auth`, `exp://**` and `http://localhost:8081` were added to
-`supabase/config.toml` and pushed. Nothing to do unless you change the app's
-scheme.
+`eraya://auth` and `http://localhost:8081` are in `supabase/config.toml` and
+pushed. Nothing to do unless you change the app's scheme.
+
+**Expo Go cannot complete a sign-in.** Supabase refuses `exp://` redirect URLs —
+tested, and a literal URL is rejected as firmly as a wildcard — and it is right
+to. `exp://` belongs to Expo Go, which every Expo project on a device shares, so
+a session delivered there could be picked up by another app.
+
+What that means in practice:
+
+| | Screens and layout | Sign-in |
+| --- | --- | --- |
+| Expo Go | Yes | No |
+| Development build | Yes | Yes |
+| Store build | Yes | Yes |
+
+So Expo Go is useful for looking at the app and useless for using it. A
+development build registers the `eraya` scheme and behaves normally — see §8.
 
 If a sign-in ever comes back as an error instead of a session, this list is the
-first thing to check: a redirect that is not on it is rejected.
-
----
+first thing to check: a redirect that is not on it is silently swapped for
+`site_url`.
 
 ## 3. Sign in with Apple — **blocker for iOS**
 
@@ -144,19 +158,29 @@ notifying people that somebody looked at their profile.
 
 ## 8. Building for a device
 
-Running through `npx expo start` uses Expo Go, which cannot include custom native
-modules. For a real APK:
+Expo Go shows the screens but cannot sign in (§2), so real testing needs a
+development build. It is a one-off per device; after that `npx expo start`
+connects to it exactly like Expo Go.
 
 ```
 npm install -g eas-cli
-eas login
-eas build --platform android --profile preview
+eas login                                        # free Expo account
+cd apps/mobile
+eas build --platform android --profile development
 ```
 
-This needs an Expo account (free) and runs on Expo's servers. `eas.json` is not
-committed yet — `eas build:configure` creates it on first run.
+`eas.json` is not committed; `eas build:configure` writes it on first run.
 
----
+**Android**: free. The build runs on Expo's servers, you get an APK link, and it
+installs on any phone with "install unknown apps" allowed.
+
+**iOS**: needs the Apple Developer Program membership from §3 ($99/year), because
+Apple requires a provisioning profile for every device an app is installed on.
+There is no free route onto a physical iPhone, from Windows or from a Mac.
+
+**iOS Simulator**: `eas build --platform ios --profile development --simulator`
+produces a `.app` with no Apple account at all — but a simulator only runs on
+macOS, so it is not an option from this machine.
 
 ## Summary
 

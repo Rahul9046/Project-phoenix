@@ -16,6 +16,11 @@ npm run mobile                                        # or: cd apps/mobile && np
 
 Press `a` for an Android device or emulator, `i` for iOS, `w` for the browser.
 
+**Expo Go cannot complete a sign-in.** Supabase refuses `exp://` redirects, and
+correctly -- that scheme belongs to Expo Go, which every Expo project on the
+device shares. Expo Go is fine for looking at screens; using the app needs a
+development build, which registers `eraya://`. See `docs/MOBILE_SETUP.md` §2.
+
 The web target is a development convenience, not a product. Eraya's web product
 is the Next.js app; `expo start --web` exists here so mobile layouts can be
 inspected at a phone viewport without a device attached. Two things behave
@@ -23,6 +28,12 @@ differently there and both are documented where they happen: the session lives i
 memory rather than the keystore (`secure-storage.ts`), and the Supabase client
 reads the session out of the URL, which is exactly what that option is for in a
 browser (`client.ts`).
+
+One React across the workspace, deliberately: `apps/mobile` pins the same
+19.2.8 the web app does, rather than the 19.2.3 Expo suggests, because
+`react-native@0.86`'s peer range accepts both and two Reacts in one workspace is
+the classic cause of "Invalid hook call" on a device. The pin is recorded in
+`expo.install.exclude` so `expo install --check` stops asking.
 
 ## Layout
 

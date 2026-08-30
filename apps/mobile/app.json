@@ -9,7 +9,6 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#FBF7F2",
     "primaryColor": "#BD4F33",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.eraya.mobile",
@@ -19,7 +18,6 @@
     },
     "android": {
       "package": "app.eraya.mobile",
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "backgroundColor": "#BD4F33",

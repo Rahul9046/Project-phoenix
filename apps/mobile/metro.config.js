@@ -19,9 +19,5 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
 ];
-// Hoisting can leave two copies of a package reachable. Resolving only through
-// the paths above keeps React and React Native single-instance, which is the
-// difference between a working app and a blank screen with a hooks error.
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;
