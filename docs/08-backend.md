@@ -48,7 +48,7 @@ Everything about the schema lives in `supabase/migrations/`, in order:
 | `…090600_create_waitlist` | Landing-page signups |
 | `…090700_create_triggers` | Profile on signup, phone mirror, `updated_at` |
 | `…090800_enable_rls` | RLS on every table, with policies |
-| `…090900_seed_reference_data` | The seven launch cities and the languages |
+| `…090900_seed_reference_data` | The original launch cities and the languages |
 | `…101500_restrict_function_execute` | Revokes EXECUTE on the trigger functions |
 | `…100100_create_membership_enums` | `membership_tier`, `subscription_status`, `payment_provider` |
 | `…100200_create_membership_plans` | The catalogue and its prices |
@@ -56,6 +56,16 @@ Everything about the schema lives in `supabase/migrations/`, in order:
 | `…100400_create_subscriptions` | One row per term |
 | `…100500_membership_rls` | RLS for the three membership tables |
 | `…100600_seed_membership` | The four plans and every entitlement |
+| `…140100_name_membership_plans` | Plan names and descriptions |
+| `…100100_cities_all_india` | State, country, search terms, trigram index |
+| `…100200_seed_cities_india` | 493 cities, every state and union territory |
+| `…100300_search_cities` | Ranked search RPC |
+| `…100400_search_cities_tiebreak` | Deterministic order for same-named cities |
+| `…100100_create_connection_tables` | Blocks, interests, connections, messages, reports |
+| `…100200_discovery_and_rls` | `member_card`, the four member RPCs, RLS for all five tables |
+| `…150100_city_coverage` | Counts of cities and states, for marketing copy |
+| `…150200_search_cities_fuzzy` | Trigram fallback so a misspelling still finds the city |
+| `…150300_close_waitlist_writes` | Drops the public insert policy on `waitlist` |
 
 Apply them with the Supabase CLI:
 
@@ -207,14 +217,20 @@ supabase db push
 
 ### `is_launch_city` no longer gates anything
 
-It survives as **marketing and community-density metadata** — where Eraya is
-concentrating first — and the landing page lists those seven. It affects the
-*order* of search results and nothing else. It must never be used to decide who
-may register; that was the old model and it is gone.
+It survives as a **search-ordering hint** and nothing else: after exact and
+prefix matches, a flagged city sorts above an unflagged one. It must never be
+used to decide who may register; that was the old model and it is gone.
 
-The distinction worth keeping is **registration availability** (everywhere)
-against **community density** (seven cities, for now). Discovery can later
-prioritise people who are geographically close without either concept moving.
+Nothing displays it any more either. The landing page used to list the seven
+flagged cities under "Where the community is densest", which claimed to describe
+where members are while actually describing a seed flag. It now shows a count
+read from the table through `city_coverage()`, which cannot drift away from what
+the search field will accept.
+
+`discover_members` applies **no city filter at all**. Where someone lives affects
+neither whether they can join nor who they are introduced to. Discovery could
+later prioritise people who are geographically close, but that would be a new
+decision, not a restoration of this one.
 
 ### Search
 
@@ -224,6 +240,11 @@ prioritise people who are geographically close without either concept moving.
 Ranking happens in the database: exact name, then name-prefix, then a word inside
 the name, then anything in `search_terms`. Sorting in the browser would mean
 fetching a large set to sort, which is the thing worth avoiding.
+
+When that pass finds nothing at all, a second one runs on trigram word
+similarity at 0.45, so "banglore", "hydrabad", "guwhati", "kolkatta" and
+"lucknoww" all still land on the right city while nonsense still returns nothing.
+It only runs on a total miss, so ranking for ordinary queries is unchanged.
 
 `search_terms` holds the lowercased name, its state, and the spellings people
 actually type. Someone who has said "Bangalore" for forty years will not type
@@ -375,6 +396,21 @@ JSON error page.
 
 They are now `enabled = false`, matching the live project. Register the OAuth
 app, set the environment variables, then flip the flag.
+
+## The waitlist is retired
+
+`public.waitlist` and its migration remain; nothing writes to them.
+
+The landing page collected an email address and promised to be in touch "as soon
+as we open". That was true when Eraya opened in seven cities. It stopped being
+true when registration opened across India, and became contradictory: every call
+to action on the page pointed at a waitlist for a product the same page said was
+already open. The form is gone and every CTA now leads to `/signup`.
+
+The table is kept rather than dropped. Removing one to tidy a landing page is the
+wrong trade, the rows are real if any exist, and a waitlist may yet be useful for
+something specific — a city, a feature, an event. The RLS policy is unchanged:
+insert-only, unreadable without the service role.
 
 ## Discovery, connections and messages
 

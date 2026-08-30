@@ -75,10 +75,10 @@ export function getPublicSupabaseConfig(): { url: string; key: string } {
 /**
  * Server-only key that bypasses Row Level Security.
  *
- * Nothing in the current application needs it — every user-facing path runs as
- * the signed-in member under RLS, which is the point. It exists for
- * administrative work (reading the waitlist, back-office tooling) and is
- * deliberately awkward to reach.
+ * Exactly one thing needs it: deleting an account, which removes a row from
+ * `auth.users` and is therefore not something RLS can ever let a member do.
+ * Every other user-facing path runs as the signed-in member under RLS, which is
+ * the point. This is deliberately awkward to reach.
  *
  * Calling this from code that ends up in the browser bundle is a serious
  * mistake; the guard below turns it into an immediate, obvious error rather

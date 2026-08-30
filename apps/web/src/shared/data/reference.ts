@@ -26,33 +26,32 @@ export type LanguageOption = {
   name: string;
 };
 
+export type CityCoverage = {
+  cities: number;
+  states: number;
+};
+
 /**
- * The cities Eraya is concentrating on first, for the landing page.
+ * How much of India is selectable, counted at read time.
  *
- * This is where the community is densest, not where registration is permitted —
- * anyone in India can join from anywhere, and the marketing copy says so.
+ * This replaced `getFocusCities`, which returned the seven `is_launch_city`
+ * rows for a landing-page panel headed "Where the community is densest". That
+ * panel claimed to show where members are while actually showing a seed flag,
+ * and it read as a restriction on a page that says anyone in India can join.
+ *
+ * A count cannot go stale the way a hardcoded list can: add a city to the table
+ * and the page says 494.
  */
-export async function getFocusCities(): Promise<CityOption[]> {
+export async function getCityCoverage(): Promise<CityCoverage> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("cities")
-    .select("id, name, state, is_launch_city")
-    .eq("is_active", true)
-    .eq("is_launch_city", true)
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
+  const { data, error } = await supabase.rpc("city_coverage").single();
 
   if (error) {
-    throw new Error(`Could not load cities: ${error.message}`);
+    throw new Error(`Could not count cities: ${error.message}`);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    name: row.name,
-    state: row.state,
-    isFocusCity: row.is_launch_city,
-  }));
+  return { cities: data.city_count, states: data.state_count };
 }
 
 /**

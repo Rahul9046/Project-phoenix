@@ -593,6 +593,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      city_coverage: {
+        Args: never
+        Returns: {
+          city_count: number
+          state_count: number
+        }[]
+      }
       discover_members: {
         Args: { max_results?: number }
         Returns: Database["public"]["CompositeTypes"]["member_card"][]

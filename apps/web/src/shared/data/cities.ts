@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * City search, for the onboarding and waitlist selectors.
+ * City search, for the onboarding city step.
  *
  * Runs against Supabase from the browser rather than through a server action.
  * Cities are public reference data — `anon` may read them, and `search_cities`

@@ -76,9 +76,21 @@ export function TrustMark({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * What Eraya can actually vouch for about a stranger.
+ *
+ * "Phone verified" used to appear here. It was the strongest safety signal on
+ * the card and it was not true: phone verification is mocked, any six digits are
+ * accepted, and no SMS is ever sent. Telling one member that another's number
+ * has been checked -- in a product for people who are deliberately meeting
+ * strangers -- is the one claim that must never run ahead of the system.
+ *
+ * `phoneVerified` stays on the card and in the database. When an SMS provider is
+ * connected (see features/auth/phone-verification.ts) the mark comes back by
+ * restoring the line below, and nothing else needs to change.
+ */
 export function TrustMarks({ member }: { member: MemberCard }) {
   const marks: string[] = [];
-  if (member.phoneVerified) marks.push("Phone verified");
   if (member.emailVerified) marks.push("Email verified");
 
   if (!marks.length) return null;

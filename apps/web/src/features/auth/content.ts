@@ -45,34 +45,50 @@ export const emailStep = {
   sentRetry: "Use a different email address",
 } as const;
 
+/*
+ * The phone step, worded for a check that does not happen yet.
+ *
+ * This said "Let's verify your phone", offered to "Send code", and the next
+ * screen said "We sent a 6-digit code to ...". None of that was true: no SMS
+ * provider is connected, nothing is sent, and any six digits are accepted. A
+ * real person would sit waiting for a message that was never going to arrive.
+ *
+ * The step is kept -- the number is worth collecting now, and the stage machine
+ * already depends on it -- but the copy claims only what happens. When an SMS
+ * provider is connected (see features/auth/phone-verification.ts) this wording
+ * goes back to talking about verification.
+ */
 export const phoneStep = {
-  title: "Let's verify your phone.",
-  lede: "Your phone number helps us keep Eraya safe. It won't be shown publicly.",
+  title: "Add your phone number.",
+  lede: "We keep it for account recovery, and for verification once that is switched on. It is never shown on your profile.",
   countryLabel: "Country code",
   label: "Phone number",
   placeholder: "98765 43210",
-  cta: "Send code",
-  pending: "Sending code…",
+  cta: "Continue",
+  pending: "Saving…",
   emptyError: "Enter your phone number to continue.",
-  formatError: "Enter a phone number so we can send your code.",
+  formatError: "That does not look like a phone number. Check the digits.",
   reassurance:
-    "We use it for verification and account recovery. It is never shown on your profile.",
+    "Only you can see it. Another member never sees your number, and neither does anyone you connect with.",
 } as const;
 
 export const otpStep = {
-  title: "Enter your verification code.",
-  ledePrefix: "We sent a 6-digit code to",
-  label: "6-digit verification code",
-  cta: "Verify",
-  pending: "Verifying…",
+  title: "Confirm your number.",
+  // No SMS is sent, so this cannot say one was. It names the number back so the
+  // person can still catch a typo, which is most of what the step is for today.
+  ledePrefix: "Checking codes by SMS is not switched on yet, so any six digits will do for now. Your number is",
+  label: "6-digit code",
+  cta: "Continue",
+  pending: "Saving…",
   incompleteError: "Enter all six digits to continue.",
-  invalidError: "That code didn't work. Check the digits and try again.",
-  resendPrompt: "Didn't receive the code?",
-  resendCta: "Resend code",
-  resendPending: "Sending…",
-  resendConfirmation: "We've sent another code.",
+  invalidError: "That needs to be six digits. Check and try again.",
   changeCta: "Change phone number",
-  success: "Phone verified.",
+  /*
+   * Not "Phone verified." No SMS is sent and any six digits are accepted, so
+   * the step is complete rather than verified. The wording says the smaller,
+   * true thing until an SMS provider is connected.
+   */
+  success: "Phone number saved.",
 } as const;
 
 export const basicsStep = {

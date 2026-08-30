@@ -12,16 +12,13 @@ export const site = {
 } as const;
 
 /**
- * The launch cities now live in the `cities` table and are read through
- * `lib/data/reference.ts` — changing where Eraya is available is a data change,
- * not a deploy. The seed list is in
- * `supabase/migrations/20260811090900_seed_reference_data.sql`.
+ * There is no launch-city list any more.
  *
- * Availability never gates account creation: anyone can join from anywhere, and
- * someone outside these cities simply hears from us when we reach them.
+ * Cities live in the `cities` table — 493 of them, every state — and are found
+ * through the `search_cities` RPC rather than a constant in this file. Nothing
+ * in the product gates on which one someone picks: not registration, not
+ * onboarding, not discovery.
  */
-
-/** Value used by the form when someone is not in a launch city. */
 
 export const navLinks = [
   { label: "How it works", href: "#how-it-works" },
@@ -31,16 +28,6 @@ export const navLinks = [
 ] as const;
 
 /** Wording for the searchable city field on the landing form. */
-export const citySearch = {
-  fieldLabel: "Where do you live?",
-  hint: "Every city in India. Type a few letters to find yours.",
-  searchLabel: "Search for your city",
-  searchPlaceholder: "Start typing your city",
-  searching: "Searching…",
-  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
-  changeCta: "Change",
-} as const;
-
 export const hero = {
   eyebrow: "For those beginning again",
   headline: ["Every ending can be", "a new beginning."],
@@ -51,45 +38,60 @@ export const hero = {
    * those who want it; it just no longer carries the differentiation.
    */
   lede: "Meet people who understand what starting again means.",
-  primaryCta: { label: "Begin your journey", href: "#begin" },
+  primaryCta: { label: "Create your account", href: "/signup" },
   secondaryCta: { label: "How Eraya works", href: "#how-it-works" },
   note: "Open across India. Verified members. A considered few, never an endless list.",
 } as const;
 
+/**
+ * Trust, stated honestly.
+ *
+ * This section previously claimed things Eraya does not do: that a team reviews
+ * every profile before it goes live, that reporting takes two taps and every
+ * report is read by a person, and that members choose what is visible to whom.
+ * None of those systems exist. Phone "verification" is a mocked step that
+ * accepts any six digits, so calling it verification was the most serious of
+ * them -- it is a safety claim, and safety claims are the ones people actually
+ * rely on.
+ *
+ * What remains is what the product genuinely enforces today, most of it in the
+ * database rather than in intentions. Where something is a commitment rather
+ * than a mechanism, it is written as a commitment.
+ */
 export const trust = {
   eyebrow: "Safety & Trust",
   title: "Trust comes before connection.",
   lede: "Meeting someone new asks a lot of you. Eraya's job is to make that feel safe long before it feels exciting — so the groundwork comes first.",
   items: [
     {
-      icon: "verified" as IconName,
-      title: "Phone and email verification",
-      description:
-        "Every member confirms a working phone number and email address before they can take part.",
-    },
-    {
-      icon: "review" as IconName,
-      title: "Profiles are reviewed",
-      description:
-        "Our team reviews profiles before they go live, and continues to act on anything that looks wrong afterwards.",
-    },
-    {
       icon: "consent" as IconName,
-      title: "You decide who connects",
+      title: "Nobody can reach you uninvited",
       description:
-        "Nobody can start a conversation with you unless you have chosen to open it. Consent is the default, not a setting.",
+        "A conversation opens only when you have both chosen it. There is no inbox for strangers, and no way to message someone who has not chosen you back.",
     },
     {
       icon: "privacy" as IconName,
-      title: "Clear privacy controls",
+      title: "You are not browsable",
       description:
-        "You choose what is visible, to whom, and when. The controls are written in plain language, not legal terms.",
+        "Eraya introduces a considered few rather than listing everyone. There is no directory to search, and no way to look someone up.",
+    },
+    {
+      icon: "verified" as IconName,
+      title: "Only what you agreed to share",
+      description:
+        "Your email address and phone number are never shown to another member, and your date of birth is never shown at all — only your age.",
+    },
+    {
+      icon: "review" as IconName,
+      title: "Built for one chapter of life",
+      description:
+        "Eraya is for people who are divorced, separated or widowed. Nobody creates a profile on someone else's behalf.",
     },
     {
       icon: "report" as IconName,
-      title: "Report and block, easily",
+      title: "Interest is private",
       description:
-        "Reporting or blocking someone takes two taps, and every report is read by a person.",
+        "If you pass on someone, they are never told. Nobody learns they were passed over, and nobody can be pestered.",
     },
   ],
 } as const;
@@ -131,7 +133,7 @@ export const howItWorks = {
       number: "01",
       title: "Create your profile",
       description:
-        "Tell us a little about yourself and verify your phone and email. It takes a few minutes.",
+        "Tell us a little about yourself — your name, your city, and the chapter you are in. It takes a few minutes.",
     },
     {
       number: "02",
@@ -180,31 +182,49 @@ export const cities = {
   eyebrow: "Where Eraya is",
   /*
    * This section used to say "Opening in a few cities first" and offered a
-   * waitlist to everyone else. Registration is open across India now, so the
-   * section keeps the honest half -- community grows city by city -- and drops
-   * the half that turned people away.
+   * waitlist to everyone else. Both are gone: registration is open India-wide,
+   * and `discover_members` applies no city filter whatsoever, so a member in
+   * Guwahati is introduced to the same community as one in Mumbai. Any wording
+   * about cities coming first would describe a restriction the code does not
+   * implement.
    */
-  title: "Open across India, growing city by city.",
+  title: "Open everywhere in India.",
   body: [
-    "Anyone in India can join today. A community only works when there are real people in it, so Eraya is concentrating on a few cities first — but that shapes who you are likely to meet, not whether you are welcome.",
+    "Every city and town in India is here — search for yours and it will be in the list. Where you live shapes who you are likely to meet, never whether you can join.",
   ],
   elsewhere:
-    "Wherever you are, you can create your account and take your time. Introductions arrive as the community reaches you.",
-  cta: { label: "Begin your journey", href: "#begin" },
+    "Eraya is young, so some places have more members than others. Create your account and take your time; introductions arrive as the community grows around you.",
+  cta: { label: "Create your account", href: "/signup" },
 } as const;
 
 export const finalCta = {
   title: "Your next chapter doesn't have to begin alone.",
   lede: "Wherever you are in it — a year on, or ten — there are people who understand. Eraya is being built for them, and for you.",
-  cta: { label: "Begin your journey", href: "#begin" },
+  cta: { label: "Create your account", href: "/signup" },
 } as const;
 
+/**
+ * The closing invitation.
+ *
+ * This was a waitlist form, and every call to action on the page pointed at it.
+ * That made sense when Eraya opened in seven cities and everyone else was
+ * waiting; it stopped making sense the day registration opened across India, and
+ * became actively contradictory -- the page said anyone could join while the
+ * button collected an email address and promised to be in touch "as soon as we
+ * open".
+ *
+ * The waitlist table and its migration are kept. Removing a table to tidy a
+ * landing page is the wrong trade, and it may yet be useful for people who ask
+ * to hear about something specific. Nothing writes to it now.
+ */
 export const begin = {
-  eyebrow: "Begin your journey",
-  title: "Tell us where to find you.",
-  lede: "Eraya is welcoming members across India as we build our community, city by city. Tell us where you are and we will let you know as soon as we open.",
+  eyebrow: "Begin",
+  title: "Your next chapter starts when you are ready.",
+  lede: "Creating an account is free and takes a few minutes. Nothing is shared with anyone until you choose it, and nobody can reach you until you both do.",
+  cta: { label: "Create your account", href: "/signup" },
+  secondary: { label: "I already have an account", href: "/login" },
   reassurance:
-    "We will only contact you about Eraya. Your details are never sold or shared.",
+    "Open across India. Free to join, and free to leave — you can delete your account and everything in it at any time.",
 } as const;
 
 export const footer = {
