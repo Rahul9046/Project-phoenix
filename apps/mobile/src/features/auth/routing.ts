@@ -1,3 +1,5 @@
+import type { Href } from "expo-router";
+
 import type { ProfileSnapshot } from "@/features/auth/types";
 
 /**
@@ -35,10 +37,31 @@ export const routes = {
   you: "/(tabs)/you",
 } as const;
 
-export type AppRoute = (typeof routes)[keyof typeof routes];
+/**
+ * Typed against the router's own route union.
+ *
+ * `typedRoutes` is on, so expo-router generates a literal type of every route in
+ * `app/`. Returning a bare `string` from here would compile and then fail at the
+ * call site, so this is the type that keeps a typo in a path a build error
+ * rather than a blank screen.
+ */
+export type AppRoute = Href;
 
-export function nextRouteFor(profile: ProfileSnapshot | null): string {
-  if (!profile) return routes.signIn;
+/**
+ * Where a signed-in person belongs.
+ *
+ * Only ever called with a profile. A null one used to fall through to the
+ * sign-in route, which meant a signed-in person whose profile had not yet
+ * arrived was redirected to sign-in, which redirected them here, which sent them
+ * back -- an infinite loop that rendered as a blank screen. Callers now wait for
+ * `loading` to clear instead, and the phone step is the first thing this can
+ * return.
+ */
+export function nextRouteFor(profile: ProfileSnapshot | null): Href {
+  // Defensive only. A caller that reaches this has not waited for `loading`,
+  // and the first onboarding step is a far better answer than a redirect back
+  // to a screen that will bounce them here again.
+  if (!profile) return routes.phone;
 
   // Phone comes first because the stage machine gates on it, and because asking
   // for it later would mean interrupting someone who thought they had finished.

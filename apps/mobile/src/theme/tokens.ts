@@ -96,6 +96,8 @@ export const space = {
 
 export const radius = {
   none: 0,
+  /** The squared-off corner on a message bubble, nearest its sender. */
+  xs: 5,
   sm: 8,
   md: 12,
   lg: 16,

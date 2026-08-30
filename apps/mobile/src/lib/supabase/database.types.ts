@@ -686,6 +686,7 @@ export type Database = {
           state_count: number
         }[]
       }
+      delete_my_account: { Args: never; Returns: undefined }
       discover_members: {
         Args: {
           city_ids?: string[]

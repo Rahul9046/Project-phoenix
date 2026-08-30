@@ -28,7 +28,13 @@ import type { OnboardingStage, ProfileSnapshot } from "@/features/auth/types";
  */
 
 type SessionState = {
-  /** Null while the stored session is still being read from the keystore. */
+  /**
+   * True until both the stored session and, if there is one, its profile have
+   * resolved. Consumers must wait rather than decide: a signed-in person whose
+   * profile has not arrived yet is not the same as a signed-out one, and
+   * treating them alike is what produced an infinite redirect between the entry
+   * screen and sign-in.
+   */
   loading: boolean;
   session: Session | null;
   profile: ProfileSnapshot | null;
@@ -46,6 +52,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
+  // Separate from `loading`, which covers the very first read. This one goes
+  // true again whenever a new sign-in triggers a fresh profile fetch.
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Guards against a slow fetch for a signed-out user landing after a newer one
   // for a signed-in user, which would show the previous person's profile.
@@ -145,7 +154,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
          */
         if (event === "TOKEN_REFRESHED") return;
 
-        void loadProfile(nextSession);
+        setProfileLoading(true);
+        void loadProfile(nextSession).finally(() => setProfileLoading(false));
       },
     );
 
@@ -171,8 +181,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SessionState>(
-    () => ({ loading, session, profile, refresh, signOut }),
-    [loading, session, profile, refresh, signOut],
+    () => ({
+      // A session with no profile yet still counts as loading. This is the line
+      // that stops a half-resolved state from being routed on.
+      loading: loading || profileLoading || (session !== null && profile === null),
+      session,
+      profile,
+      refresh,
+      signOut,
+    }),
+    [loading, profileLoading, session, profile, refresh, signOut],
   );
 
   return (

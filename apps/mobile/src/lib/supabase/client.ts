@@ -1,6 +1,6 @@
 import "react-native-url-polyfill/auto";
 
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 
 import { secureSessionStorage } from "@/lib/supabase/secure-storage";
@@ -20,11 +20,14 @@ import { supabaseConfig } from "@/lib/supabase/env";
  * `storage` is the encrypted keystore, not AsyncStorage. See `secure-storage.ts`
  * for why.
  *
- * `detectSessionInUrl` is false. That option exists so a browser can pick a
- * session out of the address bar after a redirect; there is no address bar here,
- * and leaving it on makes the client attempt URL parsing that cannot succeed.
- * The OAuth and magic-link flows hand their code to `exchangeCodeForSession`
- * explicitly instead -- see `features/auth/session.ts`.
+ * `detectSessionInUrl` is off on a device and on in the browser. The option
+ * exists so a page can pick a session out of its own address bar after a
+ * redirect: there is no address bar on a phone, so on native the OAuth and
+ * magic-link returns are handed to `establishSession` explicitly instead (see
+ * `features/auth/sign-in.ts`). The `expo start --web` preview is a real browser
+ * and is exactly the case the option was written for, so there it stays on --
+ * without it, a link that returns tokens in the fragment lands on a signed-out
+ * screen with nothing to explain why.
  *
  * `autoRefreshToken` is on, but a background app must not keep a refresh timer
  * running: the OS suspends the process, the timer fires late or not at all, and
@@ -40,7 +43,7 @@ export const supabase = createClient<Database>(
       storage: secureSessionStorage,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: Platform.OS === "web",
       flowType: "pkce",
     },
     global: {

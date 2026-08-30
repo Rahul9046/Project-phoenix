@@ -50,7 +50,13 @@
           "backgroundColor": "#FBF7F2"
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Eraya uses your photos so you can add one to your profile. Nothing is uploaded until you choose it."
+        }
+      ]
     ]
   }
 }

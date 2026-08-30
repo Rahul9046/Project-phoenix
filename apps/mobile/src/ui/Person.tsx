@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, type ImageStyle, type ViewStyle } from "react-native";
+import { View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -235,7 +235,8 @@ export function PersonSummary({
   state?: string | null;
   relationship?: string | null;
   numberOfLines?: number;
-  style?: ViewStyle;
+  // Styles a Text, not a View -- the two disagree about `userSelect`.
+  style?: TextStyle;
 }) {
   const parts = [
     age ? `${age}` : null,

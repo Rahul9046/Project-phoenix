@@ -92,13 +92,27 @@ function DeepLinkHandler() {
 
     async function handle(url: string | null) {
       if (!url || !active || url === handled) return;
-      if (!url.includes("code=") && !url.includes("error")) return;
+      // Both shapes, plus the error case. See readReturnedUrl for why.
+      const carriesSession =
+        url.includes("code=") ||
+        url.includes("access_token=") ||
+        url.includes("error");
+      if (!carriesSession) return;
 
       setHandled(url);
-      await completeSignInFromUrl(url);
+      const result = await completeSignInFromUrl(url);
+
+      /*
+       * A failed exchange is silent to the person -- they simply stay on the
+       * sign-in screen, which is the right behaviour -- but silent to the
+       * developer as well would make a broken redirect configuration almost
+       * impossible to diagnose. The reason is logged; the token never is.
+       */
+      if (!result.ok) {
+        console.warn("[eraya] sign-in link could not be completed:", result.message);
+      }
       // The session provider is subscribed to auth state, so a successful
-      // exchange re-routes on its own. A failure leaves the person on the
-      // sign-in screen, which already shows its own error.
+      // exchange re-routes on its own.
     }
 
     void Linking.getInitialURL().then(handle);

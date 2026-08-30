@@ -64,15 +64,26 @@ const GENERIC =
   "We could not sign you in just now. Please check your connection and try again.";
 
 /**
- * Pulls the authorisation code out of whatever the provider sent back.
+ * Reads whatever Supabase sent back.
  *
- * Supabase can return either shape depending on how the project and the email
- * templates are configured: a PKCE `code` in the query string, or a legacy
- * `access_token` pair in the fragment. The web app learned this the hard way --
- * it handled only one and every magic link failed. Handling both costs a few
- * lines and removes a whole class of "it works on my machine".
+ * There are two shapes, and both are real. A PKCE sign-in returns a `code` in
+ * the query string, which is exchanged for a session. Everything else -- the
+ * implicit flow, and any link generated server-side through the admin API --
+ * returns `access_token` and `refresh_token` in the fragment, which are set as
+ * the session directly.
+ *
+ * The web app learned this the hard way: it handled one shape, and every magic
+ * link failed with a redirect to an error page that gave no clue why. Handling
+ * both costs a few lines and removes a whole class of "it works on my machine".
  */
-function readReturnedUrl(url: string): { code?: string; error?: string } {
+type ReturnedUrl = {
+  code?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  error?: string;
+};
+
+function readReturnedUrl(url: string): ReturnedUrl {
   const parsed = new URL(url);
   const query = parsed.searchParams;
   const fragment = new URLSearchParams(parsed.hash.replace(/^#/, ""));
@@ -84,9 +95,32 @@ function readReturnedUrl(url: string): { code?: string; error?: string } {
     fragment.get("error") ??
     undefined;
 
-  const code = query.get("code") ?? fragment.get("code") ?? undefined;
+  return {
+    code: query.get("code") ?? fragment.get("code") ?? undefined,
+    accessToken: fragment.get("access_token") ?? undefined,
+    refreshToken: fragment.get("refresh_token") ?? undefined,
+    error: error ?? undefined,
+  };
+}
 
-  return { code, error: error ?? undefined };
+/** Turns either shape into a session. Shared by the OAuth and link paths. */
+async function establishSession(returned: ReturnedUrl): Promise<SignInResult> {
+  if (returned.error) return { ok: false, message: returned.error };
+
+  if (returned.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(returned.code);
+    return error ? { ok: false, message: error.message } : { ok: true };
+  }
+
+  if (returned.accessToken && returned.refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: returned.accessToken,
+      refresh_token: returned.refreshToken,
+    });
+    return error ? { ok: false, message: error.message } : { ok: true };
+  }
+
+  return { ok: false, message: GENERIC };
 }
 
 export async function signInWithProvider(
@@ -121,23 +155,7 @@ export async function signInWithProvider(
     return { ok: false, message: GENERIC };
   }
 
-  const { code, error: returned } = readReturnedUrl(result.url);
-
-  if (returned) {
-    return { ok: false, message: returned };
-  }
-  if (!code) {
-    return { ok: false, message: GENERIC };
-  }
-
-  const { error: exchangeError } =
-    await supabase.auth.exchangeCodeForSession(code);
-
-  if (exchangeError) {
-    return { ok: false, message: exchangeError.message };
-  }
-
-  return { ok: true };
+  return establishSession(readReturnedUrl(result.url));
 }
 
 /**
@@ -187,14 +205,5 @@ export async function sendEmailLink(email: string): Promise<SignInResult> {
 export async function completeSignInFromUrl(
   url: string,
 ): Promise<SignInResult> {
-  const { code, error } = readReturnedUrl(url);
-
-  if (error) return { ok: false, message: error };
-  if (!code) return { ok: false, message: GENERIC };
-
-  const { error: exchangeError } =
-    await supabase.auth.exchangeCodeForSession(code);
-
-  if (exchangeError) return { ok: false, message: exchangeError.message };
-  return { ok: true };
+  return establishSession(readReturnedUrl(url));
 }

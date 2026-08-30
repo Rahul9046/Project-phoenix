@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 /**
@@ -21,6 +22,20 @@ import * as SecureStore from "expo-secure-store";
  * temporarily unavailable -- device locked during a background refresh, a
  * restored backup on a new device -- should send someone to the sign-in screen,
  * not crash the app.
+ *
+ * ---------------------------------------------------------------------------
+ * The web branch
+ * ---------------------------------------------------------------------------
+ * SecureStore has no web implementation and throws if called there. Eraya does
+ * not ship a web build of this app -- the web product is the Next.js one -- but
+ * `expo start --web` is how the mobile layouts get inspected at a phone
+ * viewport during development, and the app has to boot for that to be possible.
+ *
+ * So the fallback is an in-memory map, deliberately, and not `localStorage`. A
+ * token in localStorage is readable by any script on the origin and survives a
+ * reload, which is exactly the shipping-a-security-regression-by-accident this
+ * comment exists to prevent. In memory it dies with the tab, which makes the
+ * fallback useless for anything but looking at screens -- which is the point.
  */
 
 const CHUNK_SIZE = 1800;
@@ -45,8 +60,15 @@ async function readChunkCount(key: string): Promise<number> {
   return Number.isFinite(count) && count > 0 ? count : 0;
 }
 
+/** Development only. See the note above: never persisted, never on a device. */
+const previewStore = new Map<string, string>();
+
+const useKeystore = Platform.OS !== "web";
+
 export const secureSessionStorage = {
   async getItem(key: string): Promise<string | null> {
+    if (!useKeystore) return previewStore.get(key) ?? null;
+
     try {
       const count = await readChunkCount(key);
       if (count === 0) return null;
@@ -66,6 +88,11 @@ export const secureSessionStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
+    if (!useKeystore) {
+      previewStore.set(key, value);
+      return;
+    }
+
     try {
       const previous = await readChunkCount(key);
 
@@ -102,6 +129,11 @@ export const secureSessionStorage = {
   },
 
   async removeItem(key: string): Promise<void> {
+    if (!useKeystore) {
+      previewStore.delete(key);
+      return;
+    }
+
     try {
       const count = await readChunkCount(key);
       // Header first, so a partial delete still reads as signed out.
