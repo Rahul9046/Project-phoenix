@@ -26,10 +26,35 @@ export const account = {
 
   dangerTitle: "Leaving Eraya",
   dangerBody:
-    "Deleting your account removes your profile, your answers and your sign-in permanently. It cannot be undone.",
-  dangerCta: "Delete account",
-  dangerUnavailable:
-    "Account deletion is not built yet. Until it is, write to us and a person will do it for you.",
+    "You can delete your account at any time. It is yours, and you should not have to ask us for it back.",
+  dangerCta: "Delete my account",
+
+  /*
+   * The confirmation step.
+   *
+   * It lists what actually disappears rather than saying "all your data", which
+   * is a phrase people skim past. Someone about to do something irreversible
+   * deserves to know precisely what they are about to lose -- particularly the
+   * part they may not have considered, that conversations vanish for the other
+   * person too.
+   */
+  confirmTitle: "Delete your account?",
+  confirmBody:
+    "This cannot be undone. There is no grace period and no way for us to restore it afterwards.",
+  confirmList: [
+    "Your profile, and everything you told us about yourself",
+    "Every connection you have made",
+    "Every conversation, for you and for the people you were speaking to",
+    "Your sign-in — you would start again from scratch",
+  ],
+  confirmCta: "Yes, delete my account",
+  confirmCancel: "Keep my account",
+  confirmPending: "Deleting…",
+
+  /* Shown on the way out. Warm, brief, and asking nothing of them. */
+  deletedTitle: "Your account has been deleted.",
+  deletedBody:
+    "Everything of yours has been removed from Eraya. If you ever want to begin again, you would be welcome.",
 
   notProvided: "Not provided",
   notAnswered: "Not answered",

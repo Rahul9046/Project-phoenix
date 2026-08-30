@@ -50,6 +50,6 @@ export const accountNav = [
   {
     href: appRoutes.settings,
     label: "Settings",
-    description: "Account details and preferences",
+    description: "Account details, and deleting your account",
   },
 ] as const;

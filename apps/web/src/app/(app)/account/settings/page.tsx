@@ -1,8 +1,8 @@
 import { account } from "@/features/account/content";
+import { DeleteAccount } from "@/features/account/DeleteAccount";
 import { AppPage, DetailRow, Panel } from "@/features/app-shell/AppPage";
 import { authRoutes } from "@/features/auth/flow";
 import { loadAuthSession } from "@/features/auth/load-session";
-import { site } from "@/features/marketing/content";
 import { Button } from "@/shared/ui/Button";
 
 export const metadata = { title: "Settings" };
@@ -51,18 +51,9 @@ export default async function SettingsPage() {
           is coming next week is not.
         */}
         <Panel title={account.dangerTitle}>
-          <p className="mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-ink-muted">
-            {account.dangerBody}
-          </p>
-          <p className="mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-ink-subtle">
-            {account.dangerUnavailable}{" "}
-            <a
-              href={`mailto:${site.email}`}
-              className="text-ember-text underline underline-offset-4 hover:text-ember-strong"
-            >
-              {site.email}
-            </a>
-          </p>
+          <div className="mt-3">
+            <DeleteAccount />
+          </div>
         </Panel>
       </div>
     </AppPage>
