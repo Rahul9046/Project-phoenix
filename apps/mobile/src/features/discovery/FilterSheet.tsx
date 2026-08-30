@@ -46,33 +46,44 @@ export function FilterSheet({
   onClose: () => void;
   onApply: (next: DiscoveryFilters) => void;
 }) {
+  /*
+   * Initialised once, from the filters in force when this sheet was mounted.
+   * The parent remounts it on open (see the `key` on <FilterSheet>), so a
+   * cancelled edit is discarded by unmounting rather than by an effect that
+   * copies props into state a render late.
+   */
   const [draft, setDraft] = useState<DiscoveryFilters>(filters);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [cityQuery, setCityQuery] = useState("");
   const [cityResults, setCityResults] = useState<CityResult[]>([]);
   const [chosenCities, setChosenCities] = useState<CityResult[]>([]);
 
-  // Reset the draft each time the sheet opens, so a cancelled edit does not
-  // linger and surprise someone the next time they open it.
   useEffect(() => {
-    if (visible) setDraft(filters);
-  }, [visible, filters]);
-
-  useEffect(() => {
-    if (!visible || languages.length) return;
-    void listLanguages().then(setLanguages);
-  }, [visible, languages.length]);
+    if (!visible) return;
+    let active = true;
+    void listLanguages().then((list) => {
+      if (active) setLanguages(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [visible]);
 
   useEffect(() => {
     const term = cityQuery.trim();
-    if (term.length === 0) {
-      setCityResults([]);
-      return;
-    }
+    if (term.length === 0) return;
+
+    let active = true;
     const timer = setTimeout(() => {
-      void searchCities(term, 6).then(setCityResults);
+      void searchCities(term, 6).then((found) => {
+        if (active) setCityResults(found);
+      });
     }, 180);
-    return () => clearTimeout(timer);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [cityQuery]);
 
   function toggleLanguage(id: string) {
@@ -176,7 +187,9 @@ export function FilterSheet({
           accessibilityLabel="Search for a city to filter by"
         />
 
-        {cityResults.map((city) => (
+        {/* Derived, not stored: an empty field shows nothing without an effect
+            having to write that emptiness back into state. */}
+        {(cityQuery.trim().length === 0 ? [] : cityResults).map((city) => (
           <Pressable
             key={city.id}
             accessibilityRole="button"

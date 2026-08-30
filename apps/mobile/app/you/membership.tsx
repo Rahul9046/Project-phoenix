@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { supabase } from "@/lib/supabase/client";
 import { useEntitlements } from "@/features/membership/entitlements";
-import { colors, iconSize, radius, space } from "@/theme/tokens";
+import { colors, iconSize, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Card, Divider } from "@/ui/Surface";
@@ -74,7 +74,7 @@ const ALWAYS_FREE = [
 ];
 
 export default function Membership() {
-  const { entitlements, loading: entitlementsLoading } = useEntitlements();
+  const { entitlements } = useEntitlements();
   const [plans, setPlans] = useState<Plan[] | null>(null);
 
   useEffect(() => {

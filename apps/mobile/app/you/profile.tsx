@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,13 +32,23 @@ export default function MyProfile() {
   const { details } = useMyDetails();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
-  const sign = useCallback(async () => {
-    setPhotoUrl(await photoUrlFor(details.photoPaths[0] ?? null));
-  }, [details.photoPaths]);
-
+  /*
+   * Cancellation on unmount, and on any change that starts a newer fetch.
+   * Without it a slow response can land after the screen has gone, or after a
+   * newer one for different data -- both of which write state that is no longer
+   * true.
+   */
   useEffect(() => {
-    void sign();
-  }, [sign]);
+    let active = true;
+
+    void photoUrlFor(details.photoPaths[0] ?? null).then((url) => {
+      if (active) setPhotoUrl(url);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [details.photoPaths]);
 
   const age = profile?.dateOfBirth ? ageFrom(profile.dateOfBirth) : null;
 

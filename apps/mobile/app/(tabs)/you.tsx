@@ -4,7 +4,6 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { relationshipLabels } from "@/features/auth/types";
 import { photoUrlFor } from "@/features/members/data";
 import { useMyDetails } from "@/features/members/me";
 import { useEntitlements } from "@/features/membership/entitlements";

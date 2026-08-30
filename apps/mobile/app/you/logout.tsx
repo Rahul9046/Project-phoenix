@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { routes } from "@/features/auth/routing";
-import { colors, iconSize, radius, space } from "@/theme/tokens";
+import { colors, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";

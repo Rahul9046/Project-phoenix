@@ -34,7 +34,21 @@ port = 54324
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3000/auth/confirm"]
+# Every address an auth redirect may land on. Anything not listed here comes back
+# as an error rather than a session, which is the single most common reason a
+# working OAuth setup appears broken.
+#
+# The last three are the mobile app. `eraya://auth` is the standalone build's own
+# scheme; `exp://` covers Expo Go on a phone during development, where the host
+# is the developer's machine on the local network; and the localhost entry is the
+# `expo start --web` preview used for inspecting layouts.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "eraya://auth",
+  "exp://**",
+  "http://localhost:8081",
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

@@ -29,23 +29,33 @@ export default function Blocked() {
   const [blocks, setBlocks] = useState<Block[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const fetchBlocks = useCallback(async (): Promise<Block[]> => {
     const { data } = await supabase
       .from("member_blocks")
       .select("blocked_id, created_at")
       .order("created_at", { ascending: false });
 
-    setBlocks(
-      (data ?? []).map((row) => ({
-        blockedId: row.blocked_id,
-        createdAt: row.created_at,
-      })),
-    );
+    return (data ?? []).map((row) => ({
+      blockedId: row.blocked_id,
+      createdAt: row.created_at,
+    }));
   }, []);
 
+  /*
+   * The fetch is written out here rather than hidden behind a callback that
+   * setStates on its own. Data functions return data and the component owns its
+   * state -- which keeps the cancellation visible at the point it matters and
+   * makes the effect's dependencies the actual inputs to the query.
+   */
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    void fetchBlocks().then((rows) => {
+      if (active) setBlocks(rows);
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchBlocks]);
 
   async function unblock(id: string) {
     setPending(id);
@@ -62,7 +72,7 @@ export default function Blocked() {
       return;
     }
 
-    await load();
+    setBlocks(await fetchBlocks());
     toast.show("Unblocked. You may see each other again.");
   }
 

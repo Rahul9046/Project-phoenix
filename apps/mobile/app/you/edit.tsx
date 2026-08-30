@@ -14,7 +14,7 @@ import {
   saveStory,
   type LanguageOption,
 } from "@/features/onboarding/data";
-import { useMyDetails } from "@/features/members/me";
+import { useMyDetails, type MyDetails } from "@/features/members/me";
 import { space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Field } from "@/ui/Input";
@@ -22,6 +22,7 @@ import { Screen } from "@/ui/Screen";
 import { Chip, ChipGroup, SelectionCard } from "@/ui/Selection";
 import { BottomSheet } from "@/ui/Sheet";
 import { Divider } from "@/ui/Surface";
+import { LoadingState } from "@/ui/States";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
 
@@ -30,25 +31,55 @@ import { useToast } from "@/ui/Toast";
  *
  * Onboarding asks one question per screen because it is a conversation with
  * somebody new. Editing is the opposite situation -- you already know what you
- * want to change and having to walk through seven screens to reach it would be
- * absurd -- so everything is on one screen and saved together.
+ * want to change, and walking through seven screens to reach it would be absurd
+ * -- so everything is on one screen and saved together.
  *
  * The two free-text fields are first. They are optional and they are the part
  * that turns a row of facts into a person, so they get the top of the screen
  * rather than being buried under the things that were answered at signup.
  */
 export default function EditProfile() {
-  const { profile, refresh } = useSession();
-  const { details, reload } = useMyDetails();
+  const { profile } = useSession();
+  const { details, loading } = useMyDetails();
+
+  /*
+   * The form does not mount until its values exist.
+   *
+   * Seeding state from an effect once the fetch lands is the usual way to do
+   * this and it is wrong twice over: the fields flash empty first, and anything
+   * typed in that moment is overwritten when the data arrives. Waiting and then
+   * initialising the state directly removes both, and the loading state is one a
+   * person would expect on a screen that has to fetch what it is editing.
+   */
+  if (loading || !profile) {
+    return (
+      <Screen>
+        <LoadingState label="Loading your profile" />
+      </Screen>
+    );
+  }
+
+  return <EditForm profile={profile} details={details} />;
+}
+
+function EditForm({
+  profile,
+  details,
+}: {
+  profile: NonNullable<ReturnType<typeof useSession>["profile"]>;
+  details: MyDetails;
+}) {
+  const { refresh } = useSession();
+  const { reload } = useMyDetails();
   const toast = useToast();
 
-  const [firstName, setFirstName] = useState("");
-  const [about, setAbout] = useState("");
-  const [lookingFor, setLookingFor] = useState("");
+  const [firstName, setFirstName] = useState(profile.firstName ?? "");
+  const [about, setAbout] = useState(details.about ?? "");
+  const [lookingFor, setLookingFor] = useState(details.lookingFor ?? "");
   const [relationship, setRelationship] = useState(
-    profile?.relationshipStatus ?? null,
+    profile.relationshipStatus ?? null,
   );
-  const [languageIds, setLanguageIds] = useState<string[]>([]);
+  const [languageIds, setLanguageIds] = useState<string[]>(profile.languageIds);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [city, setCity] = useState<
     { id: string; label: string } | { name: string } | null
@@ -58,24 +89,14 @@ export default function EditProfile() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Seeded from the stored profile once it has loaded, rather than from an
-  // initial state that would be empty on the first render and overwrite what is
-  // typed if it were re-applied later.
   useEffect(() => {
-    if (profile) {
-      setFirstName(profile.firstName ?? "");
-      setRelationship(profile.relationshipStatus ?? null);
-      setLanguageIds(profile.languageIds);
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    setAbout(details.about ?? "");
-    setLookingFor(details.lookingFor ?? "");
-  }, [details.about, details.lookingFor]);
-
-  useEffect(() => {
-    void listLanguages().then(setLanguages);
+    let active = true;
+    void listLanguages().then((list) => {
+      if (active) setLanguages(list);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const cityLabel =

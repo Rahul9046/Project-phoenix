@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, View } from "react-native";
 import { Redirect } from "expo-router";
 
@@ -40,8 +40,8 @@ export default function Entry() {
  * of it.
  */
 function EntryMark() {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const lift = useRef(new Animated.Value(10)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [lift] = useState(() => new Animated.Value(10));
 
   useEffect(() => {
     Animated.parallel([

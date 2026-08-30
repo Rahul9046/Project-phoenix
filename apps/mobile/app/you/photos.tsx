@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,16 +38,29 @@ export default function Photos() {
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const sign = useCallback(async (paths: string[]) => {
-    const signed = await Promise.all(paths.map((path) => photoUrlFor(path)));
-    setUrls(
-      Object.fromEntries(paths.map((path, index) => [path, signed[index] ?? null])),
-    );
-  }, []);
-
+  /*
+   * Cancellation on unmount, and on any change that starts a newer fetch.
+   * Without it a slow response can land after the screen has gone, or after a
+   * newer one for different data -- both of which write state that is no longer
+   * true.
+   */
   useEffect(() => {
-    void sign(details.photoPaths);
-  }, [details.photoPaths, sign]);
+    let active = true;
+    const paths = details.photoPaths;
+
+    void Promise.all(paths.map((path) => photoUrlFor(path))).then((signed) => {
+      if (!active) return;
+      setUrls(
+        Object.fromEntries(
+          paths.map((path, index) => [path, signed[index] ?? null]),
+        ),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [details.photoPaths]);
 
   async function add() {
     if (pending) return;

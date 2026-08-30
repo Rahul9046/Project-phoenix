@@ -271,7 +271,13 @@ export default function Discover() {
         }
       />
 
+      {/*
+        Keyed on the open state so the sheet is a fresh component each time. Its
+        draft then starts from the filters actually in force, and abandoning an
+        edit needs no cleanup -- the component simply goes away.
+      */}
       <FilterSheet
+        key={filtering ? "open" : "closed"}
         visible={filtering}
         filters={filters}
         onClose={() => setFiltering(false)}

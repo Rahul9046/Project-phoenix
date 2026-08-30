@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,17 +54,30 @@ export default function MemberProfile() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [decided, setDecided] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    const found = await getMember(id);
-    setMember(found);
-    setPhotoUrl(await photoUrlFor(found?.photoPath ?? null));
-    setLoading(false);
-  }, [id]);
-
+  /*
+   * The fetch is written out here rather than hidden behind a callback that
+   * setStates on its own. Data functions return data and the component owns its
+   * state -- which keeps the cancellation visible at the point it matters and
+   * makes the effect's dependencies the actual inputs to the query.
+   */
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!id) return;
+    let active = true;
+
+    void (async () => {
+      const found = await getMember(id);
+      const url = await photoUrlFor(found?.photoPath ?? null);
+
+      if (!active) return;
+      setMember(found);
+      setPhotoUrl(url);
+      setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   async function decide(decision: "interested" | "passed") {
     if (!member || deciding) return;

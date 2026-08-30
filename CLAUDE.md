@@ -7,9 +7,11 @@ This is a workspace monorepo. One app today, room for more.
 | Path | What it is |
 | --- | --- |
 | `apps/web/` | The Next.js app. Run every `next`/`npm` command from here or via the root scripts |
+| `apps/mobile/` | The Expo app, Android and iOS from one codebase. See `docs/09-mobile.md` |
 | `supabase/` | Migrations and config. The contract between every app, owned by none of them |
 | `assets/brand/` | Logo source artwork. Not served — `public/` is what ships |
-| `docs/` | Product, brand, backend and open questions |
+| `docs/` | Product, brand, backend, mobile and open questions |
+| `scripts/` | Local tools: the city dataset, demo members, the security probe |
 
 Inside `apps/web/src/`, `app/` is routing only: a folder there exists to define a
 URL. Everything else lives beside the feature it belongs to.
@@ -33,6 +35,17 @@ feature actually needs it, not in anticipation of one.
 `revertLimit`, and so on. The values live in the `entitlements` table, so adding
 a premium feature is an insert plus the feature, not a hunt through the UI for
 `tier === 'premium'`.
+
+**Never show a badge for something Eraya has not checked.** Phone verification
+is mocked -- any six digits pass, no SMS is sent -- so no member is shown a
+"phone verified" mark on another member's card, on either client. A trust mark
+that runs ahead of the system is worse than none, because the person relying on
+it is a stranger deciding whether to meet someone.
+
+**Revoke from `public`, not from `anon`.** `create function` grants EXECUTE to
+PUBLIC and `anon` inherits it, so `revoke ... from anon` does nothing. Every
+member-facing function must `revoke execute ... from public, anon` and then
+`grant ... to authenticated`. `scripts/security-probe.mjs` checks this.
 
 **Never grant membership from the browser.** `subscriptions` has no insert,
 update or delete policy for anyone, deliberately. Membership is written by

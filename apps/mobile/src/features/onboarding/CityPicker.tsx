@@ -62,13 +62,7 @@ export function CityPicker({
 
   useEffect(() => {
     const term = query.trim();
-
-    if (term.length === 0) {
-      latest.current += 1;
-      setResults([]);
-      setSearching(false);
-      return;
-    }
+    if (term.length === 0) return;
 
     const timer = setTimeout(() => void run(term), DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -82,7 +76,15 @@ export function CityPicker({
         : selected.name;
 
   const trimmed = query.trim();
-  const noMatches = trimmed.length > 1 && !searching && results.length === 0;
+
+  /*
+   * What an empty field shows is not state -- it is a fact about the query, so
+   * it is derived rather than written back by an effect. The stale results for
+   * the previous query stay in `results` and are simply not rendered, which also
+   * means clearing and retyping the same thing does not re-fetch.
+   */
+  const visibleResults = trimmed.length === 0 ? [] : results;
+  const noMatches = trimmed.length > 1 && !searching && visibleResults.length === 0;
 
   return (
     <View style={{ flex: 1 }}>
@@ -117,12 +119,12 @@ export function CityPicker({
         </View>
       ) : null}
 
-      {searching && results.length === 0 ? (
+      {searching && visibleResults.length === 0 ? (
         <LoadingState label="Searching cities" />
       ) : null}
 
-      <View style={{ marginTop: results.length ? space.lg : 0 }}>
-        {results.map((city) => {
+      <View style={{ marginTop: visibleResults.length ? space.lg : 0 }}>
+        {visibleResults.map((city) => {
           const isSelected =
             selected !== null && "label" in selected && selected.id === city.id;
 

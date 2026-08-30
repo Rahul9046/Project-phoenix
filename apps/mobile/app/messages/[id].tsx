@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -49,7 +49,7 @@ import { useToast } from "@/ui/Toast";
  * Messaging is free, permanently. It is the point of the product, and paywalling
  * it would mean two people who chose each other cannot speak.
  */
-export default function Conversation() {
+export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
@@ -68,29 +68,41 @@ export default function Conversation() {
   const listRef = useRef<FlatList<Message>>(null);
   const myId = session?.user.id ?? "";
 
-  const load = useCallback(async () => {
-    if (!id || !myId) return;
-
-    const [all, history] = await Promise.all([
-      getConversations(),
-      getMessages(id, myId),
-    ]);
-
-    const found = all.find((entry) => entry.connectionId === id) ?? null;
-    setConversation(found);
-    setPhotoUrl(await photoUrlFor(found?.member.photoPath ?? null));
-    setMessages(history);
-    setExhausted(history.length < MESSAGE_PAGE_SIZE);
-    setLoading(false);
-
-    // Opening a conversation marks it read -- for this person only. There is no
-    // query, from any client, that tells the other person this happened.
-    void markConversationRead(id);
-  }, [id, myId]);
-
+  /*
+   * The fetch is written out here rather than hidden behind a callback that
+   * setStates on its own. Data functions return data and the component owns its
+   * state -- which keeps the cancellation visible at the point it matters and
+   * makes the effect's dependencies the actual inputs to the query.
+   */
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!id || !myId) return;
+    let active = true;
+
+    void (async () => {
+      const [all, history] = await Promise.all([
+        getConversations(),
+        getMessages(id, myId),
+      ]);
+
+      const found = all.find((entry) => entry.connectionId === id) ?? null;
+      const url = await photoUrlFor(found?.member.photoPath ?? null);
+
+      if (!active) return;
+      setConversation(found);
+      setPhotoUrl(url);
+      setMessages(history);
+      setExhausted(history.length < MESSAGE_PAGE_SIZE);
+      setLoading(false);
+
+      // Opening a conversation marks it read -- for this person only. There is
+      // no query, from any client, that tells the other person this happened.
+      void markConversationRead(id);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [id, myId]);
 
   async function loadOlder() {
     const oldest = messages[0];

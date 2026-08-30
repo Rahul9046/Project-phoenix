@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -43,20 +43,32 @@ export default function Interests() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    const [found, total] = await Promise.all([
-      getInterestsReceived(),
-      getInterestsReceivedCount(),
-    ]);
-
-    setMembers(await withPhotoUrls(found));
-    setCount(total);
-    setLoading(false);
-  }, []);
-
+  /*
+   * The fetch is written out here rather than hidden behind a callback that
+   * setStates on its own. Data functions return data and the component owns its
+   * state -- which keeps the cancellation visible at the point it matters and
+   * makes the effect's dependencies the actual inputs to the query.
+   */
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+
+    void (async () => {
+      const [found, total] = await Promise.all([
+        getInterestsReceived(),
+        getInterestsReceivedCount(),
+      ]);
+      const withPhotos = await withPhotoUrls(found);
+
+      if (!active) return;
+      setMembers(withPhotos);
+      setCount(total);
+      setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const me = { city: details.cityName, languages: details.languageNames };
 

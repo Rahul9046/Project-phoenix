@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, Modal, View } from "react-native";
 
 import { ErayaMark } from "@/brand/ErayaMark";
@@ -35,8 +35,8 @@ export function ConnectionMoment({
   onStart: () => void;
   onLater: () => void;
 }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const lift = useRef(new Animated.Value(16)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [lift] = useState(() => new Animated.Value(16));
 
   useEffect(() => {
     if (!visible) {

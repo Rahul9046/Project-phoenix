@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Animated, View, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -173,7 +173,7 @@ export function Skeleton({
   rounded?: number;
   style?: ViewStyle;
 }) {
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const [pulse] = useState(() => new Animated.Value(0.4));
 
   useEffect(() => {
     const loop = Animated.loop(

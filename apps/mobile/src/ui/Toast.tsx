@@ -45,8 +45,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<ToastTone>("neutral");
-  const opacity = useRef(new Animated.Value(0)).current;
-  const offset = useRef(new Animated.Value(-12)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [offset] = useState(() => new Animated.Value(-12));
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hide = useCallback(() => {

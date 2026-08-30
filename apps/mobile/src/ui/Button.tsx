@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -69,7 +69,7 @@ export function Button({
   style,
   ...rest
 }: Props) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
   const isDisabled = Boolean(disabled) || loading;
 
   function settle(to: number) {
