@@ -16,9 +16,12 @@ const PROTECTED_PREFIXES = [
   "/auth/phone",
   "/auth/otp",
   "/onboarding",
-  // The signed-in application. The layout redirects too — this only spares
-  // an unauthenticated visitor from rendering a shell they cannot use.
+  // The signed-in application. The (app) layout redirects too, and that is the
+  // boundary that actually holds — middleware is an optimisation. This only
+  // spares an unauthenticated visitor from rendering a shell they cannot use.
   "/home",
+  "/discovery",
+  "/connections",
   "/account",
 ];
 

@@ -87,6 +87,55 @@ export type Database = {
         }
         Relationships: []
       }
+      connections: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          member_a: string
+          member_b: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          member_a: string
+          member_b: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          member_a?: string
+          member_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connections_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_member_a_fkey"
+            columns: ["member_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_member_b_fkey"
+            columns: ["member_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entitlements: {
         Row: {
           created_at: string
@@ -147,6 +196,117 @@ export type Database = {
         }
         Relationships: []
       }
+      member_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_interests: {
+        Row: {
+          created_at: string
+          from_id: string
+          kind: Database["public"]["Enums"]["interest_kind"]
+          to_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_id: string
+          kind: Database["public"]["Enums"]["interest_kind"]
+          to_id: string
+        }
+        Update: {
+          created_at?: string
+          from_id?: string
+          kind?: Database["public"]["Enums"]["interest_kind"]
+          to_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_interests_from_id_fkey"
+            columns: ["from_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_interests_to_id_fkey"
+            columns: ["to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reported_id: string
+          reporter_id: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reported_id: string
+          reporter_id: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_id?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       membership_plans: {
         Row: {
           code: string
@@ -197,6 +357,45 @@ export type Database = {
           tier?: Database["public"]["Enums"]["membership_tier"]
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          connection_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          connection_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          connection_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profile_languages: {
         Row: {
@@ -394,6 +593,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      discover_members: {
+        Args: { max_results?: number }
+        Returns: Database["public"]["CompositeTypes"]["member_card"][]
+        SetofOptions: {
+          from: "*"
+          to: "member_card"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      express_interest: {
+        Args: {
+          decision?: Database["public"]["Enums"]["interest_kind"]
+          target_id: string
+        }
+        Returns: string
+      }
+      interests_received: {
+        Args: never
+        Returns: Database["public"]["CompositeTypes"]["member_card"][]
+        SetofOptions: {
+          from: "*"
+          to: "member_card"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      member_profile: {
+        Args: { member_id: string }
+        Returns: Database["public"]["CompositeTypes"]["member_card"][]
+        SetofOptions: {
+          from: "*"
+          to: "member_card"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       search_cities: {
         Args: { max_results?: number; query: string }
         Returns: {
@@ -410,6 +646,7 @@ export type Database = {
     Enums: {
       entitlement_kind: "boolean" | "number"
       gender: "woman" | "man" | "non_binary" | "prefer_not_to_say"
+      interest_kind: "interested" | "passed"
       membership_tier: "free" | "premium"
       onboarding_stage:
         | "authenticated"
@@ -432,7 +669,20 @@ export type Database = {
         | "expired"
     }
     CompositeTypes: {
-      [_ in never]: never
+      member_card: {
+        id: string | null
+        first_name: string | null
+        age: number | null
+        city: string | null
+        state: string | null
+        relationship_status:
+          | Database["public"]["Enums"]["relationship_status"]
+          | null
+        gender: Database["public"]["Enums"]["gender"] | null
+        languages: string[] | null
+        phone_verified: boolean | null
+        email_verified: boolean | null
+      }
     }
   }
 }
@@ -562,6 +812,7 @@ export const Constants = {
     Enums: {
       entitlement_kind: ["boolean", "number"],
       gender: ["woman", "man", "non_binary", "prefer_not_to_say"],
+      interest_kind: ["interested", "passed"],
       membership_tier: ["free", "premium"],
       onboarding_stage: [
         "authenticated",

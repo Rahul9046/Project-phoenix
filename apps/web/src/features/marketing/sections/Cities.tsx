@@ -29,7 +29,7 @@ export async function Cities() {
 
         <div className="border border-line-strong bg-canvas p-8 sm:p-10">
           <h3 className="text-xs font-medium uppercase tracking-[0.2em] text-ink-subtle">
-            First cities
+            Where the community is densest
           </h3>
           <ul className="mt-6">
             {focusCities.map((city) => (
@@ -45,7 +45,8 @@ export async function Cities() {
             ))}
           </ul>
           <p className="mt-6 text-sm leading-relaxed text-ink-subtle">
-            More cities will follow, guided by where the waitlist grows.
+            Anyone in India can join from anywhere. This is where you are most
+            likely to meet someone today.
           </p>
         </div>
       </Container>

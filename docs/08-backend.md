@@ -375,3 +375,67 @@ JSON error page.
 
 They are now `enabled = false`, matching the live project. Register the OAuth
 app, set the environment variables, then flip the flag.
+
+## Discovery, connections and messages
+
+Added after the experience redesign. Until then `profiles` was readable only by
+its owner and there was no way for one member to reach another.
+
+### `profiles` is still owner-only
+
+This is the load-bearing decision. A permissive select policy would have been the
+obvious way to build discovery, and it would have exposed every column —
+including `date_of_birth`. Eraya shows an **age**; the difference matters to
+someone deciding how much of themselves to hand over.
+
+So discovery goes through SECURITY DEFINER functions returning a fixed field set:
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `discover_members(n)` | A considered few | Deterministic per viewer per day |
+| `member_profile(id)` | One member | Same fields, same exclusions |
+| `express_interest(id, kind)` | Connection id or null | Atomic |
+| `interests_received()` | Who is interested | **Premium, checked in SQL** |
+
+The column list in those functions **is** the privacy policy. There is no second
+place it could quietly widen.
+
+### Why discovery is deterministic
+
+`discover_members` orders by `md5(target || viewer || current_date)`, so the same
+viewer sees the same few people all day. Without that, refreshing deals a new
+hand — and "a considered few" becomes a feed with extra steps. The mechanism is
+what makes the claim true.
+
+### Interest is private
+
+Expressing interest tells the other person nothing until they return it. Nobody
+learns they were passed over, and nobody can be pestered. A pass is recorded so
+the same person is not offered again tomorrow.
+
+`express_interest` is one function rather than an insert plus a check, because
+"have they already chosen me" and "create the connection" must be atomic. Two
+calls racing produce either two connections or none.
+
+### Connections are ordered pairs
+
+`member_a < member_b` is enforced by a check constraint, with a unique index on
+the pair. Without it the same two people can connect twice under two orderings,
+producing two conversations — the classic symmetric-relationship bug.
+
+### What messages deliberately do not have
+
+No `read_at`, no delivered state, no typing indicator, no unread count. Those
+exist to make one person feel owed and the other feel watched. `read_at` is
+absent from the schema rather than present-and-unused, because a column invites a
+feature.
+
+Sending also requires the connection to be open: the insert policy checks
+`ended_at is null`, so ending a connection genuinely stops messages rather than
+hiding them.
+
+### Premium is enforced in the database
+
+`interests_received()` reads the caller's subscription in SQL and returns nothing
+without one. It cannot be unlocked by calling the API directly — which is the
+difference between a paid feature and a hidden div.

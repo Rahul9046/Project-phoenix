@@ -1,38 +1,90 @@
 /**
  * Every word the signed-in shell says.
  *
- * Same reasoning as the auth copy: this is product voice, and it should be
- * reviewable without reading components. Nothing here promises a feature that
- * does not exist.
+ * Kept short on purpose. The product's difference has to live in what the
+ * screens do, not in paragraphs explaining that they are different — a person
+ * who skims must still feel it.
  */
 
 export const shell = {
   skipToContent: "Skip to content",
-  openMenu: "Open menu",
-  closeMenu: "Close menu",
   accountMenuLabel: "Your account",
   signOut: "Log out",
 } as const;
 
+/** Time-of-day greeting. Warmth without pretending to know how someone is. */
+export function greetingFor(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export const home = {
-  greeting: (name: string | null) =>
-    name ? `Welcome back, ${name}.` : "Welcome back.",
-  lede: "Your account is ready. Discovery opens as Eraya reaches your city — we will let you know the moment it does.",
+  eyebrow: "My Eraya",
+  lede: "Your next chapter, at your own pace.",
 
-  /**
-   * The honest position while discovery is unbuilt. It says what is true rather
-   * than showing an empty grid and letting someone conclude nobody is here.
-   */
-  discoveryTitle: "Discovery is on its way.",
-  discoveryBody:
-    "We are introducing members carefully rather than all at once, so the first conversations are good ones. Nothing is required from you in the meantime.",
+  introductionsTitle: "A few people worth meeting",
+  introductionsLede:
+    "Chosen rather than listed. They will be here tomorrow too — there is nothing to catch.",
+  introductionsEmpty:
+    "No introductions yet. Eraya is still small, and we would rather show you nobody than show you anybody.",
+  introductionsCta: "See who",
 
-  profileCardTitle: "Your profile",
-  profileCardBody: "This is what other members will see first.",
-  profileCardCta: "Review your profile",
+  connectionsTitle: "Your connections",
+  connectionsEmpty: "Nobody yet. A connection opens when interest is mutual.",
 
-  membershipCardTitle: "Your membership",
-  membershipCardCta: "See what's included",
+  interestTitle: "People interested in you",
+  interestLocked:
+    "Eraya Premium shows you who has expressed interest before you decide.",
+  interestEmpty: "Nobody new since you last looked.",
+
+  profileTitle: "Your profile",
+  profileComplete: "Your profile is complete.",
+  profileCta: "Review your profile",
+} as const;
+
+export const discovery = {
+  title: "A few people worth meeting",
+  lede: "Eraya introduces a considered few rather than an endless list. These are yours for today.",
+  empty: {
+    title: "Nobody to introduce today.",
+    body: "Eraya is still small, and we would rather show you nobody than show you anybody. New members arrive steadily — there is nothing you need to do.",
+  },
+  seenAll: {
+    title: "That is everyone for today.",
+    body: "More arrive as Eraya grows. Coming back later will not produce a new set — that is deliberate.",
+  },
+  interested: "I'd like to know more",
+  pass: "Not for me",
+  connected: "You are connected",
+  connectedBody: "You both expressed interest. You can write to each other now.",
+  interestSent: "Interest noted",
+  interestSentBody:
+    "They will only hear about it if they feel the same. Nothing is sent, and nothing is public.",
+} as const;
+
+export const connections = {
+  title: "Your connections",
+  lede: "People you and they both chose. Conversations live here.",
+  empty: {
+    title: "No connections yet.",
+    body: "A connection opens only when interest is mutual — so nobody can write to you out of the blue.",
+  },
+  openConversation: "Open",
+  noMessages: "No messages yet",
+  ended: "This connection has ended",
+} as const;
+
+export const conversation = {
+  placeholder: "Write a message",
+  send: "Send",
+  emptyTitle: "No messages yet.",
+  emptyBody: "Say hello when you are ready. There is no hurry.",
+  endedTitle: "This connection has ended.",
+  endedBody: "You can still read what was said. Nothing further can be sent.",
+  endCta: "End connection",
+  blockCta: "Block",
+  reportCta: "Report",
 } as const;
 
 export const webVsAppNote = {

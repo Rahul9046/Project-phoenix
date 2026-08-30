@@ -76,8 +76,8 @@ export const otpStep = {
 } as const;
 
 export const basicsStep = {
-  title: "Let's start with the basics.",
-  lede: "This is what other members will see first. You can change any of it later.",
+  title: "Let's start with your name.",
+  lede: "This is how other members will know you. Nothing here is final — you can change any of it later.",
   firstName: {
     label: "First name",
     hint: "This is the name shown on your profile.",
@@ -154,8 +154,8 @@ export const signInProblemFallback =
   "That sign-in did not complete. Please try again, or continue with email.";
 
 export const relationshipStep = {
-  title: "Which chapter are you in?",
-  lede: "Eraya is built for people beginning again. This helps us introduce you to people who understand.",
+  title: "Where are you in your journey?",
+  lede: "However you arrived here, someone else did too. This is only so we introduce you to people who understand.",
   error: "Choose the option that fits you best.",
   cta: "Continue",
 } as const;
@@ -208,10 +208,18 @@ export const languageOptions = [
 ] as const;
 
 export const completeStep = {
-  title: "You're all set.",
-  lede: "Your Eraya account is ready. We'll take you through building your profile next — there's no rush, and you can stop and come back at any time.",
-  cta: "Continue to your profile",
-  secondaryCta: "Back to Eraya",
+  /**
+   * The end of signup, treated as a beginning.
+   *
+   * Not "Welcome to Eraya" -- that is a greeting from a company to a customer.
+   * This is about the person: what they have just done is start again, and the
+   * screen should be quiet enough for that to land.
+   */
+  eyebrow: "Your Eraya begins",
+  title: "You're ready for your next chapter.",
+  lede: "Take it at whatever pace suits you. Nothing here expects anything of you today, and nobody can reach you until you both choose it.",
+  cta: "See who's here",
+  secondaryCta: "Not just yet",
 } as const;
 
 /**
