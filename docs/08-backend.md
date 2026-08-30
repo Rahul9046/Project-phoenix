@@ -439,3 +439,53 @@ hiding them.
 `interests_received()` reads the caller's subscription in SQL and returns nothing
 without one. It cannot be unlocked by calling the API directly — which is the
 difference between a paid feature and a hidden div.
+
+
+## Account deletion
+
+A member can delete their own account from Settings. It is irreversible and
+complete.
+
+### One delete, everything cascades
+
+`auth.admin.deleteUser` removes the row from `auth.users`; `profiles` hangs off
+it and everything else hangs off `profiles`, all with ON DELETE CASCADE —
+languages, interests, connections, messages, blocks, reports and subscriptions.
+
+Deleting the tables individually first would be slower and strictly worse: a
+failure halfway leaves someone half-deleted, which is a state nothing in the
+product knows how to render.
+
+### The id comes from the session, never the caller
+
+This is one of the only places `createAdminClient` is legitimate, because
+removing a row from `auth.users` is not something RLS can permit a member to do.
+The service role ignores every policy — so the action reads the id from the
+session and accepts no parameter. An id parameter here would be an endpoint for
+deleting other people.
+
+### Two things worth knowing
+
+**Conversations disappear for the other person too.** Messages cascade from their
+sender, so deleting an account removes that half of every conversation. That is
+the honest reading of "delete my data", and the confirmation says so explicitly
+rather than letting someone discover it afterwards.
+
+**Reports against a deleted member go with them.** `member_reports.reported_id`
+cascades, so someone could in principle delete their account to erase reports
+filed about them. Keeping those would mean retaining data about a person who has
+asked to be forgotten, which is a real tension between moderation and erasure and
+is not something to settle silently. Flagged rather than decided.
+
+### An env bug this uncovered
+
+`getServiceRoleKey` used `??` between the secret and service-role keys.
+`.env.example` produces `SUPABASE_SECRET_KEY=` with no value, which reads as `""`
+rather than `undefined` — so nullish coalescing selected the empty string, never
+reached the fallback, and reported the variable as unset while looking straight
+at it. It was latent because nothing used the admin client until now.
+
+Both key lookups now go through `firstSet`, which treats blank and whitespace as
+absent. It takes **values, not variable names**: `process.env[name]` is a
+computed lookup and defeats the static analysis Next.js uses to inline
+`NEXT_PUBLIC_*` into the browser bundle.
