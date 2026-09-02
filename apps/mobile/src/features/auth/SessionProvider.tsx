@@ -38,12 +38,22 @@ type SessionState = {
   loading: boolean;
   session: Session | null;
   profile: ProfileSnapshot | null;
+  /**
+   * Set when the profile could not be read at all -- offline, a stalled
+   * connection, a rejected query. Distinct from "no profile yet", which is a
+   * normal state for a brand-new account and is represented by a snapshot at
+   * the earliest stage.
+   */
+  error: string | null;
   /** Re-reads the profile row. Call after any onboarding write. */
   refresh: () => Promise<ProfileSnapshot | null>;
   signOut: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionState | null>(null);
+
+/** See the note in `loadProfile`: a stalled request is the failure to design for. */
+const PROFILE_TIMEOUT_MS = 10_000;
 
 const PROFILE_COLUMNS =
   "id, first_name, date_of_birth, gender, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, onboarding_stage";
@@ -55,6 +65,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Separate from `loading`, which covers the very first read. This one goes
   // true again whenever a new sign-in triggers a fresh profile fetch.
   const [profileLoading, setProfileLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Guards against a slow fetch for a signed-out user landing after a newer one
   // for a signed-in user, which would show the previous person's profile.
@@ -69,21 +80,61 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const [{ data: row, error }, { data: languageRows }] = await Promise.all([
-        supabase
+      /*
+       * Bounded, and wrapped.
+       *
+       * Both matter, and the app hung without them. `loading` is true while a
+       * session exists and a profile does not, which is correct -- routing on a
+       * half-resolved state is what caused an infinite redirect earlier. But it
+       * makes any failure here permanent: a rejected query left `profile` null
+       * for ever, and a stalled socket never rejected at all, so the entry
+       * screen showed the mark and nothing else until the app was killed.
+       *
+       * A phone on mobile data does not fail cleanly. It hangs. Ten seconds is
+       * long enough for a slow connection and short enough that nobody sits
+       * looking at a logo wondering whether it is broken.
+       */
+      let row: Awaited<ReturnType<typeof readProfile>>["data"] = null;
+      let languageRows: { language_id: string }[] | null = null;
+
+      function readProfile() {
+        return supabase
           .from("profiles")
           .select(PROFILE_COLUMNS)
-          .eq("id", activeSession.user.id)
-          .maybeSingle(),
-        supabase
-          .from("profile_languages")
-          .select("language_id")
-          .eq("profile_id", activeSession.user.id),
-      ]);
+          .eq("id", activeSession!.user.id)
+          .abortSignal(AbortSignal.timeout(PROFILE_TIMEOUT_MS))
+          .maybeSingle();
+      }
+
+      try {
+        const [profileResult, languageResult] = await Promise.all([
+          readProfile(),
+          supabase
+            .from("profile_languages")
+            .select("language_id")
+            .eq("profile_id", activeSession.user.id)
+            .abortSignal(AbortSignal.timeout(PROFILE_TIMEOUT_MS)),
+        ]);
+
+        if (profileResult.error && profileResult.error.code !== "PGRST116") {
+          throw new Error(profileResult.error.message);
+        }
+        row = profileResult.data;
+        languageRows = languageResult.data;
+      } catch (cause) {
+        if (ticket !== requestId.current) return null;
+
+        console.warn("[eraya] could not read the profile:", cause);
+        setError(
+          "We could not reach Eraya just now. Check your connection and try again.",
+        );
+        return null;
+      }
 
       if (ticket !== requestId.current) return null;
+      setError(null);
 
-      if (error || !row) {
+      if (!row) {
         /*
          * A signed-in user with no profile row is possible for a moment: the
          * row is created by a trigger on `auth.users`, and a first sign-in can
@@ -172,6 +223,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const signOut = useCallback(async () => {
+    setError(null);
     // Clear locally first. If the network call fails the person must still end
     // up signed out on this device rather than stuck on a screen they cannot
     // leave; the refresh token is revoked on the server either way.
@@ -184,13 +236,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     () => ({
       // A session with no profile yet still counts as loading. This is the line
       // that stops a half-resolved state from being routed on.
-      loading: loading || profileLoading || (session !== null && profile === null),
+      /*
+       * A session with no profile yet still counts as loading -- that is what
+       * stops a half-resolved state being routed on. But not once the read has
+       * actually failed, or the screen waits for something that is not coming.
+       */
+      loading:
+        error === null &&
+        (loading || profileLoading || (session !== null && profile === null)),
       session,
       profile,
+      error,
       refresh,
       signOut,
     }),
-    [loading, profileLoading, session, profile, refresh, signOut],
+    [loading, profileLoading, error, session, profile, refresh, signOut],
   );
 
   return (

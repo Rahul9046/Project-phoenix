@@ -49,7 +49,27 @@ export default function RootLayout() {
     Manrope_700Bold,
   });
 
-  const ready = fontsLoaded || Boolean(fontError);
+  /*
+   * Fonts, or a deadline.
+   *
+   * `useFonts` resolves or errors in almost every case, and `fontError` covers
+   * the error. What neither covers is a load that simply never settles -- and
+   * until it does, this component returns null, the splash screen never hides,
+   * and the app is a static image with no way forward. An unbounded wait on the
+   * very first screen is the worst place in the product for one.
+   *
+   * Three seconds, then render regardless. Manrope will not be there and the
+   * system face will stand in, which is a far better outcome than a splash
+   * screen someone has to force-quit.
+   */
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDeadlinePassed(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const ready = fontsLoaded || Boolean(fontError) || deadlinePassed;
 
   const onReady = useCallback(() => {
     if (ready) void SplashScreen.hideAsync();

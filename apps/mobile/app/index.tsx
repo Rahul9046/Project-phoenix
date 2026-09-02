@@ -3,6 +3,7 @@ import { Animated, View } from "react-native";
 import { Redirect } from "expo-router";
 
 import { ErayaMark } from "@/brand/ErayaMark";
+import { Button, TextButton } from "@/ui/Button";
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { colors, motion, space } from "@/theme/tokens";
@@ -21,7 +22,58 @@ import { Text } from "@/ui/Text";
  * product.
  */
 export default function Entry() {
-  const { loading, session, profile } = useSession();
+  const { loading, session, profile, error, refresh, signOut } = useSession();
+  const [retrying, setRetrying] = useState(false);
+
+  /*
+   * A screen that can only wait is a screen that can hang. If the profile could
+   * not be read -- offline, a stalled connection -- say so and offer the two
+   * things that actually help, rather than showing the mark for ever.
+   */
+  if (error) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.canvas,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: space.gutter,
+        }}
+      >
+        <ErayaMark size={56} />
+        <Text variant="headline" center style={{ marginTop: space.xxl }}>
+          We could not reach Eraya
+        </Text>
+        <Text
+          variant="body"
+          tone="muted"
+          center
+          style={{ marginTop: space.sm, maxWidth: 320 }}
+        >
+          {error}
+        </Text>
+
+        <View style={{ alignSelf: "stretch", marginTop: space.region, gap: space.md }}>
+          <Button
+            label="Try again"
+            loading={retrying}
+            onPress={() => {
+              setRetrying(true);
+              void refresh().finally(() => setRetrying(false));
+            }}
+          />
+          {/* A way out that always works, for the case where the session itself
+              is the problem. */}
+          <TextButton
+            label="Sign in again"
+            tone="muted"
+            onPress={() => void signOut()}
+          />
+        </View>
+      </View>
+    );
+  }
 
   if (!loading) {
     if (!session) return <Redirect href={routes.signIn} />;
