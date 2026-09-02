@@ -527,6 +527,7 @@ export type Database = {
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          seeking: Database["public"]["Enums"]["gender"][] | null
           updated_at: string
         }
         Insert: {
@@ -545,6 +546,7 @@ export type Database = {
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          seeking?: Database["public"]["Enums"]["gender"][] | null
           updated_at?: string
         }
         Update: {
@@ -563,6 +565,7 @@ export type Database = {
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          seeking?: Database["public"]["Enums"]["gender"][] | null
           updated_at?: string
         }
         Relationships: [
@@ -711,6 +714,15 @@ export type Database = {
           target_id: string
         }
         Returns: string
+      }
+      genders_are_compatible: {
+        Args: {
+          candidate_gender: Database["public"]["Enums"]["gender"]
+          candidate_seeking: Database["public"]["Enums"]["gender"][]
+          viewer_gender: Database["public"]["Enums"]["gender"]
+          viewer_seeking: Database["public"]["Enums"]["gender"][]
+        }
+        Returns: boolean
       }
       home_summary: {
         Args: never

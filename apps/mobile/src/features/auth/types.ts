@@ -30,6 +30,8 @@ export type ProfileSnapshot = {
   firstName: string | null;
   dateOfBirth: string | null;
   gender: Gender | null;
+  /** Genders this member hopes to meet. Empty means the question is unanswered. */
+  seeking: Gender[];
   cityId: string | null;
   otherCity: string | null;
   relationshipStatus: RelationshipStatus | null;
@@ -97,6 +99,21 @@ export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "man", label: "Man" },
   { value: "non_binary", label: "Non-binary" },
   { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
+/**
+ * Who someone is hoping to meet.
+ *
+ * `prefer_not_to_say` is absent on purpose. It is a real answer to "what are
+ * you", and a meaningless one to "who do you want to meet" -- nobody is looking
+ * for people who declined to say. Members with that gender are matched by the
+ * permissive rule in `genders_are_compatible` instead, so they are never made
+ * invisible by anyone else's preference.
+ */
+export const seekingOptions: readonly { value: Gender; label: string }[] = [
+  { value: "woman", label: "Women" },
+  { value: "man", label: "Men" },
+  { value: "non_binary", label: "Non-binary people" },
 ];
 
 export const relationshipLabels: Record<RelationshipStatus, string> = {

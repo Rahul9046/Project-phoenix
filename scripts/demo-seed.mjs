@@ -92,6 +92,7 @@ const admin = createClient(url, serviceKey, {
 const PEOPLE = [
   {
     handle: "meera",
+    seeking: ["man"],
     firstName: "Meera",
     dateOfBirth: "1982-04-11",
     gender: "woman",
@@ -105,6 +106,7 @@ const PEOPLE = [
   },
   {
     handle: "arun",
+    seeking: ["woman"],
     firstName: "Arun",
     dateOfBirth: "1975-09-30",
     gender: "man",
@@ -117,6 +119,7 @@ const PEOPLE = [
   },
   {
     handle: "priya",
+    seeking: ["man"],
     firstName: "Priya",
     dateOfBirth: "1988-01-19",
     gender: "woman",
@@ -129,6 +132,7 @@ const PEOPLE = [
   },
   {
     handle: "rakesh",
+    seeking: ["woman"],
     firstName: "Rakesh",
     dateOfBirth: "1979-06-02",
     gender: "man",
@@ -141,6 +145,7 @@ const PEOPLE = [
   },
   {
     handle: "farida",
+    seeking: ["man"],
     firstName: "Farida",
     dateOfBirth: "1969-11-23",
     gender: "woman",
@@ -153,6 +158,7 @@ const PEOPLE = [
   },
   {
     handle: "vikram",
+    seeking: ["woman"],
     firstName: "Vikram",
     dateOfBirth: "1977-12-14",
     gender: "man",
@@ -165,6 +171,7 @@ const PEOPLE = [
   },
   {
     handle: "anjali",
+    seeking: ["man", "woman"],
     firstName: "Anjali",
     dateOfBirth: "1985-07-21",
     gender: "woman",
@@ -177,6 +184,7 @@ const PEOPLE = [
   },
   {
     handle: "sanjay",
+    seeking: ["woman"],
     firstName: "Sanjay",
     dateOfBirth: "1990-03-08",
     gender: "man",
@@ -300,6 +308,7 @@ async function seed() {
         first_name: person.firstName,
         date_of_birth: person.dateOfBirth,
         gender: person.gender,
+        seeking: person.seeking,
         city_id: cityId,
         other_city: cityId ? null : person.city,
         relationship_status: person.relationship,

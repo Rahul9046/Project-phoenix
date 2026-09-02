@@ -23,6 +23,7 @@ export const routes = {
   name: "/onboarding/name",
   birthday: "/onboarding/birthday",
   gender: "/onboarding/gender",
+  seeking: "/onboarding/seeking",
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
   languages: "/onboarding/languages",
@@ -70,6 +71,7 @@ export function nextRouteFor(profile: ProfileSnapshot | null): Href {
   if (!profile.firstName) return routes.name;
   if (!profile.dateOfBirth) return routes.birthday;
   if (!profile.gender) return routes.gender;
+  if (profile.seeking.length === 0) return routes.seeking;
   if (!profile.cityId && !profile.otherCity) return routes.city;
   if (!profile.relationshipStatus) return routes.relationship;
 

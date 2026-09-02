@@ -28,6 +28,7 @@ export const onboardingSteps = [
   "name",
   "birthday",
   "gender",
+  "seeking",
   "city",
   "relationship",
   "languages",

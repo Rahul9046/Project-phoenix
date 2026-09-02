@@ -56,7 +56,7 @@ const SessionContext = createContext<SessionState | null>(null);
 const PROFILE_TIMEOUT_MS = 10_000;
 
 const PROFILE_COLUMNS =
-  "id, first_name, date_of_birth, gender, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, onboarding_stage";
+  "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, onboarding_stage";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -148,6 +148,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           firstName: null,
           dateOfBirth: null,
           gender: null,
+          seeking: [],
           cityId: null,
           otherCity: null,
           relationshipStatus: null,
@@ -167,6 +168,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         firstName: row.first_name,
         dateOfBirth: row.date_of_birth,
         gender: row.gender,
+        seeking: row.seeking ?? [],
         cityId: row.city_id,
         otherCity: row.other_city,
         relationshipStatus: row.relationship_status,

@@ -86,6 +86,18 @@ export function saveGender(gender: Gender): Promise<SaveResult> {
 }
 
 /**
+ * Who this member hopes to meet.
+ *
+ * Applied mutually by `discover_members`, so this decides both who someone sees
+ * and who sees them. An empty array is never written: the onboarding step
+ * requires at least one answer, and "everyone" is expressed by choosing all of
+ * them rather than by choosing none.
+ */
+export function saveSeeking(seeking: Gender[]): Promise<SaveResult> {
+  return patch({ seeking });
+}
+
+/**
  * A city, whether or not it is in the table.
  *
  * `city_id` for one of the 493, `other_city` for anywhere else. Both are stored

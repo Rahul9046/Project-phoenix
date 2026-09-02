@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { relationshipOptions } from "@/features/auth/types";
+import { relationshipOptions, seekingOptions, type Gender } from "@/features/auth/types";
 import { CityPicker } from "@/features/onboarding/CityPicker";
 import {
   listLanguages,
@@ -11,6 +11,7 @@ import {
   saveLanguages,
   saveName,
   saveRelationship,
+  saveSeeking,
   saveStory,
   type LanguageOption,
 } from "@/features/onboarding/data";
@@ -80,6 +81,7 @@ function EditForm({
     profile.relationshipStatus ?? null,
   );
   const [languageIds, setLanguageIds] = useState<string[]>(profile.languageIds);
+  const [seeking, setSeeking] = useState<Gender[]>(profile.seeking);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [city, setCity] = useState<
     { id: string; label: string } | { name: string } | null
@@ -120,6 +122,10 @@ function EditForm({
       () =>
         relationship
           ? saveRelationship(relationship)
+          : Promise.resolve({ ok: true as const }),
+      () =>
+        seeking.length > 0
+          ? saveSeeking(seeking)
           : Promise.resolve({ ok: true as const }),
       () =>
         city
@@ -188,6 +194,30 @@ function EditForm({
         onPress={() => setPickingCity(true)}
         style={{ marginTop: space.sm }}
       />
+
+      <Text variant="label" style={{ marginTop: space.section }}>
+        Who you would like to meet
+      </Text>
+      <Text variant="caption" tone="subtle" style={{ marginTop: space.xxs }}>
+        This works both ways &mdash; you only appear to people you would also
+        like to meet.
+      </Text>
+      <View style={{ gap: space.sm, marginTop: space.md }}>
+        {seekingOptions.map((option) => (
+          <SelectionCard
+            key={option.value}
+            label={option.label}
+            selected={seeking.includes(option.value)}
+            onPress={() =>
+              setSeeking((current) =>
+                current.includes(option.value)
+                  ? current.filter((entry) => entry !== option.value)
+                  : [...current, option.value],
+              )
+            }
+          />
+        ))}
+      </View>
 
       <Text variant="label" style={{ marginTop: space.section }}>
         Your chapter

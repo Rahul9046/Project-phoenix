@@ -227,6 +227,17 @@ where members are while actually describing a seed flag. It now shows a count
 read from the table through `city_coverage()`, which cannot drift away from what
 the search field will accept.
 
+`discover_members` applies mutual gender preference before anything else:
+someone appears in your introductions only if they match `profiles.seeking` and
+you match theirs. `genders_are_compatible` holds that rule so it cannot be
+restated slightly differently somewhere else.
+
+It is permissive wherever either side has not answered, and for
+`prefer_not_to_say`. A strict reading would make every member who declined to
+state a gender invisible to everybody, which punishes exactly the people most
+likely to have thought about the question. Silence means "no constraint", never
+"no match".
+
 `discover_members` applies **no city filter**, and does order by proximity:
 same city first, then same state, then everywhere else, with the per-viewer daily
 hash as the tiebreak inside each band.

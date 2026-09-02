@@ -114,7 +114,8 @@ be relying on RLS to hide columns rather than on a function never to return them
 
 | Function | What it is for |
 | --- | --- |
-| `discover_members` | Introductions, with the free filters and paging |
+| `discover_members` | Introductions: mutual gender preference, nearest first, free filters, paging |
+| `genders_are_compatible` | The mutual preference rule, in one place |
 | `member_profile` | One member |
 | `express_interest` | Records a decision and creates the connection atomically |
 | `interests_received` / `_count` | Premium list, and the honest count for everyone |
@@ -170,7 +171,7 @@ Three rules the primitives enforce, because the prototype broke all three:
 
 Written down because each is a decision, not an omission:
 
-no swiping · no endless feed · no photos required · no read receipts · no typing
+no swiping · no endless feed · no photos required · no one-sided preference · no read receipts · no typing
 indicators · no unread counts shown to a sender · no streaks · no reply nudges ·
 no push notifications · no "single" · no city gate · no ranking by attractiveness
 · no invented counts or activity
