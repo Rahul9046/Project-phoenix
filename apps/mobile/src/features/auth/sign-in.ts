@@ -213,6 +213,56 @@ export async function sendEmailLink(email: string): Promise<SignInResult> {
 }
 
 /**
+ * Signing in with the code from the email instead of the link.
+ *
+ * The link is not reliable on a phone and cannot be made reliable without app
+ * links. Tapping it opens a browser, which then has to hand `eraya://` to the
+ * app -- and Chrome blocks launching an external app from a server redirect
+ * without a user gesture, harder still in incognito. It works sometimes, which
+ * is worse than never: the failure is a blank browser tab with nothing to act
+ * on.
+ *
+ * The code removes the browser from the flow entirely. It is in the same email,
+ * it works in every mail client on every platform, and it cannot be intercepted
+ * by another app the way a custom scheme can. Nothing about it depends on which
+ * browser opened what.
+ *
+ * The link still works where the browser cooperates -- both are offered, and
+ * whichever the person reaches for first is fine.
+ */
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<SignInResult> {
+  const token = code.trim();
+
+  if (!/^\d{6}$/.test(token)) {
+    return { ok: false, message: "That needs to be the six digits from the email." };
+  }
+
+  const { error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token,
+    type: "email",
+  });
+
+  if (error) {
+    // A wrong or stale code is the common case and deserves plain wording; the
+    // codes expire, and someone reading an old email will hit this.
+    if (error.status === 401 || /expired|invalid/i.test(error.message)) {
+      return {
+        ok: false,
+        message:
+          "That code did not work. It may have expired -- ask for a new email and use the latest one.",
+      };
+    }
+    return { ok: false, message: error.message };
+  }
+
+  return { ok: true };
+}
+
+/**
  * Completes a sign-in when the app is opened by a link.
  *
  * Called from the deep-link handler at the root, for both the OAuth return in

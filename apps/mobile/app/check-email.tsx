@@ -5,68 +5,100 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
-import { sendEmailLink } from "@/features/auth/sign-in";
+import { sendEmailLink, verifyEmailCode } from "@/features/auth/sign-in";
 import { colors, radius, space } from "@/theme/tokens";
 import { Button, TextButton } from "@/ui/Button";
+import { CODE_LENGTH, CodeInput } from "@/ui/CodeInput";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
 
 /**
- * Waiting for the emailed link.
+ * Finishing an email sign-in.
  *
- * The screen stays mounted while someone leaves for their mail app, so when the
- * link opens Eraya the session provider picks up the new session and this
- * redirects out on its own. Nothing here polls.
+ * The code is the primary path, and the link is the fallback -- which is the
+ * opposite of how this started, for a reason worth writing down.
  *
- * It says which address the link went to. The single most common failure in a
- * passwordless flow is a typo in the address, and the person is the only one who
- * can spot it -- so the address is shown, and changing it is one tap away rather
- * than buried behind a back gesture.
+ * Tapping the link on a phone opens a browser, which then has to hand
+ * `eraya://` back to the app. Chrome blocks launching an external app from a
+ * server redirect without a user gesture, and is stricter still in incognito.
+ * The result is a blank tab: no error, nothing to tap, no way to tell whether
+ * anything happened. It works often enough to look fine in testing and fails
+ * often enough to be unusable.
+ *
+ * Typing six digits works in every mail client on every platform, needs no
+ * browser, and cannot be swallowed by another app claiming the scheme. It is
+ * also the only version of this that works when mail is read on a different
+ * device from the one holding the app.
+ *
+ * The screen stays mounted while someone leaves for their inbox, so if the link
+ * does work the session provider notices and this redirects out on its own.
  */
 export default function CheckEmail() {
   const { session, profile } = useSession();
   const params = useLocalSearchParams<{ email?: string }>();
   const toast = useToast();
+
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const email = params.email ?? "";
 
   if (session) return <Redirect href={nextRouteFor(profile)} />;
 
+  async function submit() {
+    if (!email) return;
+    setVerifying(true);
+    setError(null);
+
+    const result = await verifyEmailCode(email, code);
+
+    if (!result.ok) {
+      setError(result.message);
+      setVerifying(false);
+      return;
+    }
+
+    // The session provider is subscribed to auth state and will route from
+    // here, so this screen does not navigate itself.
+    setVerifying(false);
+  }
+
   async function resend() {
     if (!email) return;
     setResending(true);
+    setError(null);
 
     const result = await sendEmailLink(email);
 
     toast.show(
-      result.ok ? "Link sent again." : result.message,
+      result.ok ? "Sent. Use the newest email." : result.message,
       result.ok ? "positive" : "danger",
     );
     setResending(false);
   }
 
   return (
-    <Screen topInset contentStyle={{ flexGrow: 1, justifyContent: "center" }}>
-      <View style={{ alignItems: "center" }}>
+    <Screen topInset>
+      <View style={{ alignItems: "center", marginTop: space.section }}>
         <View
           style={{
-            width: 72,
-            height: 72,
+            width: 68,
+            height: 68,
             borderRadius: radius.pill,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.emberTint,
           }}
         >
-          <Ionicons name="mail-outline" size={30} color={colors.emberText} />
+          <Ionicons name="mail-outline" size={28} color={colors.emberText} />
         </View>
 
-        <Text variant="title" center style={{ marginTop: space.xxl }}>
+        <Text variant="title" center style={{ marginTop: space.xl }}>
           Check your email.
         </Text>
-
         <Text
           variant="body"
           tone="muted"
@@ -74,35 +106,68 @@ export default function CheckEmail() {
           style={{ marginTop: space.md, maxWidth: 330 }}
         >
           {email
-            ? `We have sent a sign-in link to ${email}. Open it on this phone and Eraya will take it from there.`
-            : "We have sent you a sign-in link. Open it on this phone and Eraya will take it from there."}
-        </Text>
-
-        <Text
-          variant="bodySm"
-          tone="subtle"
-          center
-          style={{ marginTop: space.xl, maxWidth: 330 }}
-        >
-          Links take a minute or two sometimes, and occasionally land in spam.
+            ? `We sent a ${CODE_LENGTH}-digit code to ${email}. Enter it below.`
+            : `We sent you a ${CODE_LENGTH}-digit code. Enter it below.`}
         </Text>
       </View>
 
-      <View style={{ marginTop: space.region, gap: space.md }}>
-        <Button
-          label="Send it again"
-          variant="secondary"
-          loading={resending}
-          disabled={!email}
+      <View style={{ marginTop: space.section }}>
+        <CodeInput
+          value={code}
+          onChange={(next) => {
+            setCode(next);
+            if (error) setError(null);
+          }}
+          disabled={verifying}
+        />
+      </View>
+
+      {error ? (
+        <Text
+          variant="bodySm"
+          tone="danger"
+          accessibilityLiveRegion="polite"
+          style={{ marginTop: space.lg }}
+        >
+          {error}
+        </Text>
+      ) : null}
+
+      <Button
+        label="Sign in"
+        loading={verifying}
+        disabled={code.length !== CODE_LENGTH}
+        onPress={() => void submit()}
+        style={{ marginTop: space.xl }}
+      />
+
+      <View
+        style={{
+          marginTop: space.section,
+          padding: space.lg,
+          borderRadius: radius.lg,
+          backgroundColor: colors.sand,
+        }}
+      >
+        <Text variant="caption" tone="muted">
+          The same email has a button you can tap instead. On some phones the
+          browser will not hand the link back to the app, which is why the code
+          is here &mdash; it always works.
+        </Text>
+      </View>
+
+      <View style={{ marginTop: space.xxl, alignItems: "center", gap: space.sm }}>
+        <TextButton
+          label={resending ? "Sending…" : "Send another email"}
+          tone="muted"
+          disabled={resending || !email}
           onPress={() => void resend()}
         />
-        <View style={{ alignItems: "center" }}>
-          <TextButton
-            label="Use a different address"
-            tone="muted"
-            onPress={() => router.replace(routes.signIn)}
-          />
-        </View>
+        <TextButton
+          label="Use a different address"
+          tone="muted"
+          onPress={() => router.replace(routes.signIn)}
+        />
       </View>
     </Screen>
   );

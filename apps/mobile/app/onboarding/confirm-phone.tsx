@@ -1,19 +1,15 @@
-import { useRef, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { useState } from "react";
+import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { completePhoneStep } from "@/features/onboarding/data";
-import {
-  CODE_LENGTH,
-  confirmCode,
-  phoneVerificationIsLive,
-} from "@/features/onboarding/phone";
+import { confirmCode, phoneVerificationIsLive } from "@/features/onboarding/phone";
+import { CODE_LENGTH, CodeInput } from "@/ui/CodeInput";
 import { Step } from "@/features/onboarding/Step";
-import { colors, hit, iconSize, radius, space } from "@/theme/tokens";
-import { text } from "@/theme/typography";
+import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
 
 /**
@@ -35,7 +31,6 @@ export default function ConfirmPhoneStep() {
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<TextInput>(null);
 
   const number =
     params.dialCode && params.national
@@ -82,69 +77,15 @@ export default function ConfirmPhoneStep() {
       pending={pending}
       error={error}
     >
-      {/*
-        One hidden field behind six drawn boxes. Six real inputs means six
-        focus targets, six places for the keyboard to jump, and autofill that
-        works on none of them -- and it is the usual reason a code screen feels
-        broken on Android.
-      */}
-      <View>
-        <TextInput
-          ref={inputRef}
-          value={code}
-          onChangeText={(next) => {
-            setCode(next.replace(/[^\d]/g, "").slice(0, CODE_LENGTH));
-            if (error) setError(null);
-          }}
-          keyboardType="number-pad"
-          textContentType="oneTimeCode"
-          autoComplete="sms-otp"
-          maxLength={CODE_LENGTH}
-          autoFocus
-          accessibilityLabel={`${CODE_LENGTH} digit code`}
-          style={{
-            position: "absolute",
-            opacity: 0,
-            height: hit.large,
-            width: "100%",
-          }}
-        />
-
-        {/* The drawn boxes are one control: tapping any of them focuses the
-            single hidden field behind them. */}
-        <Pressable
-          accessibilityRole="none"
-          onPress={() => inputRef.current?.focus()}
-          style={{ flexDirection: "row", gap: space.sm }}
-        >
-          {Array.from({ length: CODE_LENGTH }).map((_, index) => {
-            const digit = code[index];
-            const active = index === code.length;
-
-            return (
-              <View
-                key={index}
-                style={{
-                  flex: 1,
-                  height: 62,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: radius.lg,
-                  borderWidth: active || digit ? 2 : 1,
-                  borderColor: digit
-                    ? colors.ink
-                    : active
-                      ? colors.ember
-                      : colors.lineStrong,
-                  backgroundColor: colors.surface,
-                }}
-              >
-                <Text style={[text.title, { fontSize: 26 }]}>{digit ?? ""}</Text>
-              </View>
-            );
-          })}
-        </Pressable>
-      </View>
+      <CodeInput
+        value={code}
+        onChange={(next) => {
+          setCode(next);
+          if (error) setError(null);
+        }}
+        disabled={pending}
+        accessibilityLabel={`${CODE_LENGTH} digit code`}
+      />
 
       {!phoneVerificationIsLive ? (
         <View
