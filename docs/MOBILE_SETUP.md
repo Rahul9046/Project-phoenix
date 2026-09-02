@@ -156,44 +156,55 @@ notifying people that somebody looked at their profile.
 
 ---
 
-## 8. Building for a device
+## 8. Getting a build onto a device
 
-Expo Go shows the screens but cannot sign in (§2), so real testing needs a
-development build. It is a one-off per device; after that `npx expo start`
-connects to it exactly like Expo Go.
+`eas.json` defines three profiles. All of them build on Expo's servers, so none
+needs Xcode or Android Studio on the machine that starts them.
+
+| Profile | Produces | Needs an Apple/Google account? |
+| --- | --- | --- |
+| `simulator` | A self-contained `.app` for the iOS Simulator | No |
+| `preview` | An installable Android `.apk` | No |
+| `development` | A dev client that attaches to Metro | No (simulator) |
+| `production` | Store builds | Yes, both |
 
 ```
-npm install -g eas-cli
-eas login                                        # free Expo account
 cd apps/mobile
-eas build --platform android --profile development
+npx eas-cli build --platform ios --profile simulator
+npx eas-cli build --platform android --profile preview
 ```
 
-`eas.json` is not committed; `eas build:configure` writes it on first run.
+Each finishes with a download link. Nobody needs a copy of this repository to run
+the result: `simulator` and `preview` are not development clients, so the
+JavaScript is bundled in and there is no Metro server to connect to.
 
-**Android**: free. The build runs on Expo's servers, you get an APK link, and it
-installs on any phone with "install unknown apps" allowed.
+**iOS Simulator** — download, unzip, and drag the `.app` onto a running
+simulator. The Mac needs Xcode installed (for the simulator itself) and nothing
+else.
 
-**iOS, with a Mac**: no paid account needed for either route.
+**Android** — download the `.apk` and open it on any phone with "install unknown
+apps" allowed for the browser.
 
-The simulator is the easy one -- `npx expo run:ios` compiles a development build
-and launches it, with no Apple account at all. It registers `eraya://`, so
-sign-in works normally.
+**A physical iPhone** needs signing, which is the one thing EAS cannot do without
+credentials. Two routes, covered in §3 and above: Xcode's free provisioning on a
+Mac you have to hand (7-day builds, no cost), or the $99/year membership so EAS
+can sign on its servers.
 
-A *physical* iPhone is also free, via Xcode's free provisioning: sign in to Xcode
-with an ordinary Apple ID, and it will issue a development certificate for a
-device you own. The limits are real but rarely matter for testing -- the build
-expires after **7 days** and must be reinstalled, up to three apps at a time, and
-no push notifications or associated domains. `npx expo run:ios --device` uses it.
+### The two build-time variables
 
-The $99/year membership from §3 buys distribution, not development: TestFlight,
-builds that do not expire, and the App Store. It is a release requirement, not a
-testing one.
+`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are stored
+as EAS environment variables rather than read from `.env.local`, which is
+gitignored and never reaches the build servers:
 
-**iOS, without a Mac**: neither route is available. EAS can produce a simulator
-build without an Apple account, but a simulator only runs on macOS; and putting a
-build on a physical iPhone from Windows needs the paid membership so EAS can do
-the signing on its servers.
+```
+npx eas-cli env:list preview
+```
+
+Both are public by design -- a project address and a publishable key -- and RLS
+is what protects the data. They are `plaintext` visibility deliberately, so
+anyone can confirm what a build was given. **The service-role key is not among
+them and must never be**: `EXPO_PUBLIC_` values are inlined into the binary,
+where anyone can read them.
 
 ## Summary
 
