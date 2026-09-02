@@ -227,10 +227,19 @@ where members are while actually describing a seed flag. It now shows a count
 read from the table through `city_coverage()`, which cannot drift away from what
 the search field will accept.
 
-`discover_members` applies **no city filter at all**. Where someone lives affects
-neither whether they can join nor who they are introduced to. Discovery could
-later prioritise people who are geographically close, but that would be a new
-decision, not a restoration of this one.
+`discover_members` applies **no city filter**, and does order by proximity:
+same city first, then same state, then everywhere else, with the per-viewer daily
+hash as the tiebreak inside each band.
+
+The distinction matters. Ordering means everyone is still reachable -- a member
+in a town with no other members sees the whole country rather than an empty
+screen -- while someone two streets away is not buried behind someone two
+thousand kilometres away. Filtering by city remains separate, optional and free.
+
+It is not a distance calculation. The cities table carries latitude and
+longitude, so one is available, and using it would imply a precision the product
+does not have: nobody's city is where they are, it is where they said they
+live. Three bands say what can honestly be said.
 
 ### Search
 

@@ -36,7 +36,7 @@ export default function Verification() {
       state: profile?.emailVerified ? "done" : "absent",
       detail: profile?.emailVerified
         ? "Confirmed. Other members can see this."
-        : "Open the link we sent to confirm your address.",
+        : "Enter the code we sent to confirm your address.",
     },
     {
       label: "Phone number",

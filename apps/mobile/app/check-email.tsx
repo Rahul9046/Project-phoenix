@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
-import { sendEmailLink, verifyEmailCode } from "@/features/auth/sign-in";
+import { sendEmailSignIn, verifyEmailCode } from "@/features/auth/sign-in";
 import { colors, radius, space } from "@/theme/tokens";
 import { Button, TextButton } from "@/ui/Button";
 import { CODE_LENGTH, CodeInput } from "@/ui/CodeInput";
@@ -71,7 +71,7 @@ export default function CheckEmail() {
     setResending(true);
     setError(null);
 
-    const result = await sendEmailLink(email);
+    const result = await sendEmailSignIn(email);
 
     toast.show(
       result.ok ? "Sent. Use the newest email." : result.message,

@@ -154,8 +154,8 @@ function describeProvider(provider: string | undefined): string {
     case "apple":
       return "Apple";
     case "email":
-      return "An emailed link";
+      return "An emailed code";
     default:
-      return "An emailed link";
+      return "An emailed code";
   }
 }

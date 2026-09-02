@@ -181,7 +181,7 @@ export async function signInWithProvider(
  * one fewer thing to forget, one fewer thing to reuse from another site, and one
  * fewer thing this app has to handle -- the credential never exists.
  */
-export async function sendEmailLink(email: string): Promise<SignInResult> {
+export async function sendEmailSignIn(email: string): Promise<SignInResult> {
   const trimmed = email.trim().toLowerCase();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
@@ -203,7 +203,7 @@ export async function sendEmailLink(email: string): Promise<SignInResult> {
       return {
         ok: false,
         message:
-          "We have sent a few links to this address already. Please wait a little while before asking for another.",
+          "We have sent a few codes to this address already. Please wait a little while before asking for another.",
       };
     }
     return { ok: false, message: error.message };

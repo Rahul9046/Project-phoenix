@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 import { ErayaMark } from "@/brand/ErayaMark";
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
+import { ProviderIcon } from "@/features/auth/ProviderIcon";
 import {
   availableProviders,
-  sendEmailLink,
+  sendEmailSignIn,
   signInWithProvider,
   type SignInProvider,
 } from "@/features/auth/sign-in";
@@ -30,13 +30,10 @@ import { Text } from "@/ui/Text";
  * ever holds a credential.
  */
 
-const providerCopy: Record<
-  SignInProvider,
-  { label: string; icon: React.ComponentProps<typeof Ionicons>["name"] }
-> = {
-  google: { label: "Continue with Google", icon: "logo-google" },
-  facebook: { label: "Continue with Facebook", icon: "logo-facebook" },
-  apple: { label: "Continue with Apple", icon: "logo-apple" },
+const providerLabel: Record<SignInProvider, string> = {
+  google: "Continue with Google",
+  facebook: "Continue with Facebook",
+  apple: "Continue with Apple",
 };
 
 export default function SignIn() {
@@ -65,7 +62,7 @@ export default function SignIn() {
     setPending("email");
     setError(null);
 
-    const result = await sendEmailLink(email);
+    const result = await sendEmailSignIn(email);
 
     if (!result.ok) {
       setError(result.message);
@@ -102,18 +99,12 @@ export default function SignIn() {
         {availableProviders.map((provider) => (
           <Button
             key={provider}
-            label={providerCopy[provider].label}
+            label={providerLabel[provider]}
             variant="secondary"
             loading={pending === provider}
             disabled={pending !== null && pending !== provider}
             onPress={() => void withProvider(provider)}
-            icon={
-              <Ionicons
-                name={providerCopy[provider].icon}
-                size={iconSize.md}
-                color={colors.ink}
-              />
-            }
+            icon={<ProviderIcon provider={provider} size={iconSize.md} />}
           />
         ))}
       </View>
@@ -149,7 +140,7 @@ export default function SignIn() {
         returnKeyType="go"
         onSubmitEditing={() => void withEmail()}
         error={error}
-        hint="We will send you a link. There is no password to remember."
+        hint="We will send you a six-digit code. There is no password to remember."
       />
 
       <Button

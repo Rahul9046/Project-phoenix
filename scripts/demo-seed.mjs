@@ -12,10 +12,15 @@
  * real member, or accidentally be emailed by a future campaign. It is also the
  * marker that makes `--remove` able to find every one of them.
  *
- * The names and stories are invented and read as invented. No real person's
- * details, no scraped photos, and no photos at all -- the app renders a monogram
- * when there is none, which is a first-class presentation rather than a
- * placeholder, so demo members exercise the real path.
+ * The names and stories are invented and read as invented.
+ *
+ * The photos are generated here rather than downloaded. A demo member with a
+ * stock face would be a real person's likeness attached to a fabricated profile
+ * on a dating product, which is not a thing to do casually even in development,
+ * and scraping one is a licensing problem on top. What each member gets instead
+ * is a deterministic gradient in the brand palette with their initial -- enough
+ * for the photo-forward card layout to be exercised honestly, and obviously not
+ * a person.
  *
  * It is idempotent. Running it twice updates rather than duplicates.
  *
@@ -32,6 +37,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -145,6 +152,30 @@ const PEOPLE = [
     lookingFor: "A companion, and honestly nothing more complicated than that.",
   },
   {
+    handle: "vikram",
+    firstName: "Vikram",
+    dateOfBirth: "1977-12-14",
+    gender: "man",
+    city: "Pune",
+    relationship: "divorced",
+    languages: ["Marathi", "Hindi", "English"],
+    about:
+      "Civil engineer, mostly bridges, which I am told is a metaphor. Divorced six years. I cycle badly and cook well, and I would like someone to eat the results.",
+    lookingFor: "Company that does not need filling with conversation.",
+  },
+  {
+    handle: "anjali",
+    firstName: "Anjali",
+    dateOfBirth: "1985-07-21",
+    gender: "woman",
+    city: "Mumbai",
+    relationship: "separated",
+    languages: ["Marathi", "Hindi", "English", "Gujarati"],
+    about:
+      "I run a small clinic in Bandra. Separated last year and still working out what my weekends are for. Fond of long train journeys and short arguments.",
+    lookingFor: null,
+  },
+  {
     handle: "sanjay",
     firstName: "Sanjay",
     dateOfBirth: "1990-03-08",
@@ -174,6 +205,60 @@ async function findLanguageIds(names) {
     .select("id, name")
     .in("name", names);
   return (data ?? []).map((row) => row.id);
+}
+
+/**
+ * A portrait-shaped placeholder, derived from the name.
+ *
+ * Deterministic: the same member is the same image every run, so re-seeding does
+ * not reshuffle the demo set. 4:5 because that is the aspect the cards and
+ * profiles render, so nothing is cropped in a way the real path would not be.
+ */
+async function generatePhoto(person) {
+  const hue = crypto.createHash("md5").update(person.handle).digest()[0];
+  const palettes = [
+    ["#BD4F33", "#F4CFAE"],
+    ["#5A3328", "#ECE0D1"],
+    ["#3F6B52", "#E7F0E9"],
+    ["#A8452C", "#F7E6DE"],
+    ["#6B5B51", "#F4ECE2"],
+  ];
+  const [from, to] = palettes[hue % palettes.length];
+  const initial = person.firstName.charAt(0).toUpperCase();
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="0.6" y2="1">
+        <stop offset="0%" stop-color="${from}"/>
+        <stop offset="100%" stop-color="${to}"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="1500" fill="url(#g)"/>
+    <text x="600" y="820" text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif" font-size="520"
+          fill="rgba(255,255,255,0.82)">${initial}</text>
+  </svg>`;
+
+  return sharp(Buffer.from(svg)).jpeg({ quality: 86 }).toBuffer();
+}
+
+async function seedPhoto(person, userId) {
+  // Idempotent: one photo per demo member, replaced rather than accumulated.
+  const path = `${userId}/demo-portrait.jpg`;
+
+  const body = await generatePhoto(person);
+  const { error: uploadError } = await admin.storage
+    .from("profile-photos")
+    .upload(path, body, { contentType: "image/jpeg", upsert: true });
+
+  if (uploadError) return uploadError.message;
+
+  await admin.from("profile_photos").delete().eq("profile_id", userId);
+  const { error } = await admin
+    .from("profile_photos")
+    .insert({ profile_id: userId, storage_path: path, position: 0 });
+
+  return error ? error.message : null;
 }
 
 async function findUserByEmail(email) {
@@ -244,7 +329,12 @@ async function seed() {
       );
     }
 
-    console.log(`  ${person.firstName.padEnd(8)} ${person.city.padEnd(22)} ${email}`);
+    const photoError = await seedPhoto(person, user.id);
+
+    console.log(
+      `  ${person.firstName.padEnd(8)} ${person.city.padEnd(22)} ` +
+        `${photoError ? "photo failed: " + photoError : "photo ok"}`,
+    );
   }
 
   console.log("\nDone.");
