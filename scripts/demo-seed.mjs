@@ -216,57 +216,104 @@ async function findLanguageIds(names) {
 }
 
 /**
- * A portrait-shaped placeholder, derived from the name.
+ * Portrait-shaped placeholders, derived from the name.
  *
- * Deterministic: the same member is the same image every run, so re-seeding does
- * not reshuffle the demo set. 4:5 because that is the aspect the cards and
- * profiles render, so nothing is cropped in a way the real path would not be.
+ * Three per member rather than one, so the profile's photo strip and the "1 of
+ * 3" affordances have something to work with -- a single image exercises neither.
+ *
+ * Generated rather than downloaded. A stock face attached to a fabricated
+ * profile on a dating product is not a thing to do casually even in
+ * development, and scraping one is a licensing problem on top. These are
+ * unmistakably not people, which is the point: they make the layout real without
+ * making the members look real.
+ *
+ * Deterministic per member and per position, so re-seeding does not reshuffle
+ * the demo set. Each of the three differs in hue rotation and gradient angle so
+ * a strip of them reads as three photographs rather than one repeated.
  */
-async function generatePhoto(person) {
-  const hue = crypto.createHash("md5").update(person.handle).digest()[0];
-  const palettes = [
-    ["#BD4F33", "#F4CFAE"],
-    ["#5A3328", "#ECE0D1"],
-    ["#3F6B52", "#E7F0E9"],
-    ["#A8452C", "#F7E6DE"],
-    ["#6B5B51", "#F4ECE2"],
-  ];
-  const [from, to] = palettes[hue % palettes.length];
+const PHOTOS_PER_MEMBER = 3;
+
+const PALETTES = [
+  ["#BD4F33", "#F4CFAE"],
+  ["#5A3328", "#ECE0D1"],
+  ["#3F6B52", "#D8E6DC"],
+  ["#A8452C", "#F0D3C6"],
+  ["#7B5E3B", "#EFE0C8"],
+  ["#4A5B7A", "#DCE3EF"],
+];
+
+async function generatePhoto(person, index) {
+  const seed = crypto
+    .createHash("md5")
+    .update(`${person.handle}:${index}`)
+    .digest();
+
+  const [from, to] = PALETTES[seed[0] % PALETTES.length];
+  // Vary the sweep so the three do not look like one image three times.
+  const angle = [
+    { x1: 0, y1: 0, x2: 0.6, y2: 1 },
+    { x1: 1, y1: 0, x2: 0, y2: 1 },
+    { x1: 0, y1: 1, x2: 1, y2: 0 },
+  ][index % 3];
+
   const initial = person.firstName.charAt(0).toUpperCase();
+  // A few soft shapes, so it reads as an image rather than a flat swatch.
+  const blobs = Array.from({ length: 3 }, (_, i) => {
+    const cx = 200 + ((seed[i + 1] % 80) / 100) * 800;
+    const cy = 250 + ((seed[i + 4] % 80) / 100) * 1000;
+    const r = 180 + (seed[i + 7] % 220);
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(255,255,255,0.10)"/>`;
+  }).join("");
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500">
     <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="0.6" y2="1">
+      <linearGradient id="g" x1="${angle.x1}" y1="${angle.y1}" x2="${angle.x2}" y2="${angle.y2}">
         <stop offset="0%" stop-color="${from}"/>
         <stop offset="100%" stop-color="${to}"/>
       </linearGradient>
     </defs>
     <rect width="1200" height="1500" fill="url(#g)"/>
-    <text x="600" y="820" text-anchor="middle"
-          font-family="Georgia, 'Times New Roman', serif" font-size="520"
-          fill="rgba(255,255,255,0.82)">${initial}</text>
+    ${blobs}
+    <text x="600" y="830" text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif" font-size="480"
+          fill="rgba(255,255,255,0.9)">${initial}</text>
   </svg>`;
 
   return sharp(Buffer.from(svg)).jpeg({ quality: 86 }).toBuffer();
 }
 
-async function seedPhoto(person, userId) {
-  // Idempotent: one photo per demo member, replaced rather than accumulated.
-  const path = `${userId}/demo-portrait.jpg`;
-
-  const body = await generatePhoto(person);
-  const { error: uploadError } = await admin.storage
-    .from("profile-photos")
-    .upload(path, body, { contentType: "image/jpeg", upsert: true });
-
-  if (uploadError) return uploadError.message;
-
-  await admin.from("profile_photos").delete().eq("profile_id", userId);
-  const { error } = await admin
+async function seedPhotos(person, userId) {
+  // Replace rather than accumulate: re-seeding must be idempotent.
+  const { data: existing } = await admin
     .from("profile_photos")
-    .insert({ profile_id: userId, storage_path: path, position: 0 });
+    .select("storage_path")
+    .eq("profile_id", userId);
 
-  return error ? error.message : null;
+  if (existing?.length) {
+    await admin.storage
+      .from("profile-photos")
+      .remove(existing.map((row) => row.storage_path));
+    await admin.from("profile_photos").delete().eq("profile_id", userId);
+  }
+
+  for (let index = 0; index < PHOTOS_PER_MEMBER; index += 1) {
+    const path = `${userId}/demo-${index}.jpg`;
+    const body = await generatePhoto(person, index);
+
+    const { error: uploadError } = await admin.storage
+      .from("profile-photos")
+      .upload(path, body, { contentType: "image/jpeg", upsert: true });
+
+    if (uploadError) return uploadError.message;
+
+    const { error } = await admin
+      .from("profile_photos")
+      .insert({ profile_id: userId, storage_path: path, position: index });
+
+    if (error) return error.message;
+  }
+
+  return null;
 }
 
 async function findUserByEmail(email) {
@@ -338,11 +385,11 @@ async function seed() {
       );
     }
 
-    const photoError = await seedPhoto(person, user.id);
+    const photoError = await seedPhotos(person, user.id);
 
     console.log(
       `  ${person.firstName.padEnd(8)} ${person.city.padEnd(22)} ` +
-        `${photoError ? "photo failed: " + photoError : "photo ok"}`,
+        `${photoError ? "photos failed: " + photoError : `${PHOTOS_PER_MEMBER} photos`}`,
     );
   }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Stack } from "expo-router";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
@@ -34,6 +34,84 @@ import { colors } from "@/theme/tokens";
  */
 
 void SplashScreen.preventAutoHideAsync();
+
+/**
+ * What happens when something throws.
+ *
+ * Without this, a render error takes the whole app down -- on Android it simply
+ * closes, with no message, no way to report it and nothing to distinguish a
+ * crash from someone's phone killing a background process. That is what "the app
+ * suddenly closes after I sign in" looked like from the outside.
+ *
+ * Expo Router picks this up by name from the root layout. It cannot catch
+ * everything -- a native crash is still a native crash -- but it catches every
+ * JavaScript error thrown while rendering, which is nearly all of them, and
+ * turns each one into a screen that says what went wrong.
+ *
+ * The message is shown rather than hidden behind "something went wrong". Nobody
+ * outside the team will read it, but the person testing a build absolutely will,
+ * and a stack-free one-liner is the difference between a bug report and a
+ * shrug. `retry` re-mounts the tree, which recovers from anything transient.
+ */
+export function ErrorBoundary({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry: () => Promise<void>;
+}) {
+  return (
+    <SafeAreaProvider>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.canvas,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 22,
+            fontWeight: "700",
+            color: colors.ink,
+            textAlign: "center",
+          }}
+        >
+          Something went wrong
+        </Text>
+        <Text
+          selectable
+          style={{
+            marginTop: 12,
+            fontSize: 14,
+            lineHeight: 21,
+            color: colors.inkMuted,
+            textAlign: "center",
+          }}
+        >
+          {error?.message ?? "An unexpected error."}
+        </Text>
+        <Pressable
+          onPress={() => void retry()}
+          style={{
+            marginTop: 28,
+            minHeight: 52,
+            justifyContent: "center",
+            paddingHorizontal: 28,
+            borderRadius: 999,
+            backgroundColor: colors.ember,
+          }}
+        >
+          <Text style={{ color: colors.inkInverse, fontWeight: "600" }}>
+            Try again
+          </Text>
+        </Pressable>
+      </View>
+    </SafeAreaProvider>
+  );
+}
 
 export default function RootLayout() {
   /*

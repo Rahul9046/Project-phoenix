@@ -10,13 +10,14 @@ import { SafetyActions } from "@/features/connections/SafetyActions";
 import {
   expressInterest,
   getMember,
-  photoUrlFor,
+  getMemberPhotos,
 } from "@/features/members/data";
+import { PhotoGallery } from "@/features/members/PhotoGallery";
 import { useMyDetails } from "@/features/members/me";
 import type { Member } from "@/features/members/types";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button, IconButton, TextButton } from "@/ui/Button";
-import { ProfilePhoto, TrustMarks } from "@/ui/Person";
+import { TrustMarks } from "@/ui/Person";
 import { Screen } from "@/ui/Screen";
 import { Chip, ChipGroup } from "@/ui/Selection";
 import { Card, Divider } from "@/ui/Surface";
@@ -48,7 +49,7 @@ export default function MemberProfile() {
   const { details } = useMyDetails();
 
   const [member, setMember] = useState<Member | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState<"interested" | "passed" | null>(null);
   const [connectionId, setConnectionId] = useState<string | null>(null);
@@ -66,11 +67,13 @@ export default function MemberProfile() {
 
     void (async () => {
       const found = await getMember(id);
-      const url = await photoUrlFor(found?.photoPath ?? null);
+      // Every photo, not just the card's first -- this is the screen that shows
+      // them. Fetched together so the gallery never renders half-populated.
+      const gallery = found ? await getMemberPhotos(found.id) : [];
 
       if (!active) return;
       setMember(found);
-      setPhotoUrl(url);
+      setPhotos(gallery);
       setLoading(false);
     })();
 
@@ -145,11 +148,9 @@ export default function MemberProfile() {
       <Screen topInset bottomSpace={decided ? 0 : 128}>
         <BackRow />
 
-        <ProfilePhoto
-          name={member.firstName}
-          photoUrl={photoUrl}
-          style={{ marginTop: space.lg }}
-        />
+        <View style={{ marginTop: space.lg }}>
+          <PhotoGallery name={member.firstName} photos={photos} />
+        </View>
 
         <Text variant="display" style={{ marginTop: space.xxl }}>
           {member.firstName}

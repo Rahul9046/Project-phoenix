@@ -55,6 +55,20 @@ const SessionContext = createContext<SessionState | null>(null);
 /** See the note in `loadProfile`: a stalled request is the failure to design for. */
 const PROFILE_TIMEOUT_MS = 10_000;
 
+/**
+ * A timeout signal that exists on every engine.
+ *
+ * `AbortSignal.timeout` is the obvious way to write this and is not safe here:
+ * it is a recent addition, Hermes has not always shipped it, and reaching for a
+ * missing static on a built-in throws a TypeError at the exact moment someone
+ * signs in. An AbortController and a timer are older than the problem.
+ */
+function timeoutSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 const PROFILE_COLUMNS =
   "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, onboarding_stage";
 
@@ -102,7 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           .from("profiles")
           .select(PROFILE_COLUMNS)
           .eq("id", activeSession!.user.id)
-          .abortSignal(AbortSignal.timeout(PROFILE_TIMEOUT_MS))
+          .abortSignal(timeoutSignal(PROFILE_TIMEOUT_MS))
           .maybeSingle();
       }
 
@@ -113,7 +127,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             .from("profile_languages")
             .select("language_id")
             .eq("profile_id", activeSession.user.id)
-            .abortSignal(AbortSignal.timeout(PROFILE_TIMEOUT_MS)),
+            .abortSignal(timeoutSignal(PROFILE_TIMEOUT_MS)),
         ]);
 
         if (profileResult.error && profileResult.error.code !== "PGRST116") {

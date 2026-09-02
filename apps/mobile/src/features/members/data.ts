@@ -126,6 +126,27 @@ export async function getIntroductions(
   return (data as RawCard[]).map(toMember);
 }
 
+/**
+ * Every photo of one member, already signed.
+ *
+ * A separate call from the card, which carries only the first path -- a list
+ * renders one picture per person, and fetching the rest for rows nobody opens is
+ * waste on mobile data. The visibility rule is the same one `member_profile`
+ * applies, so a blocked member's photos are not reachable here either.
+ */
+export async function getMemberPhotos(id: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc("member_photos", {
+    member_id: id,
+  });
+
+  if (error || !data) return [];
+
+  const urls = await Promise.all(
+    data.map((row) => photoUrlFor(row.storage_path)),
+  );
+  return urls.filter((url): url is string => Boolean(url));
+}
+
 export async function getMember(id: string): Promise<Member | null> {
   const { data, error } = await supabase.rpc("member_profile", {
     member_id: id,

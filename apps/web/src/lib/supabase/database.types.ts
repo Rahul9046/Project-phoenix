@@ -748,6 +748,13 @@ export type Database = {
         Args: { connection_id: string }
         Returns: undefined
       }
+      member_photos: {
+        Args: { member_id: string }
+        Returns: {
+          photo_position: number
+          storage_path: string
+        }[]
+      }
       member_profile: {
         Args: { member_id: string }
         Returns: Database["public"]["CompositeTypes"]["member_card"][]
