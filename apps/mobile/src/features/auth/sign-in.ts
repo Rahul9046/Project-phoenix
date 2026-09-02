@@ -56,6 +56,22 @@ export function authRedirectUrl(): string {
   return AuthSession.makeRedirectUri({ scheme: "eraya", path: "auth" });
 }
 
+/**
+ * Where an emailed sign-in link must come back to.
+ *
+ * A literal rather than `authRedirectUrl()`, because the email template branches
+ * on this exact string: an `eq` comparison in
+ * `supabase/templates/magic-link.html` decides whether the link points at the
+ * app or at the web app. `makeRedirectUri` is right for OAuth -- it adapts to
+ * Expo Go and to development URLs -- but its output is not guaranteed to be
+ * character-for-character stable, and a near-miss here would silently send every
+ * mobile member a link to the website instead.
+ *
+ * Expo Go cannot complete a sign-in anyway (Supabase refuses `exp://`), so
+ * nothing is lost by fixing this to the standalone scheme.
+ */
+export const EMAIL_LINK_REDIRECT = "eraya://auth";
+
 export type SignInResult =
   | { ok: true }
   | { ok: false; cancelled?: boolean; message: string };
@@ -175,7 +191,7 @@ export async function sendEmailLink(email: string): Promise<SignInResult> {
   const { error } = await supabase.auth.signInWithOtp({
     email: trimmed,
     options: {
-      emailRedirectTo: authRedirectUrl(),
+      emailRedirectTo: EMAIL_LINK_REDIRECT,
       shouldCreateUser: true,
     },
   });
