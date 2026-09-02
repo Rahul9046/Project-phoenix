@@ -174,13 +174,26 @@ eas build --platform android --profile development
 **Android**: free. The build runs on Expo's servers, you get an APK link, and it
 installs on any phone with "install unknown apps" allowed.
 
-**iOS**: needs the Apple Developer Program membership from §3 ($99/year), because
-Apple requires a provisioning profile for every device an app is installed on.
-There is no free route onto a physical iPhone, from Windows or from a Mac.
+**iOS, with a Mac**: no paid account needed for either route.
 
-**iOS Simulator**: `eas build --platform ios --profile development --simulator`
-produces a `.app` with no Apple account at all — but a simulator only runs on
-macOS, so it is not an option from this machine.
+The simulator is the easy one -- `npx expo run:ios` compiles a development build
+and launches it, with no Apple account at all. It registers `eraya://`, so
+sign-in works normally.
+
+A *physical* iPhone is also free, via Xcode's free provisioning: sign in to Xcode
+with an ordinary Apple ID, and it will issue a development certificate for a
+device you own. The limits are real but rarely matter for testing -- the build
+expires after **7 days** and must be reinstalled, up to three apps at a time, and
+no push notifications or associated domains. `npx expo run:ios --device` uses it.
+
+The $99/year membership from §3 buys distribution, not development: TestFlight,
+builds that do not expire, and the App Store. It is a release requirement, not a
+testing one.
+
+**iOS, without a Mac**: neither route is available. EAS can produce a simulator
+build without an Apple account, but a simulator only runs on macOS; and putting a
+build on a physical iPhone from Windows needs the paid membership so EAS can do
+the signing on its servers.
 
 ## Summary
 
@@ -188,7 +201,7 @@ macOS, so it is not an option from this machine.
 | --- | --- | --- |
 | Local env | Running the app | — |
 | Redirect URLs | Sign-in | — (done) |
-| Apple sign-in | iOS release | $99/year |
+| Apple sign-in | iOS release (not testing) | $99/year |
 | SMS provider | Real phone verification | Per message + DLT |
 | Payments | Any revenue | Provider fees + store cut |
 | Push | Notifications | Free tier likely enough |
