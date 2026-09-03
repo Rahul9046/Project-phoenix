@@ -46,6 +46,29 @@ cities to real density beats launching nationally into a directory of blank
 profiles. This is stated plainly on the landing page because it also signals
 that we are not chasing vanity growth.
 
+## Who meets whom
+
+Three rules decide it, and all three live in the database rather than in a screen.
+
+**Mutual gender preference.** Everyone is asked who they hope to meet. Someone
+appears in your introductions only if they match what you are looking for and you
+match what they are -- a one-sided filter would keep showing you to people who
+have already said they are not looking for someone like you. It is permissive
+wherever either side has not answered, and for `prefer_not_to_say`: a strict
+reading would make every member who declined to state a gender invisible to
+everybody, which punishes the people most likely to have thought about it.
+
+**Proximity orders, and never filters.** Same city first, then same state, then
+everywhere else. Everyone stays reachable, so a member in a quiet town sees the
+country rather than an empty screen. Within each band the order is a per-viewer
+daily hash -- the same people in the same order all day, unrelated to anything
+about them, rolling over at midnight. Refreshing is not a slot machine.
+
+**Nobody is ranked.** There is no score, no attractiveness ordering, no
+algorithmic matching. The filters -- age, city, language, chapter -- are free,
+because they decide whether meeting someone is even practical and paywalling them
+would make the free product deliberately worse rather than the paid one better.
+
 ## Product principles
 
 1. **Trust precedes connection.** Verification, review and privacy are the
@@ -63,9 +86,25 @@ that we are not chasing vanity growth.
 
 ## Built, and not built
 
-**Built:** the landing page, supporting pages (`/login`, `/privacy`, `/terms`,
-`/contact`), and a working signup form that records name, email and city.
+**Built, on both clients:** accounts with Google, Facebook and email sign-in;
+onboarding; profiles with optional photos; discovery with free filters and
+paging; expressing interest; mutual connections; messaging; blocking; reporting;
+account deletion. The mobile app (`apps/mobile`) additionally has the account
+area, membership screen and photo management.
 
-**Not built:** accounts, profiles, verification, discovery, messaging,
-moderation tooling, payments. The landing page describes these as intent, in
-future-facing language, and makes no claim that they exist today.
+**Built but unreachable:** premium. Entitlements exist and are enforced in SQL,
+the plans are priced, and the screen says plainly that it cannot be bought
+because no payment provider is connected.
+
+**Not built:** payments, push notifications, moderation tooling, identity or
+relationship verification, real phone verification, Apple sign-in, and legal
+privacy/terms documents.
+
+**The rule that governs all of it:** nothing in the product claims a feature or a
+process that does not exist. Phone verification is mocked, so no member is ever
+shown a "phone verified" badge. There is no moderation team, so reporting says
+the report is recorded and promises no review. Premium cannot be bought, so the
+button says so rather than opening a flow. Empty screens say they are empty
+rather than being padded with invented activity.
+
+See `docs/MOBILE_SETUP.md` for what each unbuilt item needs and what it costs.

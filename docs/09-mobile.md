@@ -84,7 +84,7 @@ deciding on a half-resolved state.
 | --- | --- |
 | Google | Live |
 | Facebook | Live |
-| Email link | Live |
+| Email code | Live — six digits, the primary path on mobile |
 | Apple | **Not configured.** A release blocker for iOS, not for Android |
 | Phone SMS | **Mocked.** See below |
 
@@ -92,9 +92,17 @@ There is no password field anywhere in this app, deliberately. OAuth opens the
 provider in the system's own authentication browser (`openAuthSessionAsync`), so
 credentials are typed into the browser's UI and never into a screen Eraya drew.
 
-Supabase can return a session in two shapes and both are handled: a PKCE `code`
-in the query string, and `access_token`/`refresh_token` in the fragment. Handling
-only one is why every magic link failed on the web app for a day.
+**Email sign-in is a code, not a link.** The link is still in the email and still
+works where the browser cooperates, but a phone is where it does not: tapping it
+opens a browser that has to hand `eraya://` back to the app, and Chrome blocks
+launching an external app from a server redirect without a user gesture, harder
+still in incognito. The failure is a blank tab with nothing to act on. Six digits
+typed into the app need no browser at all, and work when mail is read on a
+different device from the one holding the app.
+
+Supabase can still return a session in two shapes and both are handled: a PKCE
+`code` in the query string, and `access_token`/`refresh_token` in the fragment.
+Handling only one is why every magic link failed on the web app for a day.
 
 **Sessions live in the platform keystore** — Keychain on iOS,
 EncryptedSharedPreferences on Android — not in AsyncStorage, which is an
@@ -117,6 +125,7 @@ be relying on RLS to hide columns rather than on a function never to return them
 | `discover_members` | Introductions: mutual gender preference, nearest first, free filters, paging |
 | `genders_are_compatible` | The mutual preference rule, in one place |
 | `member_profile` | One member |
+| `member_photos` | Every photo of one member. Separate from the card on purpose |
 | `express_interest` | Records a decision and creates the connection atomically |
 | `interests_received` / `_count` | Premium list, and the honest count for everyone |
 | `revert_last_pass` / `reverts_remaining` | Undo, with the allowance counted in SQL |
@@ -142,6 +151,28 @@ list of people is worse than a short wait.
 in by an effect. `you/edit.tsx` waits for its data and then mounts the form,
 which removes both the flash of empty fields and the race where typing is
 overwritten by a late response.
+
+## When something throws
+
+`app/_layout.tsx` exports an `ErrorBoundary`, which Expo Router picks up by name.
+
+Without one, a render error takes the whole app down — on Android it simply
+closes, with no message, no way to report it and nothing to distinguish a crash
+from the OS killing a background process. That is exactly what "the app suddenly
+closes after I sign in" looked like from the outside, and it made the problem
+undiagnosable rather than merely present.
+
+It cannot catch a native crash. It catches every JavaScript error thrown while
+rendering, which is nearly all of them, and shows the message with a retry.
+
+The same principle runs through `SessionProvider`: the profile read is bounded at
+ten seconds and wrapped, and a failure sets an error that clears `loading`.
+Without that last part the timeout would change nothing, because `loading` is
+true whenever a session exists and a profile does not.
+
+**Nothing in this app may wait indefinitely.** Three separate unbounded waits —
+the profile read, the entry screen, the splash — each produced the same
+symptom: a logo, for ever.
 
 ## Design system
 
