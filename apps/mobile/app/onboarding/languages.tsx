@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { nextRouteFor } from "@/features/auth/routing";
+import { routes } from "@/features/auth/routing";
 import {
   listLanguages,
   saveLanguages,
@@ -67,9 +67,12 @@ export default function LanguagesStep() {
       return;
     }
 
-    const next = await refresh();
+    await refresh();
     setPending(false);
-    router.push(nextRouteFor(next));
+
+    // The one step `nextRouteFor` cannot route to, because a photograph is
+    // optional and its absence never means unfinished. See routing.ts.
+    router.push(routes.photo);
   }
 
   return (

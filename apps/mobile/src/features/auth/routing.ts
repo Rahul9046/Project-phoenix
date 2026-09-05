@@ -27,6 +27,7 @@ export const routes = {
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
   languages: "/onboarding/languages",
+  photo: "/onboarding/photo",
   phone: "/onboarding/phone",
   confirmPhone: "/onboarding/confirm-phone",
   welcome: "/onboarding/welcome",
@@ -80,6 +81,20 @@ export function nextRouteFor(profile: ProfileSnapshot | null): Href {
   if (profile.languageIds.length === 0 && !profile.languagesUndisclosed) {
     return routes.languages;
   }
+
+  /*
+   * The photo step is deliberately absent from this function.
+   *
+   * Every other step is derived from what is missing, which works because each
+   * one is required. A photograph is not: a profile without one is complete, so
+   * "has no photo" can never mean "unfinished" -- deciding otherwise here would
+   * be an onboarding nobody who declines a photo could ever leave.
+   *
+   * It is reached by the languages step navigating to it, once, and it hands
+   * back here afterwards. Somebody who closes the app on that screen and returns
+   * lands past it, which is the right outcome for an optional question that has
+   * already been asked.
+   */
 
   // Everything is answered. The stage catches up on the server; until it does,
   // the person still belongs in the app rather than back at the last question.
