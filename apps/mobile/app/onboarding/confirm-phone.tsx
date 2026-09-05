@@ -59,7 +59,27 @@ export default function ConfirmPhoneStep() {
 
     const next = await refresh();
     setPending(false);
-    router.replace(nextRouteFor(next));
+
+    /*
+     * A frame between the profile arriving and the stack being rewritten.
+     *
+     * This is the one step in onboarding that replaces rather than pushes --
+     * deliberately, so that back does not return to a code screen that has
+     * already been accepted. A replace removes this screen and mounts the next
+     * one in a single mount transaction, and doing that in the same frame as
+     * `refresh` re-rendering every screen under the session provider is what
+     * produced:
+     *
+     *   addViewAt: failed to insert view into parent
+     *   Caused by: The specified child already has a parent
+     *
+     * A native crash, so nothing in JavaScript could catch it, and the app
+     * simply closed. Every other step pushes and none of them do this.
+     *
+     * One frame is enough: the profile update paints, and the navigation is then
+     * the only thing in its own commit.
+     */
+    requestAnimationFrame(() => router.replace(nextRouteFor(next)));
   }
 
   return (

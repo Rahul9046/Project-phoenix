@@ -77,21 +77,34 @@ export function Step({
           gap: space.sm,
         }}
       >
-        {canGoBack && router.canGoBack() ? (
-          <IconButton
-            accessibilityLabel="Go back"
-            onPress={() => router.back()}
-            icon={
-              <Ionicons
-                name="chevron-back"
-                size={iconSize.lg}
-                color={colors.ink}
-              />
-            }
-          />
-        ) : (
-          <View style={{ width: 44 }} />
-        )}
+        {/*
+          Always a box of the same size, sometimes with a control in it.
+
+          This used to render the button or a spacer, which meant the first child
+          of this row changed type whenever `router.canGoBack()` changed -- and
+          that is read during render, so it changes underneath a screen while the
+          stack is being rewritten. Swapping an element's type makes React unmount
+          one view and mount another, which is the last thing wanted mid
+          transition on a renderer that has just been asked to move the siblings
+          beside it.
+
+          The slot is now constant and only its contents come and go.
+        */}
+        <View style={{ width: 44 }}>
+          {canGoBack && router.canGoBack() ? (
+            <IconButton
+              accessibilityLabel="Go back"
+              onPress={() => router.back()}
+              icon={
+                <Ionicons
+                  name="chevron-back"
+                  size={iconSize.lg}
+                  color={colors.ink}
+                />
+              }
+            />
+          ) : null}
+        </View>
 
         <Progress index={index} total={onboardingSteps.length} />
 
