@@ -53,7 +53,7 @@ export function SectionHeading({
         </div>
       ) : null}
       <Tag
-        className={`font-serif text-3xl leading-[1.15] tracking-[-0.02em] sm:text-4xl lg:text-[2.75rem] ${
+        className={`text-title ${
           eyebrow ? "mt-5" : ""
         } ${tone === "light" ? "text-canvas" : "text-ink"}`}
       >

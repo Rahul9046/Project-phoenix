@@ -66,7 +66,7 @@ export function Conversation({
       <div className="flex-1">
         {messages.length === 0 ? (
           <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-            <p className="font-serif text-lg text-ink">
+            <p className="text-name text-ink">
               {conversation.emptyTitle}
             </p>
             <p className="mt-2 leading-relaxed text-ink-muted">

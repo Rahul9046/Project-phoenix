@@ -29,9 +29,17 @@ not a porting detail.
 
 ## 2. Connecting
 
-Use `@supabase/supabase-js` with `@react-native-async-storage/async-storage` as
-the auth storage adapter, and set `detectSessionInUrl: false` — that option is
-for browsers and will misbehave under a native URL scheme.
+Use `@supabase/supabase-js` with **`expo-secure-store`** as the auth storage
+adapter — not AsyncStorage, which Supabase's own guide suggests and which is a
+plain unencrypted file holding a bearer token to somebody's private
+conversations. SecureStore caps a value at 2048 bytes and a session exceeds that,
+so values are chunked with the header written last: an interrupted write reads
+back as absent rather than corrupt. See
+`apps/mobile/src/lib/supabase/secure-storage.ts`.
+
+Set `detectSessionInUrl: false` on a device — that option is for browsers picking
+a session out of an address bar, and there is none. It is on only for the
+`expo start --web` preview, which is a real browser.
 
 Two values are needed, both of which are safe to ship in the app binary:
 
@@ -49,21 +57,34 @@ which has to reach `auth.users`) and throws if it is ever read in a browser. See
 
 | Method | State |
 | --- | --- |
-| Email magic link / OTP | Live, with custom SMTP so templates are branded |
+| Email code (six digits) | Live. The primary path on mobile — see below |
+| Email magic link | Live, and what the web uses |
 | Google | Live |
 | Facebook | Live |
 | Apple | **Not configured.** Required before iOS submission if any other social sign-in ships |
 | Phone (SMS) | **Mocked.** See §7 |
 
-Redirect handling is the one genuinely different thing on mobile. The web app
-uses PKCE and accepts both link shapes Supabase can send — a `code` parameter and
-a `token_hash` + `type` pair — because the default templates return the first and
-the custom ones can return the second. Mobile needs the same tolerance, against a
-deep link scheme rather than an http URL.
+**Do not build email sign-in around the link on mobile.** It was tried and it does
+not work reliably: tapping the link opens a browser, which then has to hand
+`eraya://` back to the app, and Chrome blocks launching an external app from a
+server redirect without a user gesture — harder still in incognito. The failure
+is a blank tab with no error and nothing to tap, and it succeeds often enough to
+look fine in testing.
+
+The email carries a six-digit `{{ .Token }}` as well. Exchange it with
+`verifyOtp({ email, token, type: "email" })`. No browser, no scheme, nothing
+another app can claim, and it works when mail is read on a different device from
+the one holding the app.
+
+Redirect handling still matters for OAuth. The web app uses PKCE and accepts both
+shapes Supabase can send — a `code` parameter and a `token_hash` + `type` pair —
+and mobile needs the same tolerance against a deep link scheme. Note that
+Supabase refuses `exp://` redirects entirely, so sign-in cannot complete inside
+Expo Go; a development build registers `eraya://` and behaves normally.
 
 Add the mobile redirect URL to `supabase/config.toml` under
-`auth.additional_redirect_urls` and run `supabase config push`. Adding it does
-not affect web.
+`auth.additional_redirect_urls` and run `npm run config:push`. Adding it does not
+affect web. Never the bare CLI — see §8.
 
 Apple sign-in is currently `enabled = false` in config. It is not fabricated as
 present anywhere in the product, and it must not be: **do not add provider
@@ -78,7 +99,8 @@ no "single"), `gender` (woman, man, non_binary, prefer_not_to_say),
 
 | Table | Notes |
 | --- | --- |
-| `profiles` | One row per `auth.users` row, same id. `date_of_birth` never leaves the server; only a computed age does |
+| `profiles` | One row per `auth.users` row, same id. `date_of_birth` never leaves the server; only a computed age does. `seeking` holds the genders this member hopes to meet |
+| `profile_photos` | Optional photography, ordered. The files live in a private Storage bucket; a profile with no rows here is normal, not incomplete |
 | `profile_languages` | Join table. `profiles.languages_undisclosed` covers "prefer not to say" |
 | `cities` | 493 rows, 36 states and union territories. Public reference data |
 | `languages` | Public reference data |
@@ -97,17 +119,24 @@ All are `security definer` and revoked from `anon`. `search_cities` and
 
 | Function | Purpose |
 | --- | --- |
-| `discover_members(max_results)` | The introductions. Excludes self, blocks in either direction, and anyone already decided on. Ordered by `md5(profile ‖ viewer ‖ current_date)` so the same few people appear all day |
+| `discover_members(...)` | The introductions. Excludes self, blocks in either direction, and anyone already decided on. Applies mutual gender preference, orders nearest first, and takes the free filters and paging |
 | `member_profile(id)` | One member, as the same fixed column set |
+| `member_photos(id)` | Every photo of one member. Separate from the card on purpose — a list renders one picture per person |
+| `genders_are_compatible(...)` | The mutual preference rule, in one place |
 | `express_interest(target_id, decision)` | Atomic. Records the decision and creates the connection if it is now mutual. Returns the connection id or null |
 | `interests_received()` | Who expressed interest in you. **Returns nothing without a premium subscription — checked in SQL.** A mobile client cannot bypass this |
 | `search_cities(query, max_results)` | Ranked substring match, with a trigram fallback for misspellings |
 | `city_coverage()` | Counts of cities and states, for marketing copy |
 
-The shape all four member functions return is the composite type `member_card`:
-id, first_name, age, city, state, relationship_status, gender, languages,
-phone_verified, email_verified. **That is the entire privacy boundary.** Adding a
-column to it exposes it to every member.
+The shape the member functions return is the composite type `member_card`:
+id, first_name, age, city, state, relationship_status, gender, languages, about,
+looking_for, photo_path, photo_count, phone_verified, email_verified. **That is
+the entire privacy boundary.** Adding a column to it exposes it to every member,
+everywhere — which is why `member_photos` is a separate call rather than a wider
+card.
+
+Note what is still absent: no email, no phone number, no date of birth. Only a
+computed age.
 
 Membership is read through the `entitlements` table keyed by tier — never
 hardcode what free or premium can do. Current keys: `canSeeInteresters`,
@@ -133,15 +162,31 @@ These are decisions, not implementation details. Each one has a reason.
    reply nudges.** The `messages` table has no `read_at` column so that this
    cannot be added carelessly. Every one of those features exists to make one
    person feel owed and the other feel watched.
-6. **No photos.** The web app renders a monogram. This is a product position,
-   not a missing feature.
+6. **Photos are optional, and the monogram is not a fallback for a failure.**
+   The web app has no photos at all and renders a monogram; mobile added them
+   because deciding whether to meet a stranger with no idea what they look like
+   asks too much. A profile without one is complete, and must look considered
+   rather than unfinished -- plenty of members will not want a face on a screen
+   for a long time.
 7. **Age is shown, date of birth never is.** Members must be 18+; a check
    constraint enforces it.
-8. **Discovery is not filtered by city.** Where someone lives affects nothing
-   about who they can meet or whether they can join.
-9. **Anyone in India can register.** There is no launch-city gate. `is_launch_city`
-   still exists as a column and affects search result *ordering* only.
-10. **Deleting an account deletes everything**, immediately and with no grace
+8. **Discovery orders by proximity and never filters by it.** Same city, then
+   same state, then everywhere else, with a per-viewer daily hash as the tiebreak
+   inside each band. Everyone stays reachable, so a member in a quiet town sees
+   the country rather than an empty screen. It is not a distance calculation:
+   nobody's city is where they are, it is where they said they live.
+9. **Gender preference is mutual, and permissive where unstated.** Someone
+   appears in your introductions only if they match `seeking` and you match
+   theirs. Where either side has not answered, or a gender is
+   `prefer_not_to_say`, the rule does not exclude — a strict reading would make
+   every member who declined to state a gender invisible to everybody.
+10. **Photo files are private.** The bucket is not public, reads are
+    block-aware, and EXIF is stripped before upload -- a camera-roll photo
+    usually carries the coordinates of where it was taken.
+11. **Anyone in India can register.** There is no launch-city gate.
+    `is_launch_city` still exists as a column and affects search result
+    *ordering* only.
+12. **Deleting an account deletes everything**, immediately and with no grace
     period, through `ON DELETE CASCADE`. Do not build a soft delete.
 
 ## 7. What is genuinely incomplete

@@ -135,7 +135,7 @@ export default async function MembershipPage() {
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <span className="font-medium text-ink">{plan.name}</span>
-                    <span className="font-serif text-xl text-ink">
+                    <span className="text-name text-ink">
                       {formatRupees(
                         hasIntro ? plan.introPricePaise! : plan.pricePaise,
                       )}

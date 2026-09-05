@@ -55,9 +55,14 @@ page.
 
 ## Fonts
 
-`next/font/google` self-hosts Fraunces and Inter — no runtime request reaches
-Google, and no layout shift on load. Fraunces is loaded with its optical-size
-axis enabled.
+`next/font/google` self-hosts Manrope at four weights (400, 500, 600, 700) — no
+runtime request reaches Google. The fallback carries generated metric overrides,
+so the swap when Manrope arrives does not shift the layout.
+
+`display: "swap"` shows the fallback immediately rather than hiding text while
+the font loads -- on a slow Indian mobile connection the alternative is a blank
+page. Only the four weights the type scale asks for are loaded; the variable
+font's 200 and 800 would be two more files for weights nothing uses.
 
 ## Images
 

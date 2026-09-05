@@ -79,9 +79,24 @@ export function Logo({
   return (
     <span className={`inline-flex items-center gap-3 ${className}`}>
       <ErayaMark className={`${tileSize[size]} shrink-0`} />
+      {/*
+        The wordmark is set in the product's own typeface, which is now Manrope.
+
+        It was Fraunces, and that was a UI choice rather than brand artwork --
+        the approved lockup in `assets/brand/eraya-approved-horizontal.svg` sets
+        "Eraya" in a generic system serif, not in Fraunces at all. Keeping a
+        second family loaded for five letters would mean shipping a whole font
+        file for the wordmark alone.
+
+        The mark beside it is untouched: the same three paths from the approved
+        artwork, byte for byte.
+
+        Bold and slightly tightened so it reads as a mark rather than as a word
+        that happens to be next to the logo.
+      */}
       {variant === "full" ? (
         <span
-          className={`font-serif font-semibold tracking-[-0.015em] ${
+          className={`font-bold tracking-[-0.02em] ${
             wordSize[size]
           } ${tone === "light" ? "text-canvas" : "text-ink"}`}
         >

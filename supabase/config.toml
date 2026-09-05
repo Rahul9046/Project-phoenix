@@ -34,7 +34,26 @@ port = 54324
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3000/auth/confirm"]
+# Every address an auth redirect may land on. Anything not listed here comes back
+# as an error rather than a session, which is the single most common reason a
+# working OAuth setup appears broken.
+#
+# `eraya://auth` is the mobile app's own scheme, used by a development build and
+# by anything shipped to a store. `http://localhost:8081` is the `expo start
+# --web` preview used for inspecting layouts.
+#
+# There is deliberately no `exp://` entry. Supabase refuses that scheme -- a
+# literal URL is rejected as firmly as a wildcard -- and it is right to: `exp://`
+# belongs to Expo Go, which every Expo project on the device shares, so a session
+# delivered there could be picked up by another app. The consequence is that
+# sign-in cannot complete inside Expo Go; a development build registers the
+# `eraya` scheme and works normally. See docs/MOBILE_SETUP.md.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "eraya://auth",
+  "http://localhost:8081",
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

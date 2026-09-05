@@ -230,7 +230,7 @@ function Confirm({
       aria-label={title}
       className="rounded-2xl border border-ember/40 bg-sand/40 p-5 sm:p-6"
     >
-      <p className="font-serif text-xl text-ink">{title}</p>
+      <p className="text-name text-ink">{title}</p>
       <p className="mt-2.5 leading-relaxed text-ink-muted">{body}</p>
 
       {children}

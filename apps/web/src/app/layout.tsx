@@ -1,22 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 
 import { site } from "@/features/marketing/content";
 import "./globals.css";
 
-// Editorial serif for headlines; optical sizing keeps large type from looking
-// like enlarged body text.
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+/*
+ * Eraya's only typeface.
+ *
+ * Four weights, named rather than left to the variable font's full range:
+ * 400 for body, 500 for emphasis and small metadata, 600 for headings, buttons
+ * and navigation, 700 for the two largest display sizes. Loading 200 and 800 as
+ * well would be two more files for weights the scale never asks for.
+ *
+ * `display: "swap"` shows the fallback immediately and swaps when Manrope
+ * arrives. The alternative hides text while the font loads, which on a slow
+ * Indian mobile connection means a blank page -- and the metric overrides Next
+ * generates for the fallback keep the swap from shifting the layout.
+ */
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
-  axes: ["opsz"],
-  display: "swap",
-});
-
-// A highly legible UI face — this audience is not all young eyes.
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -64,7 +68,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en-IN"
       // Next.js 16 only manages smooth scrolling across navigations when asked.
       data-scroll-behavior="smooth"
-      className={`${fraunces.variable} ${inter.variable} h-full antialiased`}
+      className={`${manrope.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col overflow-x-hidden">
         <a

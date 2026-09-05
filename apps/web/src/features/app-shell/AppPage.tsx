@@ -12,7 +12,7 @@ export function AppPage({
 }) {
   return (
     <div className="mx-auto w-full max-w-4xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12">
-      <h1 className="font-serif text-[2rem] leading-tight tracking-[-0.02em] text-ink sm:text-4xl">
+      <h1 className="text-heading text-ink">
         {title}
       </h1>
       {lede ? (
@@ -40,7 +40,7 @@ export function Panel({
       className={`rounded-2xl border border-line bg-surface p-5 sm:p-6 ${className}`}
     >
       {title ? (
-        <h2 className="font-serif text-xl tracking-[-0.01em] text-ink">
+        <h2 className="text-name text-ink">
           {title}
         </h2>
       ) : null}

@@ -18,7 +18,7 @@ export function FeatureCard({
       className={`border-t pt-6 ${tone === "light" ? "border-night-line" : "border-line"}`}
     >
       <h3
-        className={`font-serif text-xl leading-snug tracking-[-0.01em] ${
+        className={`text-name ${
           tone === "light" ? "text-canvas" : "text-ink"
         }`}
       >

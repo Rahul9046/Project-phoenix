@@ -80,7 +80,7 @@ export function DeleteAccount() {
   if (done) {
     return (
       <div role="status" className="rounded-2xl border border-line bg-surface p-6">
-        <p className="font-serif text-xl text-ink">{account.deletedTitle}</p>
+        <p className="text-name text-ink">{account.deletedTitle}</p>
         <p className="mt-2.5 leading-relaxed text-ink-muted">
           {account.deletedBody}
         </p>
@@ -110,7 +110,7 @@ export function DeleteAccount() {
           aria-label={account.confirmTitle}
           className="mt-5 rounded-2xl border border-ember/40 bg-sand/40 p-5 focus:outline-none sm:p-6"
         >
-          <p className="font-serif text-xl text-ink">{account.confirmTitle}</p>
+          <p className="text-name text-ink">{account.confirmTitle}</p>
           <p className="mt-2.5 leading-relaxed text-ink-muted">
             {account.confirmBody}
           </p>

@@ -72,7 +72,7 @@ export default async function PricingPage() {
         <Container>
           <div className="mx-auto max-w-3xl text-center">
             <Eyebrow>{pricing.eyebrow}</Eyebrow>
-            <h1 className="mt-6 font-serif text-[2.4rem] leading-[1.1] tracking-[-0.025em] text-ink sm:text-5xl">
+            <h1 className="mt-6 text-title text-ink">
               {pricing.title}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-ink-muted sm:text-xl">
@@ -83,10 +83,10 @@ export default async function PricingPage() {
           <div className="mx-auto mt-14 grid max-w-4xl gap-5 lg:grid-cols-2">
             {/* Free. Listed first, because it is what most people will use. */}
             <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
-              <h2 className="font-serif text-2xl text-ink">
+              <h2 className="text-subhead text-ink">
                 {pricing.freeName}
               </h2>
-              <p className="mt-4 font-serif text-4xl text-ink">
+              <p className="mt-4 text-ink text-4xl font-bold tracking-[-0.02em]">
                 {pricing.freePrice}
               </p>
               <p className="mt-2 text-[0.95rem] text-ink-subtle">
@@ -123,11 +123,11 @@ export default async function PricingPage() {
 
             {/* Premium. */}
             <div className="rounded-2xl border border-ember/35 bg-surface p-6 ring-1 ring-ember/10 sm:p-8">
-              <h2 className="font-serif text-2xl text-ink">
+              <h2 className="text-subhead text-ink">
                 {pricing.premiumName}
               </h2>
 
-              <p className="mt-4 font-serif text-4xl text-ink">
+              <p className="mt-4 text-ink text-4xl font-bold tracking-[-0.02em]">
                 <span className="mr-1.5 align-middle font-sans text-base font-normal text-ink-subtle">
                   {pricing.premiumFrom}
                 </span>
@@ -207,7 +207,7 @@ export default async function PricingPage() {
                       {plan.description}
                     </p>
                   ) : null}
-                  <p className="mt-3 font-serif text-3xl text-ink">
+                  <p className="mt-3 text-ink text-3xl font-bold tracking-[-0.02em]">
                     {formatRupees(hasIntro ? introPaise : plan.pricePaise)}
                   </p>
 
@@ -297,7 +297,7 @@ export default async function PricingPage() {
           <dl className="mx-auto mt-12 grid max-w-3xl gap-8">
             {pricing.faq.map((item) => (
               <div key={item.q}>
-                <dt className="font-serif text-xl text-ink">{item.q}</dt>
+                <dt className="text-name text-ink">{item.q}</dt>
                 <dd className="mt-2.5 leading-relaxed text-ink-muted">
                   {item.a}
                 </dd>

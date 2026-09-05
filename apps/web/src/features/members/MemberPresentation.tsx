@@ -41,7 +41,7 @@ export function MemberMonogram({
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex ${dimensions} shrink-0 items-center justify-center rounded-2xl bg-ember-tint font-serif text-ember-text`}
+      className={`inline-flex ${dimensions} shrink-0 items-center justify-center rounded-2xl bg-ember-tint font-semibold text-ember-text`}
     >
       {initial}
     </span>

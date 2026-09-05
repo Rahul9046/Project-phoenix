@@ -227,10 +227,30 @@ where members are while actually describing a seed flag. It now shows a count
 read from the table through `city_coverage()`, which cannot drift away from what
 the search field will accept.
 
-`discover_members` applies **no city filter at all**. Where someone lives affects
-neither whether they can join nor who they are introduced to. Discovery could
-later prioritise people who are geographically close, but that would be a new
-decision, not a restoration of this one.
+`discover_members` applies mutual gender preference before anything else:
+someone appears in your introductions only if they match `profiles.seeking` and
+you match theirs. `genders_are_compatible` holds that rule so it cannot be
+restated slightly differently somewhere else.
+
+It is permissive wherever either side has not answered, and for
+`prefer_not_to_say`. A strict reading would make every member who declined to
+state a gender invisible to everybody, which punishes exactly the people most
+likely to have thought about the question. Silence means "no constraint", never
+"no match".
+
+`discover_members` applies **no city filter**, and does order by proximity:
+same city first, then same state, then everywhere else, with the per-viewer daily
+hash as the tiebreak inside each band.
+
+The distinction matters. Ordering means everyone is still reachable -- a member
+in a town with no other members sees the whole country rather than an empty
+screen -- while someone two streets away is not buried behind someone two
+thousand kilometres away. Filtering by city remains separate, optional and free.
+
+It is not a distance calculation. The cities table carries latitude and
+longitude, so one is available, and using it would imply a precision the product
+does not have: nobody's city is where they are, it is where they said they
+live. Three bands say what can honestly be said.
 
 ### Search
 
@@ -267,6 +287,46 @@ indistinguishable from a right one, and discovery would quietly mis-rank people.
 Retained but no longer written. Every member now resolves to a real `city_id`,
 which is what lets discovery reason about distance. The column holds free text
 for accounts created before registration opened nationwide.
+
+## Photos
+
+Optional, and a profile without one is complete. The web renders a monogram and
+always has; mobile added photos because deciding whether to meet a stranger with
+no idea what they look like asks more of people than is reasonable. The monogram
+stayed a first-class presentation rather than becoming a failure state — plenty
+of Eraya's members will not want a face on a screen for a long time, and the
+product must not treat them as half-finished.
+
+`profile_photos` holds the ordering and which is first; the file itself lives in
+Supabase Storage. Those are different questions — one is about a profile, the
+other about a file — and a storage listing has no stable order.
+
+**The bucket is private.** A public bucket means every photo is a guessable URL
+that outlives a block, a deletion and an account closure. Clients mint signed
+URLs with an hour's life instead.
+
+Three policies do the work:
+
+- Writes are constrained to a folder named for the owner's id, checked with
+  `storage.foldername(name)[1] = auth.uid()`. There is no way to write outside
+  your own folder whatever the client sends.
+- Reads are allowed to any signed-in member **except** where either party has
+  blocked the other, so a blocked person loses access to the file itself — a URL
+  signed before the block cannot be renewed, and a saved path stops resolving.
+- Reads are deliberately *not* restricted to existing connections. Discovery has
+  to show a face before anyone connects, and that rule would make every card
+  blank.
+
+Uploads are resized to 1400px and re-encoded as JPEG before leaving the phone.
+Partly size; mostly EXIF. A photo from a camera roll usually carries the GPS
+coordinates of where it was taken, frequently somebody's home, and re-encoding
+strips it.
+
+A six-photo limit is enforced by the `profile_photos_limit` trigger rather than
+by the `position` column. Those are two different rules — an ordering and a count
+— and conflating them broke reordering: a unique index on
+`(profile_id, position)` means positions cannot be reassigned in place, and the
+standard way round it needs room to move rows temporarily out of range.
 
 ## Membership and entitlements
 
@@ -332,6 +392,38 @@ charge.
 `'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
 the current term.
 
+## Pushing config: never use the CLI directly
+
+Use `npm run config:push`, not `supabase config push`.
+
+`supabase/config.toml` refers to the OAuth credentials as
+`env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)` and so on, which is right -- the file is
+committed and the credentials must not be. The trap is what the CLI does when one
+of those variables is missing from the environment. It does not fail and it does
+not warn: it pushes the **literal string** `env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)`
+as the client id, and the project stores it. Anyone pressing "Continue with
+Google" is then sent to Google with that text as the client id and told the app
+is misconfigured, while the push output looks entirely successful.
+
+That is not hypothetical. Several pushes for unrelated reasons -- redirect URLs,
+mostly -- silently wiped both providers, and it surfaced only when someone tried
+to sign in.
+
+The variables live in `apps/web/.env.local`, which the CLI does not read.
+`scripts/supabase-config.mjs` reads them, works out which are actually required
+(only from sections where `enabled = true`, so a disabled provider like Apple
+does not block anything), refuses to push if any is missing, and prints the names
+it substituted -- never the values.
+
+After changing anything about a provider, check it rather than trusting the
+output:
+
+```
+curl -si "$SUPABASE_URL/auth/v1/authorize?provider=google&redirect_to=http://localhost:3000/auth/callback" | grep -i location
+```
+
+A `client_id=env%28...%29` in that redirect means the credentials were wiped.
+
 ## Email
 
 ### Custom SMTP is not optional
@@ -354,8 +446,10 @@ SMTP is configured. `SUPABASE_SMTP_HOST`, `SUPABASE_SMTP_USER` and
 `SUPABASE_SMTP_PASS` live in `.env.local`; apply any template change with:
 
 ```
-supabase config push
+npm run config:push
 ```
+
+Never the bare CLI — see "Pushing config" above for what that silently breaks.
 
 The sending domain needs SPF and DKIM records. The sender mailbox does not need
 to receive anything: mail goes out as `no-reply@eraya.app`, and the address that
@@ -370,9 +464,45 @@ template that exists only in one project's dashboard cannot be reviewed,
 reproduced or rolled back — and this is the first thing a new member sees of
 Eraya.
 
-The template links to `/auth/confirm?token_hash=…` rather than Supabase's verify
-endpoint, which is what makes a link requested on one device work when opened on
-another. See "The two shapes an email link can arrive in" above.
+### One template, two clients, and a code
+
+The template does three things, and each exists because of a specific failure.
+
+**It branches on `.RedirectTo`.** It used to hardcode `.SiteURL/auth/confirm`, so
+every link went to the web app regardless of what `emailRedirectTo` the caller
+passed — the mobile app's `eraya://auth` was accepted, sent, and then discarded
+at render time. That was invisible while the web app was the only caller, because
+its redirect and the site URL were the same address.
+
+  Web    `{{ .RedirectTo }}?token_hash=…&type=email`
+  Mobile `{{ .ConfirmationURL }}`
+
+**The web link uses a `token_hash`, not Supabase's verify endpoint.** The default
+returns a PKCE code, which needs a verifier cookie from the browser that
+requested the link — so a link requested on a laptop and opened on a phone fails.
+A `token_hash` works anywhere.
+
+**The mobile branch is an https address**, not `eraya://` directly. A custom
+scheme in an `href` is stripped or left unlinked by several mail clients, Gmail
+among them, so the https hop is what makes the button tappable at all. The
+comparison is exact and the app pins the value in `EMAIL_LINK_REDIRECT`:
+Supabase refuses `eraya:///auth` and `eraya://auth/` outright, so being generous
+here would buy nothing.
+
+**And the email carries a six-digit `{{ .Token }}`, which is what mobile actually
+uses.** Tapping the link on a phone opens a browser that then has to hand the
+scheme back to the app, and Chrome blocks launching an external app from a server
+redirect without a user gesture — harder still in incognito. The result is a
+blank tab: no error, nothing to tap. It works often enough to look fine in
+testing and fails often enough to be unusable.
+
+The code needs no browser, no scheme, and nothing another app can claim. It also
+works when mail is read on a different device from the one holding the app, which
+the link never could. `verifyOtp({ email, token, type: "email" })` exchanges it.
+
+The web still uses the link, correctly — a browser handing a redirect to itself
+has none of these problems. The code block says "Or enter this code in the app",
+so it is unambiguous who it is for.
 
 The logo is a PNG, generated from `mark.ts` by
 `scripts/build-email-logo.mjs` — the same geometry as the favicon and the site
