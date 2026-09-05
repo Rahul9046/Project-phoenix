@@ -19,6 +19,8 @@ export const routes = {
   entry: "/",
   signIn: "/sign-in",
   checkEmail: "/check-email",
+  /** Where an emailed sign-in link lands. See app/auth.tsx. */
+  authReturn: "/auth",
 
   name: "/onboarding/name",
   birthday: "/onboarding/birthday",
