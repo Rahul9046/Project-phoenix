@@ -1,5 +1,6 @@
 "use client";
 
+import { maskEmail, recordAuthEvent } from "@/features/auth/events";
 import { createClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/supabase/env";
 import { verifyPhoneCode, sendPhoneCode } from "@/features/auth/phone-verification";
@@ -42,6 +43,18 @@ function toAuthError(error: unknown, fallback: string): AuthError {
   return new AuthError("generic", fallback);
 }
 
+/** Only these two have provider events; Apple is not configured. */
+function recordProviderOutcome(
+  provider: SocialProviderId,
+  ok: boolean,
+  reason?: string,
+) {
+  if (provider !== "google" && provider !== "facebook") return;
+  recordAuthEvent(ok ? `${provider}_auth_success` : `${provider}_auth_failure`, {
+    reason,
+  });
+}
+
 export const supabaseAuthClient: AuthClient = {
   /**
    * Hands off to the provider. On success the browser navigates away and this
@@ -60,8 +73,17 @@ export const supabaseAuthClient: AuthClient = {
     });
 
     if (error) {
+      recordProviderOutcome(provider, false, "handoff_failed");
       throw toAuthError(error, "Could not reach the sign-in provider.");
     }
+
+    /*
+     * Recorded as a success at the point of handing off, because this promise
+     * does not meaningfully resolve: the browser leaves for the provider and
+     * the session is established later by the callback route. Whether the
+     * person completes it there is the callback's story to tell.
+     */
+    recordProviderOutcome(provider, true, "handoff");
   },
 
   /**
@@ -74,6 +96,9 @@ export const supabaseAuthClient: AuthClient = {
   async signInWithEmail(email: string) {
     const supabase = createClient();
 
+    const identifier = maskEmail(email);
+    recordAuthEvent("email_auth_requested", { identifier });
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -83,6 +108,10 @@ export const supabaseAuthClient: AuthClient = {
     });
 
     if (error) {
+      recordAuthEvent("email_auth_failure", {
+        identifier,
+        reason: error.status === 429 ? "rate_limited" : "send_failed",
+      });
       throw toAuthError(error, "Could not send the sign-in link.");
     }
   },

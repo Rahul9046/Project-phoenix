@@ -690,6 +690,14 @@ export type Database = {
         }[]
       }
       delete_my_account: { Args: never; Returns: undefined }
+      record_auth_event: {
+        Args: {
+          event_name: string
+          masked_identifier?: string | null
+          reason?: string | null
+        }
+        Returns: undefined
+      }
       discover_members: {
         Args: {
           city_ids?: string[]

@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import type { Provider } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
+import { maskEmail, recordAuthEvent } from "@/features/auth/events";
 
 /**
  * Signing in.
@@ -164,14 +165,32 @@ export async function signInWithProvider(
   });
 
   if (result.type === "cancel" || result.type === "dismiss") {
+    // Changing your mind is not a failure, and counting it as one would make
+    // the provider look broken in the numbers.
     return { ok: false, cancelled: true, message: "Sign-in was cancelled." };
   }
 
   if (result.type !== "success") {
+    recordProviderOutcome(provider, false, "browser_closed");
     return { ok: false, message: GENERIC };
   }
 
-  return establishSession(readReturnedUrl(result.url));
+  const session = await establishSession(readReturnedUrl(result.url));
+  recordProviderOutcome(provider, session.ok, session.ok ? undefined : "exchange_failed");
+  return session;
+}
+
+/** Only Google and Facebook have events; Apple is not configured. */
+function recordProviderOutcome(
+  provider: SignInProvider,
+  ok: boolean,
+  reason?: string,
+) {
+  if (provider === "apple") return;
+  recordAuthEvent(
+    ok ? `${provider}_auth_success` : `${provider}_auth_failure`,
+    { reason },
+  );
 }
 
 /**
@@ -188,6 +207,9 @@ export async function sendEmailSignIn(email: string): Promise<SignInResult> {
     return { ok: false, message: "That does not look like an email address." };
   }
 
+  const identifier = maskEmail(trimmed);
+  recordAuthEvent("email_auth_requested", { identifier });
+
   const { error } = await supabase.auth.signInWithOtp({
     email: trimmed,
     options: {
@@ -197,16 +219,35 @@ export async function sendEmailSignIn(email: string): Promise<SignInResult> {
   });
 
   if (error) {
-    // Supabase rate-limits link requests per address. Saying so is more useful
-    // than "something went wrong", which invites someone to try again at once.
+    // Supabase rate-limits requests per address. Saying so is more useful than
+    // "something went wrong", which invites someone to try again at once.
     if (error.status === 429) {
+      recordAuthEvent("email_auth_failure", { identifier, reason: "rate_limited" });
       return {
         ok: false,
         message:
           "We have sent a few codes to this address already. Please wait a little while before asking for another.",
       };
     }
-    return { ok: false, message: error.message };
+
+    /*
+     * Everything else gets one calm sentence.
+     *
+     * This used to return `error.message`, which is written for whoever is
+     * reading the logs: "Error sending confirmation email", "SMTP provider
+     * returned 550". Handing that to somebody trying to join a relationship
+     * product tells them nothing they can act on and quite a lot about the
+     * plumbing. The category is recorded instead, where it is useful.
+     */
+    recordAuthEvent("email_auth_failure", {
+      identifier,
+      reason: error.status === 400 ? "rejected" : "send_failed",
+    });
+    return {
+      ok: false,
+      message:
+        "We could not send your code just now. Please check the address and try again shortly.",
+    };
   }
 
   return { ok: true };
@@ -246,19 +287,28 @@ export async function verifyEmailCode(
     type: "email",
   });
 
+  const identifier = maskEmail(email);
+
   if (error) {
     // A wrong or stale code is the common case and deserves plain wording; the
     // codes expire, and someone reading an old email will hit this.
     if (error.status === 401 || /expired|invalid/i.test(error.message)) {
+      recordAuthEvent("email_auth_failure", { identifier, reason: "invalid_code" });
       return {
         ok: false,
         message:
           "That code did not work. It may have expired -- ask for a new email and use the latest one.",
       };
     }
-    return { ok: false, message: error.message };
+
+    recordAuthEvent("email_auth_failure", { identifier, reason: "verify_failed" });
+    return {
+      ok: false,
+      message: "We could not sign you in just now. Please try again in a moment.",
+    };
   }
 
+  recordAuthEvent("email_auth_success", { identifier });
   return { ok: true };
 }
 
