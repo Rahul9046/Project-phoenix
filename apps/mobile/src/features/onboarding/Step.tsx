@@ -32,6 +32,7 @@ export const onboardingSteps = [
   "city",
   "relationship",
   "languages",
+  "photo",
 ] as const;
 
 export type OnboardingStepName = (typeof onboardingSteps)[number];
