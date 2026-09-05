@@ -215,7 +215,7 @@ export function MemberCard({
  * here will not want a face on a screen for a long time, and the card has to
  * look deliberate for them rather than broken.
  */
-function PhotoOrMonogram({
+export function PhotoOrMonogram({
   name,
   photoUrl,
 }: {

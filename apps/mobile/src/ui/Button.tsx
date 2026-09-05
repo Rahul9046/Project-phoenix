@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   Pressable,
   View,
   type PressableProps,
@@ -162,11 +163,26 @@ export function Button({
         ) : null}
 
         <Text
-          // One line that scales down rather than truncating. A button whose
-          // label ends in an ellipsis has failed at the only job it has.
+          /*
+           * One line that scales down rather than truncating -- on iOS, where
+           * that actually works.
+           *
+           * `adjustsFontSizeToFit` is an iOS API. React Native accepts it on
+           * Android and gets it wrong: rather than shrinking the text it clips
+           * it, without even an ellipsis to show that anything is missing. That
+           * is how "Continue with Facebook" became "Continue with" and "Take a
+           * look" became "Take a" -- on buttons with room to spare, so it read
+           * as copy someone had forgotten to finish rather than as a layout bug.
+           *
+           * Android gets plain one-line text instead. Every label in this app
+           * fits a full-width button at the default size, and if one ever does
+           * not, an ellipsis is the honest outcome and a shorter label is the
+           * real fix.
+           */
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.85}
+          {...(Platform.OS === "ios"
+            ? { adjustsFontSizeToFit: true, minimumFontScale: 0.85 }
+            : null)}
           style={[text.label, { color: palette.label, flexShrink: 1 }]}
         >
           {label}

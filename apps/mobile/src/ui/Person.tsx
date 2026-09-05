@@ -190,11 +190,16 @@ export function ProfilePhoto({
 export function TrustMarks({
   emailVerified,
   style,
+  /** Set when the mark sits over a photograph rather than on a page. */
+  onDark = false,
 }: {
   emailVerified: boolean;
   style?: ViewStyle;
+  onDark?: boolean;
 }) {
   if (!emailVerified) return null;
+
+  const tone = onDark ? colors.positiveOnDark : colors.positive;
 
   return (
     <View
@@ -206,9 +211,9 @@ export function TrustMarks({
       <Ionicons
         name="shield-checkmark-outline"
         size={iconSize.sm}
-        color={colors.positive}
+        color={tone}
       />
-      <Text variant="caption" style={{ color: colors.positive }}>
+      <Text variant="caption" style={{ color: tone }}>
         Email verified
       </Text>
     </View>

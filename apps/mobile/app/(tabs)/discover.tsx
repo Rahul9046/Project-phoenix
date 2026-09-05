@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 
-import { contextFor, MemberCard } from "@/features/discovery/MemberCard";
+import { ConnectionMoment } from "@/features/connections/ConnectionMoment";
+import { DeckCard } from "@/features/discovery/DeckCard";
+import { contextFor } from "@/features/discovery/MemberCard";
 import { useMyDetails } from "@/features/members/me";
 import { FilterSheet } from "@/features/discovery/FilterSheet";
 import {
   DISCOVERY_PAGE_SIZE,
+  expressInterest,
   getIntroductions,
   revertLastPass,
   revertsRemaining,
@@ -19,29 +24,36 @@ import {
   type DiscoveryFilters,
   type Member,
 } from "@/features/members/types";
-import { colors, hit, layout, radius, space } from "@/theme/tokens";
+import { colors, hit, iconSize, layout, radius, space } from "@/theme/tokens";
 import { TextButton } from "@/ui/Button";
 import { Text } from "@/ui/Text";
 import { EmptyState, SkeletonRow } from "@/ui/States";
 import { useToast } from "@/ui/Toast";
 
 /**
- * Discover.
+ * Discover, one person at a time.
  *
- * The considered-introductions model, made browsable. Nobody swipes, nothing is
- * endless, and the list runs out -- but within those rules someone can look
- * deliberately: filter to their own city, ask for the next page, and change
- * their mind about the last person they passed on.
+ * This was a scrolling list, and it is a deck now because a list invites
+ * comparison: two faces on a screen are two faces being weighed against each
+ * other, which is the quickest way to turn people into options. One person
+ * filling the screen asks one question, and the only way to the next person is
+ * to answer it.
  *
- * That last part matters more than it sounds. Without a revert, one mis-tap
- * removes somebody permanently, and on a phone mis-taps are constant. The
- * allowance is finite and counted in the database, so it guards against
- * thoughtless tapping without becoming a resource to be hoarded -- there is no
- * countdown and nothing to buy.
+ * What is deliberately kept from the list version, because it is the difference
+ * between this and the products it now resembles:
  *
- * Ordering is a per-viewer daily hash, so the same people appear in the same
- * order all day. Refreshing is not a slot machine, and paging back does not
- * reshuffle what you already looked at.
+ * Their own words are on the card. Three lines of `about`, not a face and a
+ * name, and the whole profile is one tap away. Deciding from a photograph alone
+ * remains the thing Eraya exists to avoid; the deck changes the pacing, not the
+ * grounds for the decision.
+ *
+ * Nothing is endless. The deck runs out, a new set is chosen each morning, and
+ * the ordering is a per-viewer daily hash -- so refreshing is not a slot machine
+ * and the same people stay in the same order all day.
+ *
+ * A pass can be taken back. One mis-tap otherwise removes somebody permanently,
+ * and on a deck the taps come faster than they did on a list, which makes the
+ * allowance matter more here than it did there. It is counted in the database.
  */
 
 type Loaded = Member & { photoUrl: string | null };
@@ -53,13 +65,15 @@ export default function Discover() {
 
   const [filters, setFilters] = useState<DiscoveryFilters>(emptyFilters);
   const [members, setMembers] = useState<Loaded[]>([]);
+  const [cursor, setCursor] = useState(0);
   const [page, setPage] = useState(0);
   const [exhausted, setExhausted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [filtering, setFiltering] = useState(false);
+  const [deciding, setDeciding] = useState<"interested" | "passed" | null>(null);
   const [reverts, setReverts] = useState(0);
+  const [connectedWith, setConnectedWith] = useState<Member | null>(null);
+  const fetchingMore = useRef(false);
 
   const load = useCallback(
     async (nextFilters: DiscoveryFilters, nextPage: number) => {
@@ -94,27 +108,75 @@ export default function Discover() {
     }, []),
   );
 
+  const current = members[cursor] ?? null;
+  const remaining = members.length - cursor;
+
+  /*
+   * Fetch the next page while there are still a few cards in hand.
+   *
+   * A list could wait until somebody scrolled to the bottom. A deck cannot: the
+   * card after this one is the whole screen, so arriving at it and finding a
+   * spinner is the entire interface stopping. Two cards of headroom is enough
+   * for a page to arrive over a slow connection.
+   */
+  useEffect(() => {
+    if (loading || exhausted || fetchingMore.current) return;
+    if (remaining > 2) return;
+
+    // A ref rather than state: this only guards against two fetches for the
+    // same page, and nothing on screen changes while one is in flight -- there
+    // are still cards in hand, which is the whole point of fetching early.
+    fetchingMore.current = true;
+    void (async () => {
+      try {
+        await load(filters, page + 1);
+      } finally {
+        fetchingMore.current = false;
+      }
+    })();
+  }, [remaining, loading, exhausted, filters, page, load]);
+
   async function apply(next: DiscoveryFilters) {
     setFiltering(false);
     setFilters(next);
     setLoading(true);
     setMembers([]);
+    setCursor(0);
     await load(next, 0);
     setLoading(false);
   }
 
-  async function refresh() {
-    setRefreshing(true);
-    await load(filters, 0);
-    void revertsRemaining().then(setReverts);
-    setRefreshing(false);
-  }
+  async function decide(decision: "interested" | "passed") {
+    if (!current || deciding) return;
 
-  async function loadMore() {
-    if (loadingMore || exhausted || loading) return;
-    setLoadingMore(true);
-    await load(filters, page + 1);
-    setLoadingMore(false);
+    setDeciding(decision);
+    void Haptics.impactAsync(
+      decision === "interested"
+        ? Haptics.ImpactFeedbackStyle.Medium
+        : Haptics.ImpactFeedbackStyle.Light,
+    );
+
+    const result = await expressInterest(current.id, decision);
+
+    if (!result.ok) {
+      toast.show(result.message, "danger");
+      setDeciding(null);
+      return;
+    }
+
+    /*
+     * Both people said yes. Shown here rather than left for the connections tab,
+     * because the moment belongs to the decision that caused it -- and because
+     * the deck would otherwise move straight on as though nothing had happened.
+     */
+    if (decision === "interested" && result.connectionId) {
+      setConnectedWith(current);
+    } else if (decision === "passed") {
+      void revertsRemaining().then(setReverts);
+    }
+
+    setCursor((index) => index + 1);
+    setDeciding(null);
   }
 
   async function undo() {
@@ -130,15 +192,20 @@ export default function Discover() {
     }
 
     toast.show("Brought back into your introductions.", "positive");
-    await refresh();
+    setLoading(true);
+    setMembers([]);
+    setCursor(0);
+    await load(filters, 0);
+    void revertsRemaining().then(setReverts);
+    setLoading(false);
   }
 
   const activeCount = countActiveFilters(filters);
 
   /*
-   * The viewer's own city and languages, for the "also in Pune" line. Read from
-   * their own profile rather than from a card -- there is no member_card for
-   * yourself, and there should not be.
+   * The viewer's own city and languages, for the "also in Kolkata" line. Read
+   * from their own profile rather than from a card -- there is no member_card
+   * for yourself, and there should not be.
    */
   const me = {
     city: details.cityName,
@@ -152,124 +219,116 @@ export default function Discover() {
           paddingTop: insets.top + space.md,
           paddingHorizontal: space.gutter,
           paddingBottom: space.md,
-          backgroundColor: colors.canvas,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: space.md,
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: space.md,
-          }}
-        >
-          <Text variant="title" style={{ flex: 1 }}>
-            Discover
-          </Text>
+        <Text variant="title" style={{ flex: 1 }}>
+          Discover
+        </Text>
 
-          {reverts > 0 ? (
-            <TextButton
-              label="Undo last pass"
-              onPress={() => void undo()}
-            />
-          ) : null}
+        {reverts > 0 && cursor > 0 ? (
+          <TextButton label="Undo last pass" onPress={() => void undo()} />
+        ) : null}
 
-          <FilterButton
-            activeCount={activeCount}
-            onPress={() => setFiltering(true)}
-          />
-        </View>
+        <FilterButton
+          activeCount={activeCount}
+          onPress={() => setFiltering(true)}
+        />
       </View>
 
-      <FlatList
-        data={members}
-        keyExtractor={(member) => member.id}
-        contentContainerStyle={{
-          paddingHorizontal: space.gutter,
-          paddingBottom: insets.bottom + space.region,
-          gap: space.lg,
-          maxWidth: layout.maxContentWidth,
+      <View
+        style={{
+          flex: 1,
           width: "100%",
+          maxWidth: layout.maxContentWidth,
           alignSelf: "center",
+          paddingHorizontal: space.gutter,
+          paddingBottom: insets.bottom + space.md,
         }}
-        onRefresh={() => void refresh()}
-        refreshing={refreshing}
-        onEndReached={() => void loadMore()}
-        onEndReachedThreshold={0.4}
-        showsVerticalScrollIndicator={false}
-        // A list of people is expensive to keep mounted; these keep memory flat
-        // on a long scroll without the blank-cell flicker of a tighter window.
-        initialNumToRender={4}
-        maxToRenderPerBatch={6}
-        windowSize={7}
-        renderItem={({ item }) => (
-          <MemberCard
-            member={item}
-            photoUrl={item.photoUrl}
-            onPress={() => router.push(`/member/${item.id}`)}
-            context={contextFor(item, me)}
-          />
-        )}
-        ListHeaderComponent={
-          activeCount > 0 ? (
+      >
+        {loading ? (
+          <View style={{ flex: 1, gap: space.lg }}>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </View>
+        ) : current ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${current.firstName}, ${
+                current.age ?? "age unknown"
+              }. Opens their profile.`}
+              onPress={() => router.push(`/member/${current.id}`)}
+              style={{ flex: 1 }}
+            >
+              <DeckCard
+                member={current}
+                photoUrl={current.photoUrl}
+                context={contextFor(current, me)}
+              />
+            </Pressable>
+
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                gap: space.sm,
-                paddingBottom: space.xs,
+                justifyContent: "center",
+                gap: space.xl,
+                paddingTop: space.lg,
               }}
             >
-              <Text variant="caption" tone="muted" style={{ flex: 1 }}>
-                {activeCount === 1
-                  ? "1 filter applied"
-                  : `${activeCount} filters applied`}
-              </Text>
-              <TextButton
-                label="Clear"
-                tone="muted"
-                onPress={() => void apply(emptyFilters)}
+              <DeckAction
+                icon="close"
+                label={`Not for me, pass on ${current.firstName}`}
+                tone="quiet"
+                disabled={deciding !== null}
+                onPress={() => void decide("passed")}
+              />
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Read more about ${current.firstName}`}
+                onPress={() => router.push(`/member/${current.id}`)}
+                style={{
+                  minHeight: hit.min,
+                  paddingHorizontal: space.lg,
+                  justifyContent: "center",
+                }}
+              >
+                <Text variant="label" style={{ color: colors.emberText }}>
+                  Read more
+                </Text>
+              </Pressable>
+
+              <DeckAction
+                icon="heart"
+                label={`Interested in ${current.firstName}`}
+                tone="ember"
+                disabled={deciding !== null}
+                onPress={() => void decide("interested")}
               />
             </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={{ gap: space.lg }}>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </View>
-          ) : activeCount > 0 ? (
-            <EmptyState
-              icon="options-outline"
-              title="Nobody matches those filters"
-              body="Try widening the age range, or adding another city. Eraya is young, so narrow filters find fewer people than they will in a few months."
-              actionLabel="Clear filters"
-              onAction={() => void apply(emptyFilters)}
-            />
-          ) : (
-            <EmptyState
-              icon="leaf-outline"
-              title="No introductions right now"
-              body="You have seen everyone we have for today. New people arrive as the community grows, and a fresh set is chosen each morning."
-            />
-          )
-        }
-        ListFooterComponent={
-          members.length > 0 && exhausted && !loading ? (
-            <View style={{ paddingTop: space.section, alignItems: "center" }}>
-              <Text variant="bodySm" tone="subtle" center style={{ maxWidth: 300 }}>
-                That is everyone for now. A new set is chosen each morning.
-              </Text>
-            </View>
-          ) : loadingMore ? (
-            <View style={{ paddingTop: space.lg }}>
-              <SkeletonRow />
-            </View>
-          ) : null
-        }
-      />
+          </>
+        ) : activeCount > 0 ? (
+          <EmptyState
+            icon="options-outline"
+            title="Nobody matches those filters"
+            body="Try widening the age range, or adding another city. Eraya is young, so narrow filters find fewer people than they will in a few months."
+            actionLabel="Clear filters"
+            onAction={() => void apply(emptyFilters)}
+          />
+        ) : (
+          <EmptyState
+            icon="leaf-outline"
+            title="That is everyone for now"
+            body="You have seen everyone we have for today. New people arrive as the community grows, and a fresh set is chosen each morning."
+          />
+        )}
+      </View>
 
       {/*
         Keyed on the open state so the sheet is a fresh component each time. Its
@@ -283,7 +342,75 @@ export default function Discover() {
         onClose={() => setFiltering(false)}
         onApply={(next) => void apply(next)}
       />
+
+      <ConnectionMoment
+        visible={connectedWith !== null}
+        name={connectedWith?.firstName ?? ""}
+        onStart={() => {
+          const id = connectedWith?.id;
+          setConnectedWith(null);
+          if (id) router.push(`/member/${id}`);
+        }}
+        onLater={() => setConnectedWith(null)}
+      />
     </View>
+  );
+}
+
+/**
+ * One of the two decisions.
+ *
+ * Round, large, and far enough apart that a thumb cannot hit both. The two are
+ * the same size on purpose: a pass drawn smaller or greyer than the like is a
+ * thumb on the scale, and somebody who is not interested should not have to aim.
+ */
+function DeckAction({
+  icon,
+  label,
+  tone,
+  disabled,
+  onPress,
+}: {
+  icon: "close" | "heart";
+  label: string;
+  tone: "quiet" | "ember";
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const size = 64;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: size,
+        height: size,
+        borderRadius: radius.pill,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: tone === "ember" ? colors.ember : colors.lineStrong,
+        backgroundColor:
+          tone === "ember"
+            ? pressed
+              ? colors.emberText
+              : colors.ember
+            : pressed
+              ? colors.sand
+              : colors.surface,
+        opacity: disabled ? 0.5 : 1,
+      })}
+    >
+      <Ionicons
+        name={icon}
+        size={iconSize.lg}
+        color={tone === "ember" ? colors.inkInverse : colors.inkMuted}
+      />
+    </Pressable>
   );
 }
 
@@ -299,9 +426,7 @@ function FilterButton({
       label={activeCount > 0 ? `Filters (${activeCount})` : "Filters"}
       onPress={onPress}
       accessibilityLabel={
-        activeCount > 0
-          ? `Filters, ${activeCount} applied`
-          : "Filters"
+        activeCount > 0 ? `Filters, ${activeCount} applied` : "Filters"
       }
       style={{
         minHeight: hit.min,

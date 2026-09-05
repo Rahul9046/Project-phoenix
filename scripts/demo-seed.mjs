@@ -14,13 +14,22 @@
  *
  * The names and stories are invented and read as invented.
  *
- * The photos are generated here rather than downloaded. A demo member with a
- * stock face would be a real person's likeness attached to a fabricated profile
- * on a dating product, which is not a thing to do casually even in development,
- * and scraping one is a licensing problem on top. What each member gets instead
- * is a deterministic gradient in the brand palette with their initial -- enough
- * for the photo-forward card layout to be exercised honestly, and obviously not
- * a person.
+ * Photographs, if you have supplied them; a generated gradient otherwise.
+ *
+ * Drop images into `scripts/demo-photos/` named for the handle -- `meera-1.jpg`,
+ * `meera-2.jpg`, `meera-3.jpg`, or a single `meera.jpg` -- and they are uploaded
+ * as that member's photos. The folder is git-ignored, so nobody inherits image
+ * files with a clone and nothing large lands in the repository.
+ *
+ * What must not go in there is a photograph of a real person. A stock face
+ * attached to a fabricated profile on a dating product is somebody's likeness
+ * being used to imply they are looking for a relationship, which is not a thing
+ * to do casually even in development, and scraping one is a licensing problem on
+ * top. AI-generated portraits depict nobody, which is the point.
+ *
+ * With no folder, each member gets a deterministic gradient in the brand palette
+ * with their initial -- enough to exercise the photo-forward layouts honestly,
+ * and obviously not a person.
  *
  * It is idempotent. Running it twice updates rather than duplicates.
  *
@@ -40,6 +49,7 @@ import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -195,6 +205,70 @@ const PEOPLE = [
       "Thirty-five, divorced two years ago, no children. I write software and I play very mediocre badminton. I am told I take things too seriously, which I am working on.",
     lookingFor: "Someone patient with the working-on-it part.",
   },
+
+  /*
+   * Men who are looking for men, and a woman looking for women.
+   *
+   * Not decoration. `seeking` is honoured in both directions, so a viewer whose
+   * answer no cast member reciprocates sees an empty Discover -- correctly, and
+   * indistinguishably from a broken query. Every one of the eight above is
+   * looking for the other gender, which meant the whole same-gender half of the
+   * product could not be exercised at all.
+   */
+  {
+    handle: "debashish",
+    seeking: ["man"],
+    firstName: "Debashish",
+    dateOfBirth: "1980-02-17",
+    gender: "man",
+    city: "Kolkata",
+    relationship: "divorced",
+    languages: ["Bengali", "English", "Hindi"],
+    about:
+      "I restore old radios, which is a slower hobby than it sounds and has taught me most of what I know about patience. Separated for three years, and the quiet has been good for a while, but it has been long enough now.",
+    lookingFor:
+      "Someone who can talk about something other than work, and who does not mind a house that smells faintly of solder.",
+  },
+  {
+    handle: "imran",
+    seeking: ["man"],
+    firstName: "Imran",
+    dateOfBirth: "1986-08-05",
+    gender: "man",
+    city: "Kolkata",
+    relationship: "divorced",
+    languages: ["Urdu", "Bengali", "English"],
+    about:
+      "I cook far more than two people could eat and then find people to feed. I teach history to teenagers who are mostly unimpressed by it.",
+    lookingFor: "Someone kind, and hungry.",
+  },
+  {
+    handle: "nikhil",
+    seeking: ["man", "woman"],
+    firstName: "Nikhil",
+    dateOfBirth: "1974-05-28",
+    gender: "man",
+    city: "Bengaluru",
+    relationship: "widowed",
+    languages: ["Kannada", "English"],
+    about:
+      "I lost my wife four years ago. I have spent a good part of that time walking, and I know most of this city on foot now. I am not looking to replace anybody -- only to have company again.",
+    lookingFor: "Company, unhurried.",
+  },
+  {
+    handle: "ritu",
+    seeking: ["woman"],
+    firstName: "Ritu",
+    dateOfBirth: "1983-10-09",
+    gender: "woman",
+    city: "Kolkata",
+    relationship: "separated",
+    languages: ["Bengali", "Hindi", "English"],
+    about:
+      "I run a small design studio and I am terrible at switching it off. Weekends are for the river and for my two extremely unhelpful cats.",
+    lookingFor:
+      "Someone with their own life who wants to sit alongside mine rather than inside it.",
+  },
 ];
 
 async function findCityId(name) {
@@ -282,6 +356,48 @@ async function generatePhoto(person, index) {
   return sharp(Buffer.from(svg)).jpeg({ quality: 86 }).toBuffer();
 }
 
+const SUPPLIED_DIR = path.join(root, "scripts/demo-photos");
+const SUPPLIED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
+const CONTENT_TYPES = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
+
+/**
+ * The images someone has supplied for this member, in order.
+ *
+ * `<handle>-1` through `<handle>-3` is the shape to aim for. A bare `<handle>`
+ * is accepted as the first of them, so one good portrait is enough to get
+ * started and the rest fall back to gradients.
+ */
+function suppliedPhotos(handle) {
+  if (!fs.existsSync(SUPPLIED_DIR)) return [];
+
+  const found = [];
+
+  for (let index = 1; index <= PHOTOS_PER_MEMBER; index += 1) {
+    for (const extension of SUPPLIED_EXTENSIONS) {
+      const numbered = path.join(SUPPLIED_DIR, `${handle}-${index}${extension}`);
+      if (fs.existsSync(numbered)) {
+        found.push(numbered);
+        break;
+      }
+      if (index === 1) {
+        const bare = path.join(SUPPLIED_DIR, `${handle}${extension}`);
+        if (fs.existsSync(bare)) {
+          found.push(bare);
+          break;
+        }
+      }
+    }
+  }
+
+  return found;
+}
+
 async function seedPhotos(person, userId) {
   // Replace rather than accumulate: re-seeding must be idempotent.
   const { data: existing } = await admin
@@ -296,19 +412,26 @@ async function seedPhotos(person, userId) {
     await admin.from("profile_photos").delete().eq("profile_id", userId);
   }
 
+  const supplied = suppliedPhotos(person.handle);
+
   for (let index = 0; index < PHOTOS_PER_MEMBER; index += 1) {
-    const path = `${userId}/demo-${index}.jpg`;
-    const body = await generatePhoto(person, index);
+    const source = supplied[index] ?? null;
+    const extension = source ? path.extname(source).toLowerCase() : ".jpg";
+    const contentType = CONTENT_TYPES[extension] ?? "image/jpeg";
+    const objectPath = `${userId}/demo-${index}${extension}`;
+    const body = source
+      ? await fsp.readFile(source)
+      : await generatePhoto(person, index);
 
     const { error: uploadError } = await admin.storage
       .from("profile-photos")
-      .upload(path, body, { contentType: "image/jpeg", upsert: true });
+      .upload(objectPath, body, { contentType, upsert: true });
 
     if (uploadError) return uploadError.message;
 
     const { error } = await admin
       .from("profile_photos")
-      .insert({ profile_id: userId, storage_path: path, position: index });
+      .insert({ profile_id: userId, storage_path: objectPath, position: index });
 
     if (error) return error.message;
   }
@@ -385,11 +508,22 @@ async function seed() {
       );
     }
 
+    const suppliedCount = suppliedPhotos(person.handle).length;
     const photoError = await seedPhotos(person, user.id);
 
+    // Say which photos are real files and which are placeholders, so a member
+    // still on gradients is visible at a glance rather than found later on a
+    // screen.
+    const photoNote = photoError
+      ? "photos failed: " + photoError
+      : suppliedCount === PHOTOS_PER_MEMBER
+        ? `${PHOTOS_PER_MEMBER} photos`
+        : suppliedCount > 0
+          ? `${suppliedCount} supplied, ${PHOTOS_PER_MEMBER - suppliedCount} generated`
+          : `${PHOTOS_PER_MEMBER} generated`;
+
     console.log(
-      `  ${person.firstName.padEnd(8)} ${person.city.padEnd(22)} ` +
-        `${photoError ? "photos failed: " + photoError : `${PHOTOS_PER_MEMBER} photos`}`,
+      `  ${person.firstName.padEnd(10)} ${person.city.padEnd(22)} ${photoNote}`,
     );
   }
 
