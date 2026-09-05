@@ -35,6 +35,38 @@ function config(): { key: string; template: string } | null {
   return { key, template };
 }
 
+/**
+ * A standing code, for while India's paperwork is in progress.
+ *
+ * Sending a transactional SMS in India requires DLT registration -- a business
+ * entity, a PAN, a GST certificate, and days of approval. Everything else in
+ * this feature is finished and untestable without it, which is a bad place to
+ * leave working code: it rots, and nobody finds the bug until the week it goes
+ * live.
+ *
+ * So when `OTP_DEV_CODE` is set, no SMS is sent and that one code verifies.
+ * What this is NOT is the mock it replaced:
+ *
+ *   The code is a server secret. It is not "any six digits" -- a random guess
+ *   fails exactly as it will in production, which is the property that mattered.
+ *
+ *   Every rule still runs. The cooldown, the daily caps, the attempt limit, the
+ *   unique verified number, the trigger that refuses the column to clients:
+ *   all of it is exercised, because none of it lives in the provider.
+ *
+ *   It cannot switch itself on. Absent the secret this returns null and the real
+ *   provider is used; there is no default value and no fallback to it on error.
+ *
+ * Every call is logged as `provider=stub` so a production deployment running on
+ * it is loud rather than quiet. Unset the secret and the same code path calls
+ * MSG91 -- no release, no edit.
+ */
+function developmentCode(): string | null {
+  const code = Deno.env.get("OTP_DEV_CODE");
+  if (!code || !/^\d{6}$/.test(code)) return null;
+  return code;
+}
+
 /** MSG91 answers 200 with `type: "error"` for business failures. */
 async function call(
   url: string,
@@ -62,6 +94,12 @@ async function call(
 }
 
 export async function sendOtp(e164: string, resend: boolean): Promise<SendOutcome> {
+  const stub = developmentCode();
+  if (stub) {
+    console.log(JSON.stringify({ provider: "stub", action: "send", resend }));
+    return { ok: true };
+  }
+
   const settings = config();
   if (!settings) return { ok: false, reason: "not_configured" };
 
@@ -87,6 +125,12 @@ export async function sendOtp(e164: string, resend: boolean): Promise<SendOutcom
 }
 
 export async function verifyOtp(e164: string, code: string): Promise<VerifyOutcome> {
+  const stub = developmentCode();
+  if (stub) {
+    console.log(JSON.stringify({ provider: "stub", action: "verify" }));
+    return stub === code ? { ok: true } : { ok: false, reason: "invalid_code" };
+  }
+
   const settings = config();
   if (!settings) return { ok: false, reason: "not_configured" };
 
