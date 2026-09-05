@@ -35,8 +35,12 @@ function tabLabel(title: string) {
     return (
       <Text
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.85}
+        // iOS only: on Android `adjustsFontSizeToFit` clips the text instead of
+        // shrinking it, and a tab reading "Connectio" is worse than one reading
+        // "Connections" at the size it was designed at. See ui/Button.tsx.
+        {...(Platform.OS === "ios"
+          ? { adjustsFontSizeToFit: true, minimumFontScale: 0.85 }
+          : null)}
         style={{
           ...text.labelSm,
           fontSize: 10,
