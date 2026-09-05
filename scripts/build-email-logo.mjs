@@ -9,9 +9,19 @@
  * PNG rather than SVG because email clients barely support SVG — Gmail strips it
  * outright. Rendered at three times the display size for high-density screens.
  *
+ * Writing the file is only half the job. The email is read on someone else's
+ * machine, which cannot reach this repository or a dev server, so the same PNG
+ * is published to the public `brand` storage bucket — the address the template
+ * actually points at. Building without publishing is what left a broken image
+ * icon in every sign-in email, so the two steps are one command.
+ *
+ * Publishing needs the service-role key from apps/web/.env.local. Without it the
+ * file is still written and the script says what was skipped.
+ *
  *   node scripts/build-email-logo.mjs
  */
 import { readFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import sharp from "sharp";
 
 const MARK_SOURCE = "apps/web/src/shared/brand/mark.ts";
@@ -72,3 +82,63 @@ await sharp(Buffer.from(svg))
   .toFile(OUT);
 
 console.log(`wrote ${OUT} at ${size}x${size}, for ${DISPLAY_PX}px display`);
+
+// ---------------------------------------------------------------------------
+// Publish, so the inbox can see what was just built.
+// ---------------------------------------------------------------------------
+
+const ENV_FILE = "apps/web/.env.local";
+const BUCKET = "brand";
+const OBJECT = "eraya-mark.png";
+
+function readEnv() {
+  if (!existsSync(ENV_FILE)) return {};
+  const env = {};
+  for (const line of readFileSync(ENV_FILE, "utf8").split(/\r?\n/)) {
+    if (!line.includes("=") || line.trim().startsWith("#")) continue;
+    const at = line.indexOf("=");
+    env[line.slice(0, at).trim()] = line.slice(at + 1).trim();
+  }
+  return env;
+}
+
+const env = readEnv();
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceKey) {
+  console.log(
+    [
+      `not published: ${ENV_FILE} has no service-role key.`,
+      "The email template points at the bucket, so the logo there is now",
+      "older than this file. Re-run with the key present.",
+    ].join("\n"),
+  );
+} else {
+  // upsert, because this replaces a mark rather than adding one. The cache
+  // header is short by CDN standards on purpose: a logo revision should reach
+  // inboxes in an hour, not in a year.
+  const res = await fetch(
+    `${supabaseUrl}/storage/v1/object/${BUCKET}/${OBJECT}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "image/png",
+        "Cache-Control": "3600",
+        "x-upsert": "true",
+      },
+      body: await readFile(OUT),
+    },
+  );
+
+  if (!res.ok) {
+    console.error(`publish failed: ${res.status} ${await res.text()}`);
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `published ${supabaseUrl}/storage/v1/object/public/${BUCKET}/${OBJECT}`,
+    );
+  }
+}
