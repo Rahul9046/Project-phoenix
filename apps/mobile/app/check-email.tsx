@@ -35,7 +35,7 @@ import { useToast } from "@/ui/Toast";
  * does work the session provider notices and this redirects out on its own.
  */
 export default function CheckEmail() {
-  const { session, profile } = useSession();
+  const { loading, session, profile } = useSession();
   const params = useLocalSearchParams<{ email?: string }>();
   const toast = useToast();
 
@@ -46,7 +46,29 @@ export default function CheckEmail() {
 
   const email = params.email ?? "";
 
-  if (session) return <Redirect href={nextRouteFor(profile)} />;
+  /*
+   * Not until the profile has resolved, and the wait is the point.
+   *
+   * `Redirect` calls `router.replace` from a `useFocusEffect` whose callback is
+   * a fresh closure on every render, so it fires again each time this screen
+   * re-renders while focused. Redirecting on `session` alone meant it rendered
+   * once the moment the session arrived -- profile still null, so the fallback
+   * route -- and again a few hundred milliseconds later when the profile landed.
+   * Two replaces, the second one while the first transition was still animating,
+   * and Android tried to mount the same screen twice:
+   *
+   *   addViewAt: failed to insert view into parent
+   *   Caused by: The specified child already has a parent
+   *
+   * That is a native crash. The error boundary in the root layout cannot catch
+   * it, which is why the app simply closed after signing in.
+   *
+   * Waiting for `loading` makes this render once, with the destination already
+   * known. Every other screen that redirects does the same; this one was the
+   * exception, and it is the screen someone is on at the exact moment they
+   * sign in.
+   */
+  if (!loading && session) return <Redirect href={nextRouteFor(profile)} />;
 
   async function submit() {
     if (!email) return;
