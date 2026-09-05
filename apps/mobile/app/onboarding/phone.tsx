@@ -61,7 +61,7 @@ export default function PhoneStep() {
     <Step
       step="phone"
       title="Add your phone number."
-      lede="We keep it for account recovery, and for verification once that is switched on. It is never shown on your profile."
+      lede="We send a six-digit code to check it, and keep it for account recovery. It is never shown on your profile, and no other member ever sees it."
       onContinue={() => void submit()}
       canContinue={isPlausibleNumber(dialCode, national)}
       pending={pending}

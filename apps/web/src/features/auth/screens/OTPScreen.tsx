@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { markPhoneVerified } from "@/features/auth/actions";
+import { recordPhoneStepComplete } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
@@ -59,9 +59,9 @@ export function OTPScreen() {
     try {
       await verifyCode(value);
 
-      // The code check is still mocked; recording the result is not. This
-      // writes phone_verified_at and advances the stored stage.
-      const saved = await markPhoneVerified();
+      // The code was checked by the server, which also wrote the verification.
+      // This only advances the stored stage.
+      const saved = await recordPhoneStepComplete();
       if (!saved.ok) {
         setError(saved.message);
         setPending(false);

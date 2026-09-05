@@ -19,6 +19,7 @@
     "demo:seed": "node scripts/demo-seed.mjs",
     "demo:remove": "node scripts/demo-seed.mjs --remove",
     "security": "node scripts/security-probe.mjs",
+    "auth:capacity": "node scripts/auth-capacity.mjs",
     "config:push": "node scripts/supabase-config.mjs"
   }
 }

@@ -1,34 +1,31 @@
+import { supabase } from "@/lib/supabase/client";
+
 /**
- * Phone verification -- still mocked, and labelled as such everywhere.
+ * Phone verification, for real.
  *
- * No SMS provider has been chosen, so nothing is sent and any six digits are
- * accepted. That is a development stand-in, and the product says so out loud
- * rather than pretending: the screen tells the person that checking codes by SMS
- * is not switched on yet, the completion is recorded as "number added" rather
- * than "verified", and -- most importantly -- no other member is ever shown a
- * "phone verified" badge. A safety claim that runs ahead of the system is worse
- * than no claim, because the person relying on it is a stranger deciding whether
- * to meet someone.
+ * This file used to accept any six digits and said so on the screen. It now
+ * asks a Supabase edge function, which asks MSG91, which sends an actual SMS --
+ * and the code is checked by the provider, not here.
  *
- * The flow is shaped so real verification drops straight in. There is still a
- * number step and a code step, with the same navigation and the same stage
- * transitions; only the two functions below change:
+ * Two rules shape everything below.
  *
- *   requestCode  -> supabase.auth.updateUser({ phone: e164 })
- *   confirmCode  -> supabase.auth.verifyOtp({
- *                     phone: e164, token: code, type: "phone_change",
- *                   })
+ * Nothing that costs money happens in this app. The MSG91 key is a server
+ * secret; a copy in a mobile bundle is somebody else's SMS campaign billed to
+ * Eraya. This file knows two function names and nothing else about the
+ * provider.
  *
- * `updateUser`/`verifyOtp` attach the number to the existing account, which is
- * what Eraya wants -- phone is a step after sign-in, not a second way to log in.
- * At that point `completePhoneStep` in `data.ts` also goes away: Supabase sets
- * `auth.users.phone_confirmed_at` and a trigger mirrors it onto the profile.
+ * The app is not trusted with the outcome either. `phone_verified_at` is written
+ * only by the verify function holding the service role, and a trigger on
+ * `profiles` refuses that column to every client -- so the old behaviour cannot
+ * return by somebody calling the API directly.
  *
- * Nothing outside this file and that one function needs to change.
+ * A phone number is an attribute of an account that already exists. It is never
+ * a way to sign in, which is why every call here carries the caller's session
+ * and fails without one.
  */
 
-/** True while the mock is in place. Screens read this to word themselves. */
-export const phoneVerificationIsLive = false;
+/** No longer a stand-in. Screens read this to word themselves. */
+export const phoneVerificationIsLive = true;
 
 export const dialCodes = [
   { code: "+91", label: "India (+91)" },
@@ -56,25 +53,85 @@ export function isPlausibleNumber(dialCode: string, national: string): boolean {
 
 export const CODE_LENGTH = 6;
 
-const PAUSE_MS = 700;
-
-function pause(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-export type PhoneResult = { ok: true } | { ok: false; message: string };
+export type PhoneResult =
+  | { ok: true }
+  | { ok: false; message: string; retryAfterSeconds?: number };
 
 /**
- * Sends nothing, on purpose.
+ * What a person reads.
  *
- * The pause is not theatre -- it is here so the screen's loading state is
- * exercised in development exactly as it will be against a real provider. A
- * button that returns instantly in dev and takes two seconds in production is a
- * button whose pending state nobody has ever seen.
+ * The server answers with a category -- `cooldown`, `expired`, `unavailable` --
+ * and never with the provider's wording. This is where a category becomes a
+ * sentence, because the product's voice belongs in the product.
+ *
+ * Two of these are deliberately vague. A number that already belongs to somebody
+ * else, and a capacity limit, both come back as `unavailable`: the first because
+ * answering it truthfully turns this screen into a way of asking whether a
+ * stranger is a member, and the second because a member cannot act on our
+ * budget and should not be shown it.
+ */
+const SEND_UNAVAILABLE =
+  "We could not send your code just now. Please try again shortly.";
+
+const SEND_MESSAGES: Record<string, string> = {
+  invalid_number:
+    "That does not look like a mobile number we can reach. Check the digits and try again.",
+  cooldown: "Please wait a little before asking for another code.",
+  user_daily_cap:
+    "That is several codes in a short time. Please try again a little later.",
+  number_daily_cap:
+    "That is several codes in a short time. Please try again a little later.",
+  daily_cap: SEND_UNAVAILABLE,
+  capacity_exhausted: SEND_UNAVAILABLE,
+  unavailable: SEND_UNAVAILABLE,
+  unauthenticated: "Your session has expired. Please sign in again.",
+};
+
+const VERIFY_UNAVAILABLE =
+  "We could not check that code just now. Please try again shortly.";
+
+const VERIFY_MESSAGES: Record<string, string> = {
+  invalid_code: "That code does not look right. Check it and try again.",
+  expired: "That code has expired. Ask for a new one.",
+  too_many_attempts:
+    "That is too many tries for one code. Ask for a new one and take it slowly.",
+  no_request: "Ask for a code first, then enter it here.",
+  unavailable: VERIFY_UNAVAILABLE,
+  unauthenticated: "Your session has expired. Please sign in again.",
+};
+
+const NETWORK =
+  "We could not reach Eraya just now. Check your connection and try again.";
+
+type FunctionReply = { status?: string; retryAfter?: number };
+
+async function callFunction(
+  name: "phone-otp-request" | "phone-otp-verify",
+  body: Record<string, unknown>,
+): Promise<FunctionReply | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke<FunctionReply>(name, {
+      body,
+    });
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks for a code to be sent.
+ *
+ * The number is checked here only to save a round trip on an obvious typo. The
+ * checks that matter -- the cooldown, the daily caps, whether this number is
+ * already somebody's -- are all on the server, because a limit enforced in an
+ * app is a limit that lasts until somebody edits the app.
  */
 export async function requestCode(
   dialCode: string,
   national: string,
+  options: { resend?: boolean } = {},
 ): Promise<PhoneResult> {
   if (!isPlausibleNumber(dialCode, national)) {
     return {
@@ -86,15 +143,43 @@ export async function requestCode(
     };
   }
 
-  await pause(PAUSE_MS);
-  return { ok: true };
+  const reply = await callFunction("phone-otp-request", {
+    dialCode,
+    national: normaliseNumber(national),
+    resend: options.resend === true,
+  });
+
+  if (!reply) return { ok: false, message: NETWORK };
+  if (reply.status === "sent") return { ok: true };
+
+  return {
+    ok: false,
+    message: SEND_MESSAGES[reply.status ?? ""] ?? SEND_UNAVAILABLE,
+    retryAfterSeconds: reply.retryAfter,
+  };
 }
 
+/**
+ * Checks the code.
+ *
+ * The number is not sent. The server takes it from the request it opened, so
+ * that answering a code sent to one phone cannot verify a different number.
+ */
 export async function confirmCode(code: string): Promise<PhoneResult> {
   if (!/^\d{6}$/.test(code)) {
     return { ok: false, message: "That needs to be six digits." };
   }
 
-  await pause(PAUSE_MS);
-  return { ok: true };
+  const reply = await callFunction("phone-otp-verify", { code });
+
+  if (!reply) return { ok: false, message: NETWORK };
+  if (reply.status === "verified") return { ok: true };
+
+  return {
+    ok: false,
+    message: VERIFY_MESSAGES[reply.status ?? ""] ?? VERIFY_UNAVAILABLE,
+  };
 }
+
+/** The cooldown the resend control counts down. Server-enforced regardless. */
+export const RESEND_COOLDOWN_SECONDS = 60;

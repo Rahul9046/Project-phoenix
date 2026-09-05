@@ -257,14 +257,18 @@ export async function saveLanguages(input: {
 }
 
 /**
- * Marks the phone as verified.
+ * Moves the onboarding stage on, once the phone step is behind them.
  *
- * Temporary. Once Supabase phone auth is live it sets
- * `auth.users.phone_confirmed_at` and the `on_auth_user_phone_confirmed`
- * trigger mirrors it here — at which point this action is deleted rather than
- * rewritten. See lib/auth/phone-verification.ts.
+ * It no longer writes `phone_verified_at`, and could not if it tried: that
+ * column is set by the verify edge function holding the service role, and a
+ * trigger on `profiles` refuses it to every client. This used to write it
+ * itself, which was honest while the column meant "number added" and became a
+ * hole the moment it started meaning "somebody answered an SMS on this number".
+ *
+ * The stage is a different thing — a record of how far through the questions
+ * somebody is, not a claim about them — so it stays here.
  */
-export async function markPhoneVerified(): Promise<ActionResult> {
+export async function recordPhoneStepComplete(): Promise<ActionResult> {
   const userId = await requireUserId();
   if (!userId) return { ok: false, message: "Please sign in again." };
 
@@ -272,14 +276,11 @@ export async function markPhoneVerified(): Promise<ActionResult> {
 
   const { error } = await supabase
     .from("profiles")
-    .update({
-      phone_verified_at: new Date().toISOString(),
-      onboarding_stage: await advanceStage(userId, "phone_verified"),
-    })
+    .update({ onboarding_stage: await advanceStage(userId, "phone_verified") })
     .eq("id", userId);
 
   if (error) {
-    logFailure("markPhoneVerified", error);
+    logFailure("recordPhoneStepComplete", error);
     return { ok: false, message: describeSaveFailure(error) };
   }
 

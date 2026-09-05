@@ -1,16 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { nextRouteFor } from "@/features/auth/routing";
-import { completePhoneStep } from "@/features/onboarding/data";
-import { confirmCode, phoneVerificationIsLive } from "@/features/onboarding/phone";
+import {
+  confirmCode,
+  phoneVerificationIsLive,
+  requestCode,
+  RESEND_COOLDOWN_SECONDS,
+} from "@/features/onboarding/phone";
 import { CODE_LENGTH, CodeInput } from "@/ui/CodeInput";
 import { Step } from "@/features/onboarding/Step";
-import { colors, iconSize, radius, space } from "@/theme/tokens";
+import { space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
+import { TextButton } from "@/ui/Button";
+import { useToast } from "@/ui/Toast";
 
 /**
  * The six digits.
@@ -20,17 +25,60 @@ import { Text } from "@/ui/Text";
  * own screen, and the one useful thing this step can still do today is let them
  * notice a wrong digit.
  *
- * There is no resend control while nothing is being sent. A "resend code" button
- * that sends nothing and then reports success is a small lie in a product whose
- * whole proposition is that it does not tell them.
+ * The resend control waits before it appears, and the wait is real on both
+ * sides: the button counts down, and the server refuses an early request
+ * whatever the button says. A cooldown enforced only in the interface is a
+ * cooldown that lasts until somebody calls the API directly, and every message
+ * costs money.
  */
 export default function ConfirmPhoneStep() {
   const { refresh } = useSession();
   const params = useLocalSearchParams<{ dialCode?: string; national?: string }>();
 
+  const toast = useToast();
+
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A code was sent by the previous screen, so the wait starts now rather than
+  // when this screen first offers to send another.
+  const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SECONDS);
+  const counting = secondsLeft > 0;
+
+  useEffect(() => {
+    if (!counting) return;
+    const timer = setInterval(
+      () => setSecondsLeft((remaining) => Math.max(0, remaining - 1)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [counting]);
+
+  async function resend() {
+    if (resending || counting || !params.dialCode || !params.national) return;
+
+    setResending(true);
+    setError(null);
+
+    const result = await requestCode(params.dialCode, params.national, {
+      resend: true,
+    });
+
+    setResending(false);
+
+    if (!result.ok) {
+      setError(result.message);
+      // The server knows how long is left better than the countdown does.
+      if (result.retryAfterSeconds) setSecondsLeft(result.retryAfterSeconds);
+      return;
+    }
+
+    setCode("");
+    setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+    toast.show("A new code is on its way.", "positive");
+  }
 
   const number =
     params.dialCode && params.national
@@ -49,14 +97,8 @@ export default function ConfirmPhoneStep() {
       return;
     }
 
-    const saved = await completePhoneStep();
-
-    if (!saved.ok) {
-      setError(saved.message);
-      setPending(false);
-      return;
-    }
-
+    // Nothing is written here. The verify function set the profile server-side;
+    // this only re-reads it.
     const next = await refresh();
     setPending(false);
 
@@ -107,29 +149,21 @@ export default function ConfirmPhoneStep() {
         accessibilityLabel={`${CODE_LENGTH} digit code`}
       />
 
-      {!phoneVerificationIsLive ? (
-        <View
-          style={{
-            marginTop: space.xxl,
-            flexDirection: "row",
-            gap: space.md,
-            padding: space.lg,
-            borderRadius: radius.lg,
-            backgroundColor: colors.sand,
-          }}
-        >
-          <Ionicons
-            name="construct-outline"
-            size={iconSize.md}
-            color={colors.inkMuted}
-          />
-          <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
-            Development only. Because nothing was sent, no code is correct or
-            incorrect &mdash; any six digits continue. Other members are never
-            told your number is verified.
+      <View style={{ marginTop: space.xl, alignItems: "center" }}>
+        {counting ? (
+          <Text variant="bodySm" tone="subtle" center>
+            You can ask for another code in {secondsLeft}s.
           </Text>
-        </View>
-      ) : null}
+        ) : (
+          <TextButton
+            label={resending ? "Sending…" : "Send another code"}
+            tone="muted"
+            disabled={resending}
+            onPress={() => void resend()}
+          />
+        )}
+      </View>
+
     </Step>
   );
 }

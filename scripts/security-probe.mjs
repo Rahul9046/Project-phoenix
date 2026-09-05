@@ -378,6 +378,124 @@ for (const fn of ["discover_members", "interests_received", "member_profile"]) {
   );
 }
 
+// ---------------------------------------------------------------------------
+console.log("\nAuthentication operations data");
+// ---------------------------------------------------------------------------
+//
+// Three tables and five functions that exist for the service role alone. Between
+// them they hold how many people failed to sign in this morning, which numbers
+// asked for codes, and how close the SMS budget is to running out. None of it is
+// a member's business, and the SMS ones are the ones tied to spending.
+
+for (const table of ["auth_events", "phone_otp_requests", "ops_config"]) {
+  /*
+   * RLS with no policies answers 200 and an empty array rather than an error --
+   * PostgREST filters the rows rather than refusing the request. So emptiness is
+   * the thing to assert; a status check alone would pass while leaking.
+   */
+  const { status, body } = await request(meera.token, `${table}?select=*`);
+  check(
+    `a member reads nothing from ${table}`,
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+
+  const anonymous = await fetch(`${URL_BASE}/rest/v1/${table}?select=*`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+  });
+  const anonymousBody = await anonymous.text();
+  check(
+    `an anonymous caller reads nothing from ${table}`,
+    anonymous.status >= 400 || anonymousBody.replace(/\s/g, "") === "[]",
+    `status ${anonymous.status}: ${anonymousBody.slice(0, 120)}`,
+  );
+
+  const written = await request(meera.token, table, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  check(
+    `a member cannot write to ${table}`,
+    written.status >= 400,
+    `status ${written.status}`,
+  );
+}
+
+for (const fn of [
+  "phone_otp_capacity",
+  "begin_phone_otp",
+  "claim_phone_otp_attempt",
+  "complete_phone_otp",
+  "record_phone_event",
+]) {
+  const { status } = await request(meera.token, `rpc/${fn}`, {
+    method: "POST",
+    body: "{}",
+  });
+  check(
+    `a member cannot call ${fn}`,
+    status >= 400,
+    `status ${status}`,
+  );
+}
+
+// The whole point of the rewrite: the app can no longer declare itself verified.
+{
+  const { status, body } = await request(meera.token, `profiles?id=eq.${meera.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ phone_verified_at: new Date().toISOString() }),
+  });
+  check(
+    "a member cannot set their own phone_verified_at",
+    status >= 400,
+    `status ${status}: ${body.slice(0, 140)}`,
+  );
+}
+
+{
+  const { status, body } = await request(meera.token, `profiles?id=eq.${meera.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ phone_number: "+919999999999" }),
+  });
+  check(
+    "a member cannot set their own phone_number",
+    status >= 400,
+    `status ${status}: ${body.slice(0, 140)}`,
+  );
+}
+
+// A number must not travel through anything member-facing. The card and the
+// profile are composite types with a fixed column list; this is the test that
+// says so out loud, so that adding a column to `profiles` can never quietly add
+// it to what a stranger sees.
+{
+  const { body } = await request(meera.token, "rpc/discover_members", {
+    method: "POST",
+    body: JSON.stringify({ max_results: 5 }),
+  });
+  /*
+   * `phone_verified` is a boolean on the card and is fine -- it says whether,
+   * not what. The number itself must never appear, in any column or shape.
+   */
+  check(
+    "discovery does not carry phone numbers",
+    !/phone_number/i.test(body) && !/"\+\d{8,}"/.test(body),
+    body.slice(0, 140),
+  );
+}
+
+{
+  const { body } = await request(meera.token, "rpc/member_profile", {
+    method: "POST",
+    body: JSON.stringify({ target_id: sanjay.id }),
+  });
+  check(
+    "a member profile does not carry a phone number",
+    !/phone_number/i.test(body),
+    body.slice(0, 140),
+  );
+}
+
 const failed = results.filter((r) => !r.passed);
 console.log(
   `\n${results.length - failed.length} of ${results.length} checks passed.`,
