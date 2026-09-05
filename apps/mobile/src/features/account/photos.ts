@@ -33,18 +33,36 @@ export const MAX_PHOTOS = 6;
 const MAX_EDGE = 1400;
 const QUALITY = 0.82;
 
-export type PhotoResult =
-  | { ok: true; path: string }
+export type PhotosResult =
+  | { ok: true; paths: string[] }
   | { ok: false; cancelled?: boolean; message: string };
 
 /**
- * Asks for a photo and uploads it.
+ * Asks for photographs and uploads them.
+ *
+ * Several at once, up to whatever room is left. Adding three used to mean
+ * opening the picker three times, and a person choosing pictures of themselves
+ * is picking from the same screenful each time -- so the round trip was pure
+ * friction.
+ *
+ * That is why there is no crop step any more. Android's picker cannot offer
+ * multiple selection and its editor at the same time, and choosing between them
+ * is easy: every surface that draws a photo already fills a 4:5 frame, so the
+ * crop was previewing a decision the layout makes anyway. Anyone who wants a
+ * particular framing can crop in their own photo app, which is better at it.
  *
  * Permission is requested at the moment it is needed rather than at launch. A
  * permission prompt on first open, before anyone knows what the app is for, is
  * the one most often refused.
+ *
+ * A partial success is a success. If the third of three fails, the first two are
+ * still uploaded and returned -- throwing them away because of a later failure
+ * would mean choosing all three again.
  */
-export async function addPhoto(position: number): Promise<PhotoResult> {
+export async function addPhotos(
+  startPosition: number,
+  limit: number,
+): Promise<PhotosResult> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
   if (!permission.granted) {
@@ -57,25 +75,15 @@ export async function addPhoto(position: number): Promise<PhotoResult> {
 
   const picked = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ["images"],
-    allowsEditing: true,
-    // Matches how the photo is displayed, so what is cropped here is what is
-    // seen -- rather than a square preview and a surprise on the profile.
-    aspect: [4, 5],
+    allowsMultipleSelection: true,
+    selectionLimit: Math.max(1, limit),
     quality: 1,
     exif: false,
   });
 
-  if (picked.canceled || !picked.assets[0]) {
+  if (picked.canceled || picked.assets.length === 0) {
     return { ok: false, cancelled: true, message: "No photo chosen." };
   }
-
-  const asset = picked.assets[0];
-
-  const processed = await ImageManipulator.manipulateAsync(
-    asset.uri,
-    [{ resize: { width: Math.min(asset.width ?? MAX_EDGE, MAX_EDGE) } }],
-    { compress: QUALITY, format: ImageManipulator.SaveFormat.JPEG },
-  );
 
   const { data: auth } = await supabase.auth.getUser();
   const me = auth.user?.id;
@@ -84,43 +92,60 @@ export async function addPhoto(position: number): Promise<PhotoResult> {
     return { ok: false, message: "Your session has expired. Please sign in again." };
   }
 
+  const chosen = picked.assets.slice(0, Math.max(1, limit));
+  const paths: string[] = [];
+
+  for (const [index, asset] of chosen.entries()) {
+    const position = startPosition + index;
+
+    const processed = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [{ resize: { width: Math.min(asset.width ?? MAX_EDGE, MAX_EDGE) } }],
+      { compress: QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+    );
+
   /*
    * A fresh name every time rather than overwriting by position. Storage and CDN
    * caches key on the path, so reusing one means the old photo can keep being
    * served after it has been replaced -- the classic "I changed my picture and
    * it still shows the old one".
    */
-  const path = `${me}/${Date.now()}-${position}.jpg`;
+    const path = `${me}/${Date.now()}-${position}.jpg`;
 
-  const body = await fetch(processed.uri).then((response) => response.blob());
+    const body = await fetch(processed.uri).then((response) => response.blob());
 
-  const { error: uploadError } = await supabase.storage
-    .from("profile-photos")
-    .upload(path, body, { contentType: "image/jpeg", upsert: false });
+    const { error: uploadError } = await supabase.storage
+      .from("profile-photos")
+      .upload(path, body, { contentType: "image/jpeg", upsert: false });
 
-  if (uploadError) {
-    return {
-      ok: false,
-      message: "That photo did not upload. Please check your connection and try again.",
-    };
+    if (uploadError) {
+      return paths.length > 0
+        ? { ok: true, paths }
+        : {
+            ok: false,
+            message:
+              "That photo did not upload. Please check your connection and try again.",
+          };
+    }
+
+    const { error: rowError } = await supabase
+      .from("profile_photos")
+      .insert({ profile_id: me, storage_path: path, position });
+
+    if (rowError) {
+      // The file landed but the row did not, so the object would be orphaned --
+      // invisible to the app and still occupying storage. Clean it up rather
+      // than leaving it behind.
+      await supabase.storage.from("profile-photos").remove([path]);
+      return paths.length > 0
+        ? { ok: true, paths }
+        : { ok: false, message: "That photo did not save. Please try again." };
+    }
+
+    paths.push(path);
   }
 
-  const { error: rowError } = await supabase
-    .from("profile_photos")
-    .insert({ profile_id: me, storage_path: path, position });
-
-  if (rowError) {
-    // The file landed but the row did not, so the object would be orphaned --
-    // invisible to the app and still occupying storage. Clean it up rather than
-    // leaving it behind.
-    await supabase.storage.from("profile-photos").remove([path]);
-    return {
-      ok: false,
-      message: "That photo did not save. Please try again.",
-    };
-  }
-
-  return { ok: true, path };
+  return { ok: true, paths };
 }
 
 export async function removePhoto(path: string): Promise<boolean> {

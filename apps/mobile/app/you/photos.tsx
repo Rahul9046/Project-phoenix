@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
-  addPhoto,
+  addPhotos,
   makePrimary,
   MAX_PHOTOS,
   removePhoto,
@@ -66,7 +66,8 @@ export default function Photos() {
     if (pending) return;
     setPending(true);
 
-    const result = await addPhoto(details.photoPaths.length);
+    const room = MAX_PHOTOS - details.photoPaths.length;
+    const result = await addPhotos(details.photoPaths.length, room);
 
     setPending(false);
 
@@ -76,7 +77,10 @@ export default function Photos() {
     }
 
     await reload();
-    toast.show("Photo added.", "positive");
+    toast.show(
+      result.paths.length === 1 ? "Photo added." : `${result.paths.length} photos added.`,
+      "positive",
+    );
   }
 
   async function remove(path: string) {
