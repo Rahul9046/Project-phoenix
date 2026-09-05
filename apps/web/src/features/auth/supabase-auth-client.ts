@@ -116,6 +116,42 @@ export const supabaseAuthClient: AuthClient = {
     }
   },
 
+  /**
+   * The six digits from the email.
+   *
+   * The same code the app uses, and for the same reasons. A link has to leave
+   * the tab, come back through a redirect, and survive being opened on whatever
+   * device the mail happened to be read on -- and when it does not, it fails as
+   * a blank page rather than as a sentence anybody can act on. A code is typed
+   * where the person already is.
+   */
+  async verifyEmailCode(email: string, code: string) {
+    const supabase = createClient();
+    const identifier = maskEmail(email);
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: "email",
+    });
+
+    if (error) {
+      const stale = error.status === 401 || /expired|invalid/i.test(error.message);
+      recordAuthEvent("email_auth_failure", {
+        identifier,
+        reason: stale ? "invalid_code" : "verify_failed",
+      });
+      throw new AuthError(
+        stale ? "invalid_code" : "generic",
+        stale
+          ? "That code did not work. It may have expired — ask for a new one and use the latest email."
+          : "We could not sign you in just now. Please try again in a moment.",
+      );
+    }
+
+    recordAuthEvent("email_auth_success", { identifier });
+  },
+
   async sendVerificationCode(phone: PhoneNumber) {
     await sendPhoneCode(phone);
   },
