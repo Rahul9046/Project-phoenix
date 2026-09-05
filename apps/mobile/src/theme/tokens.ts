@@ -63,6 +63,9 @@ export const colors = {
   /** Feedback. Muted on purpose -- this palette does not do alarm. */
   positive: "#3F6B52",
   positiveTint: "#E7F0E9",
+  /* The same mark over a photograph. The dark green above disappears against
+     a scrim, and a trust mark nobody can read is not a trust mark. */
+  positiveOnDark: "#9FC9AF",
   danger: "#A8452C",
   dangerTint: "#F7E6DE",
 
