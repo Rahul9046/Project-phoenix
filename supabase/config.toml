@@ -106,8 +106,18 @@ content_path = "./supabase/templates/magic-link.html"
 subject = "Confirm your email for Eraya"
 content_path = "./supabase/templates/magic-link.html"
 
-# Phone auth stays off until an SMS provider is chosen. The application mocks
-# this step; see lib/auth/phone-verification.ts.
+# Phone auth stays off, and now stays off deliberately rather than for want of a
+# provider.
+#
+# Eraya verifies phone numbers through MSG91, in the `phone-otp-request` and
+# `phone-otp-verify` edge functions -- but a verified number is an attribute of
+# an account that already exists, never a way to sign in. Turning Supabase's
+# phone auth on would create a second identity for the same person, which is the
+# one thing the architecture is arranged to avoid: Supabase is the identity
+# authority and the number hangs off it.
+#
+# The MSG91 credentials are edge function secrets, not config here:
+#   supabase secrets set MSG91_AUTH_KEY=... MSG91_TEMPLATE_ID=...
 [auth.sms]
 enable_signup = false
 enable_confirmations = false

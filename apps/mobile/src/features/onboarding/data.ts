@@ -182,9 +182,15 @@ export async function saveLanguages(
  * `auth.users.phone_confirmed_at` and a trigger mirrors it, and this function
  * goes away rather than being quietly repurposed.
  */
-export function completePhoneStep(): Promise<SaveResult> {
-  return patch({ phone_verified_at: new Date().toISOString() });
-}
+/*
+ * There is no `completePhoneStep` any more, deliberately.
+ *
+ * It used to write `phone_verified_at` from the app, which was honest while the
+ * column meant "number added" and became a hole the moment it started meaning
+ * "somebody answered an SMS on this number". The verify edge function writes it
+ * now, holding the service role, and a trigger on `profiles` refuses that column
+ * to every client -- so this cannot be reintroduced by accident.
+ */
 
 /** Marks onboarding finished, once every question has an answer. */
 export function completeOnboarding(): Promise<SaveResult> {
