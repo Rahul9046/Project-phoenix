@@ -1,5 +1,5 @@
 <!--
-  Eraya sign-in link.
+  Eraya sign-in code.
 
   Table-based layout with inline styles, because email clients are not browsers:
   Outlook renders through Word, Gmail strips <style> blocks in some contexts, and
@@ -19,41 +19,26 @@
   A serif fallback would have been the wrong shape entirely.
 
   ---------------------------------------------------------------------------
-  The link, and why it branches
+  A code, and nothing else
   ---------------------------------------------------------------------------
-  One template now serves two clients, and they need different links.
+  There is no button and no address in this email, for either client.
 
-  This used to hardcode .SiteURL + /auth/confirm, which silently discarded
-  whatever `emailRedirectTo` the client had asked for. That was invisible while
-  the web app was the only caller -- its redirect and the site URL were the same
-  address. The moment the mobile app asked for `eraya://auth`, every sign-in
-  email still pointed at localhost, and tapping it on a phone opened a browser to
-  nothing.
+  It had both, and the link was the problem it looked like the solution to. The
+  token is PKCE: it can only be exchanged by the device that asked for it, so
+  mail read on a laptop cannot sign in a phone -- it fails with "invalid flow
+  state", which is not a sentence anybody should meet while joining a
+  relationship product. On a phone it was worse. Tapping it opened a browser,
+  which then had to hand `eraya://` back to the app; Chrome blocks launching an
+  external app from a server redirect without a user gesture, and is stricter
+  still in incognito. The result was a blank tab with nothing to act on.
 
-  Web gets .RedirectTo with a token_hash. That is deliberate over
-  Supabase's own verify endpoint: the default returns a PKCE code, which needs a
-  verifier cookie from the browser that requested the link, so a link requested
-  on a laptop and opened on a phone fails. A token_hash works anywhere. Using
-  .RedirectTo rather than .SiteURL also means a preview deployment gets a link
-  back to itself instead of to production.
+  Six digits have neither problem. They work in every mail client, on any
+  device, with no browser in between, and they cannot be intercepted by another
+  app claiming a scheme. Both clients have a screen to type them into: the app
+  since the beginning, the website as of this change.
 
-  Mobile gets .ConfirmationURL, which is an https address on Supabase that
-  redirects to `eraya://auth`. The app could be linked directly, but a custom
-  scheme in an <a href> is stripped or left unlinked by several mail clients --
-  Gmail among them -- so the https hop is what makes the button tappable at all.
-  The verifier lives on the same phone that asked for the link, so the PKCE
-  problem above does not arise here.
-
-  The comparison is exact, and it has to be. Supabase refuses `eraya:///auth`
-  and `eraya://auth/` outright -- tested, and allow-listing them does not help --
-  so being generous here would buy nothing: a redirect Supabase will not honour
-  never reaches the app whatever the email says.
-
-  The app therefore pins the value. EMAIL_LINK_REDIRECT in
-  apps/mobile/src/features/auth/sign-in.ts is a literal shared with this file
-  rather than computed by `makeRedirectUri`, whose output is not guaranteed to be
-  character-for-character stable. Change one without the other and every mobile
-  member gets a link to the website, silently.
+  Offering a second, less reliable route beside them only invited people down
+  it, so there is one door now.
 -->
 <!--[if !mso]><!-->
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -108,10 +93,10 @@
         <tr>
           <td style="padding:28px 36px 0 36px;">
             <h1 style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:26px;line-height:1.25;font-weight:600;letter-spacing:-0.02em;color:#2a211c;">
-              Your sign-in link
+              Your sign-in code
             </h1>
             <p style="margin:14px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#6b5b51;">
-              Use the button below to sign in to Eraya. It works once, and expires in an hour.
+              Enter this code in the Eraya app to sign in. It works once, and expires in an hour.
             </p>
           </td>
         </tr>
@@ -119,48 +104,17 @@
         <tr>
           <td style="padding:28px 36px 0 36px;">
             <!--
-              A padded anchor rather than a styled table cell: the most widely
-              supported option that still degrades to a plain link when a client
-              strips the styling.
-            -->
-            <a href="{{ if eq .RedirectTo "eraya://auth" }}{{ .ConfirmationURL }}{{ else }}{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email{{ end }}"
-               style="display:inline-block;background-color:#bd4f33;color:#fbf7f2;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1;text-decoration:none;padding:16px 30px;border-radius:999px;">
-              Sign in to Eraya
-            </a>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:28px 36px 0 36px;">
-            <!--
-              The code, and the reason it is here.
-
-              Tapping the button on a phone opens a browser, which then has to
-              hand the app's own scheme back to it. Chrome blocks launching an
-              external app from a server redirect without a user gesture, and is
-              stricter still in incognito -- the result is a blank tab with
-              nothing to act on. Six digits typed into the app need no browser at
-              all, and work when mail is read on a different device entirely.
+              The code. See the note at the top of this file for why it is the
+              only thing here.
 
               Letter-spacing rather than separate cells: a single selectable
-              string is what someone will try to copy.
+              string is what somebody will try to copy.
             -->
             <p style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
-              Or enter this code in the app:
+              Your code:
             </p>
             <p style="margin:10px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:30px;font-weight:700;letter-spacing:7px;line-height:1.2;color:#2a211c;">
               {{ .Token }}
-            </p>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:26px 36px 0 36px;">
-            <p style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
-              If the button does not work, copy this address into your browser:
-            </p>
-            <p style="margin:8px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;word-break:break-all;color:#a8452c;">
-              {{ if eq .RedirectTo "eraya://auth" }}{{ .ConfirmationURL }}{{ else }}{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email{{ end }}
             </p>
           </td>
         </tr>

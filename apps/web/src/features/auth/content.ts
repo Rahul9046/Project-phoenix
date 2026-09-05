@@ -33,15 +33,29 @@ export const emailStep = {
   label: "Email address",
   placeholder: "you@example.com",
   cta: "Continue",
-  pending: "Sending link…",
+  pending: "Sending code…",
   emptyError: "Enter your email address to continue.",
   formatError: "That doesn't look like an email address yet.",
-  // Shown after the sign-in link is sent: the journey continues in their inbox,
-  // and the screen has to say so rather than appear to have done nothing.
+  /*
+   * The second half of this screen: the code, not a link.
+   *
+   * A link has to leave this tab, come back through a redirect, and survive
+   * being opened on whichever device the mail was read on. When it fails it
+   * fails as a blank page. Six digits are typed where the person already is,
+   * which is why the journey now finishes here rather than in an inbox.
+   */
   sentTitle: "Check your email.",
-  sentBody: "We've sent a sign-in link to",
-  sentHint:
-    "Open it on this device to continue. The link works once and expires after an hour.",
+  sentBody: "We've sent a six-digit code to",
+  sentHint: "It works once, and expires in an hour.",
+  codeLabel: "Six-digit code",
+  codePlaceholder: "000000",
+  codeCta: "Sign in",
+  codePending: "Signing you in…",
+  codeEmptyError: "Enter the code from your email.",
+  codeFormatError: "That should be the six digits from the email.",
+  resend: "Send another code",
+  resendPending: "Sending…",
+  resent: "Sent. Use the newest email.",
   sentRetry: "Use a different email address",
 } as const;
 

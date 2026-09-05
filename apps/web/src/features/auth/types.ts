@@ -143,8 +143,10 @@ export class AuthError extends Error {
 export interface AuthClient {
   /** Redirects to the provider. Resolves only if the redirect fails. */
   signInWithSocial(provider: SocialProviderId): Promise<void>;
-  /** Sends a sign-in link. The person continues from their inbox. */
+  /** Sends a six-digit code. The person comes back to this tab with it. */
   signInWithEmail(email: string): Promise<void>;
+  /** Checks that code and, on success, establishes the session. */
+  verifyEmailCode(email: string, code: string): Promise<void>;
   sendVerificationCode(phone: PhoneNumber): Promise<void>;
   verifyCode(phone: PhoneNumber, code: string): Promise<void>;
   signOut(): Promise<void>;
