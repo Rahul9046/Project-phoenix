@@ -42,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Scratch previews served through public/ during development.
+# Regenerate one from the real template with scripts/preview-email.sh
+apps/web/public/__*
+
+# Supplied demo photographs. Generated portraits only -- never a real person.
+# The folder's instructions are tracked; the images are not.
+scripts/demo-photos/*
+!scripts/demo-photos/README.md

@@ -24,14 +24,36 @@ enabled = true
 port = 54323
 
 # Local inbox for magic links and OTP emails during development.
-[inbucket]
+# The local mail catcher, used by `supabase start`. Renamed from [inbucket],
+# which the CLI now warns is deprecated. Local only -- it has no bearing on the
+# linked project, which sends through Resend.
+[local_smtp]
 enabled = true
 port = 54324
 
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+# Every address an auth redirect may land on. Anything not listed here comes back
+# as an error rather than a session, which is the single most common reason a
+# working OAuth setup appears broken.
+#
+# `eraya://auth` is the mobile app's own scheme, used by a development build and
+# by anything shipped to a store. `http://localhost:8081` is the `expo start
+# --web` preview used for inspecting layouts.
+#
+# There is deliberately no `exp://` entry. Supabase refuses that scheme -- a
+# literal URL is rejected as firmly as a wildcard -- and it is right to: `exp://`
+# belongs to Expo Go, which every Expo project on the device shares, so a session
+# delivered there could be picked up by another app. The consequence is that
+# sign-in cannot complete inside Expo Go; a development build registers the
+# `eraya` scheme and works normally. See docs/MOBILE_SETUP.md.
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "eraya://auth",
+  "http://localhost:8081",
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -42,24 +64,109 @@ enable_signup = true
 # Eraya has no passwords: members receive a link or a code.
 enable_confirmations = true
 
-# Phone auth stays off until an SMS provider is chosen. The application mocks
-# this step; see lib/auth/phone-verification.ts.
+# Custom SMTP.
+#
+# Not optional for Eraya, and not only about deliverability. Supabase's built-in
+# email service delivers solely to addresses belonging to members of the project,
+# caps sending at two messages an hour, AND refuses template customisation
+# entirely -- "Email template modification is not available for free tier
+# projects using the default email provider". Configuring SMTP lifts all three at
+# once, on the free plan.
+#
+# Sent from no-reply@, because this mailbox is not read. The address that IS read
+# is named in the body of the email, so a reply is never silently lost.
+#
+# Credentials come from the environment. Nothing secret is written here.
+[auth.email.smtp]
+enabled = true
+host = "env(SUPABASE_SMTP_HOST)"
+port = 587
+user = "env(SUPABASE_SMTP_USER)"
+pass = "env(SUPABASE_SMTP_PASS)"
+admin_email = "no-reply@eraya.app"
+sender_name = "Eraya"
+
+# The sign-in email, kept in version control rather than edited in the dashboard.
+# Same reasoning as the migrations: a template that exists in one project only
+# cannot be reviewed, reproduced or rolled back, and this is the first thing a
+# new member sees of Eraya.
+#
+# The link deliberately targets /auth/confirm with a token_hash instead of
+# Supabase's own verify endpoint. The default template returns a PKCE code, which
+# needs a verifier cookie from the browser that requested the link -- so a link
+# requested on a laptop and opened on a phone fails. token_hash works anywhere.
+[auth.email.template.magic_link]
+subject = "Your Eraya sign-in link"
+content_path = "./supabase/templates/magic-link.html"
+
+# Sent when an address signs up for the first time. Supabase uses this rather
+# than the magic link template on first contact, so leaving it as the default
+# would mean a new member sees stock wording and a returning one sees Eraya's.
+[auth.email.template.confirmation]
+subject = "Confirm your email for Eraya"
+content_path = "./supabase/templates/magic-link.html"
+
+# Phone auth stays off, and now stays off deliberately rather than for want of a
+# provider.
+#
+# Eraya verifies phone numbers through MSG91, in the `phone-otp-request` and
+# `phone-otp-verify` edge functions -- but a verified number is an attribute of
+# an account that already exists, never a way to sign in. Turning Supabase's
+# phone auth on would create a second identity for the same person, which is the
+# one thing the architecture is arranged to avoid: Supabase is the identity
+# authority and the number hangs off it.
+#
+# The MSG91 credentials are edge function secrets, not config here:
+#   supabase secrets set MSG91_AUTH_KEY=... MSG91_TEMPLATE_ID=...
 [auth.sms]
 enable_signup = false
 enable_confirmations = false
 
 # OAuth providers. Secrets are read from the environment, never written here.
+#
+# All three are OFF until real credentials exist, and that is not a placeholder
+# -- it is load-bearing. `lib/data/auth-settings.ts` asks the live project which
+# providers are configured and renders only those buttons, because
+# signInWithOAuth does not fail on a disabled provider: it navigates to Supabase,
+# which answers with raw JSON as a page, stranding someone outside the site with
+# no error handler able to run.
+#
+# Enabling one here without a client_id would therefore put a button on the login
+# screen that breaks. Register the OAuth app first, set the environment
+# variables, then flip `enabled` to true and run `supabase config push`.
+# Live. Credentials are in .env.local and read through env() below; nothing
+# secret is written here.
+#
+# Apple stays off until its credentials exist. Enabling a provider without a
+# client id puts a button on the login screen that leads to a raw JSON error
+# page -- see lib/data/auth-settings.ts.
 [auth.external.google]
 enabled = true
 client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 
 [auth.external.apple]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_APPLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 
+# Live, in Meta's Development mode: only app admins, developers and testers can
+# sign in until Business Verification and App Review are done. The button is
+# shown regardless, because Supabase reports the provider as enabled -- a
+# non-tester who presses it is refused by Facebook, not by Eraya.
 [auth.external.facebook]
 enabled = true
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
+
+# Storage is off, matching the project.
+#
+# Declared explicitly rather than left to the CLI's defaults. Without this,
+# `supabase config push` tries to enable storage with vector buckets, which the
+# free tier refuses with a 402 -- so every push ended in an error that had
+# nothing to do with what was being pushed, and the real result got lost in it.
+#
+# Turn this on when profile photos arrive; they will need a bucket and its own
+# RLS policies.
+[storage]
+enabled = false

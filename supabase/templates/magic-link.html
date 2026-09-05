@@ -1,0 +1,145 @@
+<!--
+  Eraya sign-in code.
+
+  Table-based layout with inline styles, because email clients are not browsers:
+  Outlook renders through Word, Gmail strips <style> blocks in some contexts, and
+  flexbox and CSS variables are unreliable across the field. The brand palette is
+  written out as literals here for that reason — the one place in this project
+  where duplicating a token is correct.
+
+  Manrope, the way an inbox can have it. Eraya is set in Manrope everywhere else
+  -- website, app, wordmark -- and this email was set in Georgia, so the first
+  thing a new member saw looked like it came from somewhere else.
+
+  A web font in email is a request, never a guarantee. Apple Mail, Outlook for
+  Mac, Samsung Mail and Thunderbird honour the stylesheet below; Gmail and
+  Outlook on Windows strip it and fall back. So Manrope leads every stack and a
+  system sans sits under it -- the same sans this template already used for body
+  text, which means a client that refuses the font loses nothing it had before.
+  A serif fallback would have been the wrong shape entirely.
+
+  ---------------------------------------------------------------------------
+  A code, and nothing else
+  ---------------------------------------------------------------------------
+  There is no button and no address in this email, for either client.
+
+  It had both, and the link was the problem it looked like the solution to. The
+  token is PKCE: it can only be exchanged by the device that asked for it, so
+  mail read on a laptop cannot sign in a phone -- it fails with "invalid flow
+  state", which is not a sentence anybody should meet while joining a
+  relationship product. On a phone it was worse. Tapping it opened a browser,
+  which then had to hand `eraya://` back to the app; Chrome blocks launching an
+  external app from a server redirect without a user gesture, and is stricter
+  still in incognito. The result was a blank tab with nothing to act on.
+
+  Six digits have neither problem. They work in every mail client, on any
+  device, with no browser in between, and they cannot be intercepted by another
+  app claiming a scheme. Both clients have a screen to type them into: the app
+  since the beginning, the website as of this change.
+
+  Offering a second, less reliable route beside them only invited people down
+  it, so there is one door now.
+-->
+<!--[if !mso]><!-->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Some clients drop a <link> but read a <style>; asking twice costs nothing. */
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+</style>
+<!--<![endif]-->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fbf7f2;margin:0;padding:32px 12px;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e6dacb;border-radius:16px;">
+        <tr>
+          <td style="padding:32px 36px 0 36px;">
+            <!--
+              The mark and the wordmark, exactly as the site pairs them.
+
+              Two elements rather than one image on purpose. Most clients block
+              images by default, so an image-only header would arrive as a broken
+              icon and nothing else. The mark carries an empty alt because the
+              wordmark beside it already says "Eraya" — announcing it twice would
+              be noise for a screen reader.
+
+              The PNG is generated from the same geometry as the favicon by
+              scripts/build-email-logo.mjs, so it cannot drift from the site, and
+              that script publishes it to the bucket this tag points at.
+
+              The address is written out rather than built from the site URL. It
+              used to be the latter, and the result was a broken image icon in
+              every email: .SiteURL is http://localhost:3000, which is nothing at
+              all on the machine reading the mail. A public storage URL is
+              reachable from any inbox, needs no deploy, and is the same address
+              in local, preview and production. See the brand bucket migration.
+            -->
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle;">
+                  <img src="https://mwixuwmxvppeagyruueu.supabase.co/storage/v1/object/public/brand/eraya-mark.png"
+                       width="44" height="44" alt=""
+                       style="display:block;width:44px;height:44px;border:0;border-radius:10px;" />
+                </td>
+                <td style="vertical-align:middle;">
+                  <span style="font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#2a211c;">
+                    Eraya
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 36px 0 36px;">
+            <h1 style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:26px;line-height:1.25;font-weight:600;letter-spacing:-0.02em;color:#2a211c;">
+              Your sign-in code
+            </h1>
+            <p style="margin:14px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#6b5b51;">
+              Enter this code in the Eraya app to sign in. It works once, and expires in an hour.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:28px 36px 0 36px;">
+            <!--
+              The code. See the note at the top of this file for why it is the
+              only thing here.
+
+              Letter-spacing rather than separate cells: a single selectable
+              string is what somebody will try to copy.
+            -->
+            <p style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+              Your code:
+            </p>
+            <p style="margin:10px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:30px;font-weight:700;letter-spacing:7px;line-height:1.2;color:#2a211c;">
+              {{ .Token }}
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:26px 36px 34px 36px;">
+            <div style="border-top:1px solid #e6dacb;padding-top:20px;">
+              <!--
+                Said plainly. An unexpected sign-in email is alarming, and the
+                reassurance is the useful part rather than the boilerplate.
+              -->
+              <p style="margin:0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+                If you did not ask to sign in, you can ignore this email. Nothing will happen, and nobody can use this link but you.
+              </p>
+              <!--
+                This address is sent from a no-reply mailbox, so the one that
+                does read replies is named here rather than left to be guessed.
+              -->
+              <p style="margin:14px 0 0 0;font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#7b6a5e;">
+                Need a hand? Write to <a href="mailto:hello@eraya.app" style="color:#a8452c;text-decoration:underline;">hello@eraya.app</a> and a person will answer.
+              </p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

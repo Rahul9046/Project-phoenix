@@ -135,7 +135,7 @@ export function OTPInput({
             onFocus={(event) => event.target.select()}
             aria-label={`Digit ${index + 1} of ${OTP_LENGTH}`}
             aria-invalid={invalid || undefined}
-            className={`h-16 w-full min-w-0 rounded-xl border bg-surface text-center font-serif text-2xl text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-ember focus:ring-offset-2 focus:ring-offset-canvas disabled:opacity-60 ${
+            className={`h-16 w-full min-w-0 rounded-xl border bg-surface text-center text-subhead text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-ember focus:ring-offset-2 focus:ring-offset-canvas disabled:opacity-60 ${
               invalid
                 ? "border-ember-text"
                 : digit

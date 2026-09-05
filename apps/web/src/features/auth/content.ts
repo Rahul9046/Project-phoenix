@@ -1,4 +1,4 @@
-import type { RelationshipStatus } from "@/features/auth/types";
+import type { Gender, RelationshipStatus } from "@/features/auth/types";
 
 /**
  * Every word the sign-in and sign-up screens say.
@@ -33,51 +33,81 @@ export const emailStep = {
   label: "Email address",
   placeholder: "you@example.com",
   cta: "Continue",
-  pending: "Sending link…",
+  pending: "Sending code…",
   emptyError: "Enter your email address to continue.",
   formatError: "That doesn't look like an email address yet.",
-  // Shown after the sign-in link is sent: the journey continues in their inbox,
-  // and the screen has to say so rather than appear to have done nothing.
+  /*
+   * The second half of this screen: the code, not a link.
+   *
+   * A link has to leave this tab, come back through a redirect, and survive
+   * being opened on whichever device the mail was read on. When it fails it
+   * fails as a blank page. Six digits are typed where the person already is,
+   * which is why the journey now finishes here rather than in an inbox.
+   */
   sentTitle: "Check your email.",
-  sentBody: "We've sent a sign-in link to",
-  sentHint:
-    "Open it on this device to continue. The link works once and expires after an hour.",
+  sentBody: "We've sent a six-digit code to",
+  sentHint: "It works once, and expires in an hour.",
+  codeLabel: "Six-digit code",
+  codePlaceholder: "000000",
+  codeCta: "Sign in",
+  codePending: "Signing you in…",
+  codeEmptyError: "Enter the code from your email.",
+  codeFormatError: "That should be the six digits from the email.",
+  resend: "Send another code",
+  resendPending: "Sending…",
+  resent: "Sent. Use the newest email.",
   sentRetry: "Use a different email address",
 } as const;
 
+/*
+ * The phone step, worded for a check that does not happen yet.
+ *
+ * This said "Let's verify your phone", offered to "Send code", and the next
+ * screen said "We sent a 6-digit code to ...". None of that was true: no SMS
+ * provider is connected, nothing is sent, and any six digits are accepted. A
+ * real person would sit waiting for a message that was never going to arrive.
+ *
+ * The step is kept -- the number is worth collecting now, and the stage machine
+ * already depends on it -- but the copy claims only what happens. When an SMS
+ * provider is connected (see features/auth/phone-verification.ts) this wording
+ * goes back to talking about verification.
+ */
 export const phoneStep = {
-  title: "Let's verify your phone.",
-  lede: "Your phone number helps us keep Eraya safe. It won't be shown publicly.",
+  title: "Add your phone number.",
+  lede: "We keep it for account recovery, and for verification once that is switched on. It is never shown on your profile.",
   countryLabel: "Country code",
   label: "Phone number",
   placeholder: "98765 43210",
-  cta: "Send code",
-  pending: "Sending code…",
+  cta: "Continue",
+  pending: "Saving…",
   emptyError: "Enter your phone number to continue.",
-  formatError: "Enter a phone number so we can send your code.",
+  formatError: "That does not look like a phone number. Check the digits.",
   reassurance:
-    "We use it for verification and account recovery. It is never shown on your profile.",
+    "Only you can see it. Another member never sees your number, and neither does anyone you connect with.",
 } as const;
 
 export const otpStep = {
-  title: "Enter your verification code.",
-  ledePrefix: "We sent a 6-digit code to",
-  label: "6-digit verification code",
-  cta: "Verify",
-  pending: "Verifying…",
+  title: "Confirm your number.",
+  // No SMS is sent, so this cannot say one was. It names the number back so the
+  // person can still catch a typo, which is most of what the step is for today.
+  ledePrefix: "Checking codes by SMS is not switched on yet, so any six digits will do for now. Your number is",
+  label: "6-digit code",
+  cta: "Continue",
+  pending: "Saving…",
   incompleteError: "Enter all six digits to continue.",
-  invalidError: "That code didn't work. Check the digits and try again.",
-  resendPrompt: "Didn't receive the code?",
-  resendCta: "Resend code",
-  resendPending: "Sending…",
-  resendConfirmation: "We've sent another code.",
+  invalidError: "That needs to be six digits. Check and try again.",
   changeCta: "Change phone number",
-  success: "Phone verified.",
+  /*
+   * Not "Phone verified." No SMS is sent and any six digits are accepted, so
+   * the step is complete rather than verified. The wording says the smaller,
+   * true thing until an SMS provider is connected.
+   */
+  success: "Phone number saved.",
 } as const;
 
 export const basicsStep = {
-  title: "Let's start with the basics.",
-  lede: "This is what other members will see first. You can change any of it later.",
+  title: "Let's start with your name.",
+  lede: "This is how other members will know you. Nothing here is final — you can change any of it later.",
   firstName: {
     label: "First name",
     hint: "This is the name shown on your profile.",
@@ -88,6 +118,8 @@ export const basicsStep = {
     label: "Date of birth",
     hint: "Used to confirm you're over 18. Only your age is ever shown.",
     error: "Enter your date of birth to continue.",
+    /* Names the actual problem. "Try again in a moment" cannot fix a birth date. */
+    tooYoung: "Eraya is for people aged 18 and over. Please check the year.",
   },
   gender: {
     label: "Gender",
@@ -96,30 +128,77 @@ export const basicsStep = {
   cta: "Continue",
 } as const;
 
-export const genderOptions = [
+/**
+ * The values here are the database's enum values, not display slugs.
+ *
+ * They used to be hyphenated ("non-binary") because this screen was written
+ * against a mocked provider that accepted any string. When the real enum arrived
+ * it used underscores, and nothing reconciled the two -- so choosing Non-binary
+ * or Prefer not to say failed for a fortnight while Woman and Man worked.
+ *
+ * The `Gender` annotation is the guard: this list can no longer drift from the
+ * database without failing the build.
+ */
+export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "woman", label: "Woman" },
   { value: "man", label: "Man" },
-  { value: "non-binary", label: "Non-binary" },
-  { value: "prefer-not-to-say", label: "Prefer not to say" },
-] as const;
+  { value: "non_binary", label: "Non-binary" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
 
 export const cityStep = {
   title: "Where are you based?",
-  lede: "Your city helps us create meaningful local communities.",
-  otherLabel: "Another city",
-  otherFieldLabel: "Which city?",
-  otherFieldPlaceholder: "Your city",
-  /** Shown when someone picks a city Eraya has not reached yet. Never a refusal. */
-  elsewhereTitle: "Eraya is growing city by city.",
-  elsewhereBody:
-    "You can still create your account today. We'll let you know as Eraya becomes available in your area.",
-  error: "Choose your city to continue.",
+  lede: "Eraya is welcoming members across India as we build our community, city by city.",
+
+  searchLabel: "Search for your city",
+  searchPlaceholder: "Start typing your city",
+  searching: "Searching…",
+  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
+  changeCta: "Change",
+
+  /**
+   * The hint under the field. It exists to answer the question someone from a
+   * smaller city is actually asking — "is this for me?" — before they have to
+   * wonder. Everywhere in India is registerable, so there is nothing to soften
+   * and nothing to apologise for.
+   */
+  hint: "Every city in India is open. Type a few letters to find yours.",
+
+  error: "Search for your city and choose it to continue.",
   cta: "Continue",
 } as const;
 
+/**
+ * What to say when someone arrives back at sign-in after something failed.
+ *
+ * Keyed on what the provider or Supabase actually reports. These are the
+ * outcomes people hit in practice — cancelling a consent screen is the second
+ * most common thing that happens after succeeding at it — and returning someone
+ * to a blank login page with no explanation is how a working product looks
+ * broken.
+ */
+export const signInProblems: Record<string, string> = {
+  access_denied:
+    "Sign-in was cancelled, so nothing happened. You can try again, or continue with email.",
+  server_error:
+    "That sign-in provider had a problem on its end. Please try again, or continue with email.",
+  temporarily_unavailable:
+    "That sign-in provider is briefly unavailable. Please try again in a moment, or continue with email.",
+  invalid_link:
+    "That sign-in link is not valid any more. Links work once and expire after an hour — request a new one below.",
+  missing_code:
+    "The sign-in did not complete. Please try again, or continue with email.",
+  provider_not_enabled:
+    "That sign-in option is not available yet. Please continue with email.",
+} as const;
+
+/** Anything not in the list above. Deliberately vague; it is genuinely unknown. */
+export const signInProblemFallback =
+  "That sign-in did not complete. Please try again, or continue with email.";
+
 export const relationshipStep = {
-  title: "Which chapter are you in?",
-  lede: "Eraya is built for people beginning again. This helps us introduce you to people who understand.",
+  title: "Where are you in your journey?",
+  lede: "However you arrived here, someone else did too. This is only so we introduce you to people who understand.",
   error: "Choose the option that fits you best.",
   cta: "Continue",
 } as const;
@@ -172,10 +251,18 @@ export const languageOptions = [
 ] as const;
 
 export const completeStep = {
-  title: "You're all set.",
-  lede: "Your Eraya account is ready. We'll take you through building your profile next — there's no rush, and you can stop and come back at any time.",
-  cta: "Continue to your profile",
-  secondaryCta: "Back to Eraya",
+  /**
+   * The end of signup, treated as a beginning.
+   *
+   * Not "Welcome to Eraya" -- that is a greeting from a company to a customer.
+   * This is about the person: what they have just done is start again, and the
+   * screen should be quiet enough for that to land.
+   */
+  eyebrow: "Your Eraya begins",
+  title: "You're ready for your next chapter.",
+  lede: "Take it at whatever pace suits you. Nothing here expects anything of you today, and nobody can reach you until you both choose it.",
+  cta: "See who's here",
+  secondaryCta: "Not just yet",
 } as const;
 
 /**

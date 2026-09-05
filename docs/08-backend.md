@@ -48,7 +48,24 @@ Everything about the schema lives in `supabase/migrations/`, in order:
 | `…090600_create_waitlist` | Landing-page signups |
 | `…090700_create_triggers` | Profile on signup, phone mirror, `updated_at` |
 | `…090800_enable_rls` | RLS on every table, with policies |
-| `…090900_seed_reference_data` | The seven launch cities and the languages |
+| `…090900_seed_reference_data` | The original launch cities and the languages |
+| `…101500_restrict_function_execute` | Revokes EXECUTE on the trigger functions |
+| `…100100_create_membership_enums` | `membership_tier`, `subscription_status`, `payment_provider` |
+| `…100200_create_membership_plans` | The catalogue and its prices |
+| `…100300_create_entitlements` | Per-tier capabilities |
+| `…100400_create_subscriptions` | One row per term |
+| `…100500_membership_rls` | RLS for the three membership tables |
+| `…100600_seed_membership` | The four plans and every entitlement |
+| `…140100_name_membership_plans` | Plan names and descriptions |
+| `…100100_cities_all_india` | State, country, search terms, trigram index |
+| `…100200_seed_cities_india` | 493 cities, every state and union territory |
+| `…100300_search_cities` | Ranked search RPC |
+| `…100400_search_cities_tiebreak` | Deterministic order for same-named cities |
+| `…100100_create_connection_tables` | Blocks, interests, connections, messages, reports |
+| `…100200_discovery_and_rls` | `member_card`, the four member RPCs, RLS for all five tables |
+| `…150100_city_coverage` | Counts of cities and states, for marketing copy |
+| `…150200_search_cities_fuzzy` | Trigram fallback so a misspelling still finds the city |
+| `…150300_close_waitlist_writes` | Drops the public insert policy on `waitlist` |
 
 Apply them with the Supabase CLI:
 
@@ -171,6 +188,13 @@ On for every table. Anything not granted is denied.
 | `profiles` | — | select/insert/update **own row** |
 | `profile_languages` | — | select/insert/delete **own rows** |
 | `waitlist` | insert | insert |
+| `membership_plans` | select (active only) | select (active only) |
+| `entitlements` | select | select |
+| `subscriptions` | — | select **own rows** |
+
+`subscriptions` has no write policy for anybody — see the membership section.
+Pricing is readable by `anon` on purpose: hiding what a product costs behind a
+login is hostile.
 
 Nobody can read the waitlist without the secret key — it is personal data
 belonging to people who are not members. Nobody can read another member's
@@ -179,10 +203,455 @@ the safe default until they do is that nobody sees anybody.
 
 ## Cities
 
-Availability lives in the `cities` table, not in the codebase. Adding a city is
-an insert, not a deploy.
+Registration is open across **all of India**. No city restricts it, and no screen
+turns anyone away for where they live.
 
-`is_launch_city` marks full availability. It never gates registration: someone
-anywhere can create an account, and a city outside the list is stored as free
-text on `profiles.other_city` with a null `city_id`. There is no screen in this
-product that turns anyone away.
+493 cities across all 28 states and 8 union territories, seeded from
+`scripts/cities-india.mjs`. Edit the dataset there and regenerate rather than
+hand-editing SQL:
+
+```
+node scripts/cities-india.mjs > supabase/migrations/<timestamp>_seed_cities_india.sql
+supabase db push
+```
+
+### `is_launch_city` no longer gates anything
+
+It survives as a **search-ordering hint** and nothing else: after exact and
+prefix matches, a flagged city sorts above an unflagged one. It must never be
+used to decide who may register; that was the old model and it is gone.
+
+Nothing displays it any more either. The landing page used to list the seven
+flagged cities under "Where the community is densest", which claimed to describe
+where members are while actually describing a seed flag. It now shows a count
+read from the table through `city_coverage()`, which cannot drift away from what
+the search field will accept.
+
+`discover_members` applies mutual gender preference before anything else:
+someone appears in your introductions only if they match `profiles.seeking` and
+you match theirs. `genders_are_compatible` holds that rule so it cannot be
+restated slightly differently somewhere else.
+
+It is permissive wherever either side has not answered, and for
+`prefer_not_to_say`. A strict reading would make every member who declined to
+state a gender invisible to everybody, which punishes exactly the people most
+likely to have thought about the question. Silence means "no constraint", never
+"no match".
+
+`discover_members` applies **no city filter**, and does order by proximity:
+same city first, then same state, then everywhere else, with the per-viewer daily
+hash as the tiebreak inside each band.
+
+The distinction matters. Ordering means everyone is still reachable -- a member
+in a town with no other members sees the whole country rather than an empty
+screen -- while someone two streets away is not buried behind someone two
+thousand kilometres away. Filtering by city remains separate, optional and free.
+
+It is not a distance calculation. The cities table carries latitude and
+longitude, so one is available, and using it would imply a precision the product
+does not have: nobody's city is where they are, it is where they said they
+live. Three bands say what can honestly be said.
+
+### Search
+
+`search_cities(query, max_results)` is a SECURITY INVOKER function, readable by
+`anon` because the landing page offers city selection before anyone signs in.
+
+Ranking happens in the database: exact name, then name-prefix, then a word inside
+the name, then anything in `search_terms`. Sorting in the browser would mean
+fetching a large set to sort, which is the thing worth avoiding.
+
+When that pass finds nothing at all, a second one runs on trigram word
+similarity at 0.45, so "banglore", "hydrabad", "guwhati", "kolkatta" and
+"lucknoww" all still land on the right city while nonsense still returns nothing.
+It only runs on a total miss, so ranking for ordinary queries is unchanged.
+
+`search_terms` holds the lowercased name, its state, and the spellings people
+actually type. Someone who has said "Bangalore" for forty years will not type
+"Bengaluru", so both find it — as do bombay, calcutta, madras, gurgaon, vizag,
+trivandrum and poona.
+
+Names repeat across states — Udaipur in Rajasthan and Tripura, Bilaspur in
+Chhattisgarh and Himachal Pradesh — so slugs carry the state code and every
+result displays its state. There is no population data here, so same-name ties
+break alphabetically by state rather than by an invented prominence.
+
+### Coordinates
+
+`latitude`/`longitude` are populated only where verified, and null everywhere
+else. A guessed coordinate is worse than an absent one: a wrong distance is
+indistinguishable from a right one, and discovery would quietly mis-rank people.
+
+### `profiles.other_city`
+
+Retained but no longer written. Every member now resolves to a real `city_id`,
+which is what lets discovery reason about distance. The column holds free text
+for accounts created before registration opened nationwide.
+
+## Photos
+
+Optional, and a profile without one is complete. The web renders a monogram and
+always has; mobile added photos because deciding whether to meet a stranger with
+no idea what they look like asks more of people than is reasonable. The monogram
+stayed a first-class presentation rather than becoming a failure state — plenty
+of Eraya's members will not want a face on a screen for a long time, and the
+product must not treat them as half-finished.
+
+`profile_photos` holds the ordering and which is first; the file itself lives in
+Supabase Storage. Those are different questions — one is about a profile, the
+other about a file — and a storage listing has no stable order.
+
+**The bucket is private.** A public bucket means every photo is a guessable URL
+that outlives a block, a deletion and an account closure. Clients mint signed
+URLs with an hour's life instead.
+
+Three policies do the work:
+
+- Writes are constrained to a folder named for the owner's id, checked with
+  `storage.foldername(name)[1] = auth.uid()`. There is no way to write outside
+  your own folder whatever the client sends.
+- Reads are allowed to any signed-in member **except** where either party has
+  blocked the other, so a blocked person loses access to the file itself — a URL
+  signed before the block cannot be renewed, and a saved path stops resolving.
+- Reads are deliberately *not* restricted to existing connections. Discovery has
+  to show a face before anyone connects, and that rule would make every card
+  blank.
+
+Uploads are resized to 1400px and re-encoded as JPEG before leaving the phone.
+Partly size; mostly EXIF. A photo from a camera roll usually carries the GPS
+coordinates of where it was taken, frequently somebody's home, and re-encoding
+strips it.
+
+A six-photo limit is enforced by the `profile_photos_limit` trigger rather than
+by the `position` column. Those are two different rules — an ordering and a count
+— and conflating them broke reordering: a unique index on
+`(profile_id, position)` means positions cannot be reassigned in place, and the
+standard way round it needs room to move rows temporarily out of range.
+
+## Membership and entitlements
+
+Eraya is freemium. The paid tier exists in the database today; payments do not.
+
+| Table | Holds | Who may write |
+| --- | --- | --- |
+| `membership_plans` | The catalogue and its prices, in paise | Migrations only |
+| `entitlements` | What each tier may do, as `(tier, key) -> jsonb` | Migrations only |
+| `subscriptions` | One row per term, per member | **Service role only** |
+
+### Why `subscriptions` has no write policy
+
+Not an oversight. A browser that can insert its own subscription row can award
+itself premium, which makes every check downstream decorative. Membership is
+granted by whatever takes the money — a payment webhook running with the service
+role — and read back through RLS, which allows a member to see their own rows and
+nobody else's.
+
+### Entitlements are data, not code
+
+Nothing outside `features/membership/entitlements.ts` should compare a tier.
+Components ask for a named capability:
+
+```ts
+const { entitlements } = await loadMembership();
+if (entitlements.canSeeInteresters) { ... }
+```
+
+Adding a capability from the future pool — boosts, read receipts, travel mode —
+is two rows in `entitlements` and the feature itself. It is not a change to the
+membership system. Every capability is seeded for **both** tiers, including the
+ones free members do not get: a missing row and a deliberate `false` are
+indistinguishable to calling code, and "the key was absent" is not a decision
+anyone made.
+
+If the table cannot be read, the module falls back to the free tier. The safe
+failure is to withhold paid features, never to hand them out.
+
+### Pricing
+
+Prices are fixed and stored exactly as charged. Nothing is computed at runtime,
+and the twelve-month plan is a price rather than a saving — describing it as a
+discount would invent a claim the product does not make.
+
+| Plan | Price | Note |
+| --- | --- | --- |
+| Monthly | ₹199 first month, then ₹299 | The only recurring plan |
+| 3 months | ₹699 | One-off term |
+| 6 months | ₹1,299 | One-off term |
+| 12 months | ₹2,399 | One-off term |
+
+The renewal price is shown beside the introductory one, never behind a click.
+
+### What is not built
+
+No payment provider is configured. `subscriptions.provider` defaults to `'none'`,
+and a row in that state records intent and must never be read as money received —
+which is why `'pending'` is excluded from `ENTITLING_STATUSES`. The membership
+page says payments are not open rather than showing a button that would not
+charge.
+
+`'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
+the current term.
+
+## Pushing config: never use the CLI directly
+
+Use `npm run config:push`, not `supabase config push`.
+
+`supabase/config.toml` refers to the OAuth credentials as
+`env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)` and so on, which is right -- the file is
+committed and the credentials must not be. The trap is what the CLI does when one
+of those variables is missing from the environment. It does not fail and it does
+not warn: it pushes the **literal string** `env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)`
+as the client id, and the project stores it. Anyone pressing "Continue with
+Google" is then sent to Google with that text as the client id and told the app
+is misconfigured, while the push output looks entirely successful.
+
+That is not hypothetical. Several pushes for unrelated reasons -- redirect URLs,
+mostly -- silently wiped both providers, and it surfaced only when someone tried
+to sign in.
+
+The variables live in `apps/web/.env.local`, which the CLI does not read.
+`scripts/supabase-config.mjs` reads them, works out which are actually required
+(only from sections where `enabled = true`, so a disabled provider like Apple
+does not block anything), refuses to push if any is missing, and prints the names
+it substituted -- never the values.
+
+After changing anything about a provider, check it rather than trusting the
+output:
+
+```
+curl -si "$SUPABASE_URL/auth/v1/authorize?provider=google&redirect_to=http://localhost:3000/auth/callback" | grep -i location
+```
+
+A `client_id=env%28...%29` in that redirect means the credentials were wiped.
+
+## Email
+
+### Custom SMTP is not optional
+
+Supabase's built-in email service does three things that make it unusable beyond
+development, and configuring SMTP lifts all three at once, on the free plan:
+
+| Built-in | With custom SMTP |
+| --- | --- |
+| Delivers only to project members | Delivers to anyone |
+| Two messages an hour | Provider's limit |
+| **Templates cannot be edited at all** | Templates apply |
+
+That third one is not documented anywhere obvious. Pushing a template without
+SMTP fails with: *"Email template modification is not available for free tier
+projects using the default email provider."* Configuring SMTP is therefore a
+prerequisite for branding the email at all, not merely for delivering it.
+
+SMTP is configured. `SUPABASE_SMTP_HOST`, `SUPABASE_SMTP_USER` and
+`SUPABASE_SMTP_PASS` live in `.env.local`; apply any template change with:
+
+```
+npm run config:push
+```
+
+Never the bare CLI — see "Pushing config" above for what that silently breaks.
+
+The sending domain needs SPF and DKIM records. The sender mailbox does not need
+to receive anything: mail goes out as `no-reply@eraya.app`, and the address that
+is actually read, `hello@eraya.app`, is named in the body so a reply is never
+silently lost.
+
+### Templates live in the repository
+
+`supabase/config.toml` points `[auth.email.template.*]` at
+`supabase/templates/magic-link.html`. Same reasoning as the migrations: a
+template that exists only in one project's dashboard cannot be reviewed,
+reproduced or rolled back — and this is the first thing a new member sees of
+Eraya.
+
+### One template, two clients, and a code
+
+The template does three things, and each exists because of a specific failure.
+
+**It branches on `.RedirectTo`.** It used to hardcode `.SiteURL/auth/confirm`, so
+every link went to the web app regardless of what `emailRedirectTo` the caller
+passed — the mobile app's `eraya://auth` was accepted, sent, and then discarded
+at render time. That was invisible while the web app was the only caller, because
+its redirect and the site URL were the same address.
+
+  Web    `{{ .RedirectTo }}?token_hash=…&type=email`
+  Mobile `{{ .ConfirmationURL }}`
+
+**The web link uses a `token_hash`, not Supabase's verify endpoint.** The default
+returns a PKCE code, which needs a verifier cookie from the browser that
+requested the link — so a link requested on a laptop and opened on a phone fails.
+A `token_hash` works anywhere.
+
+**The mobile branch is an https address**, not `eraya://` directly. A custom
+scheme in an `href` is stripped or left unlinked by several mail clients, Gmail
+among them, so the https hop is what makes the button tappable at all. The
+comparison is exact and the app pins the value in `EMAIL_LINK_REDIRECT`:
+Supabase refuses `eraya:///auth` and `eraya://auth/` outright, so being generous
+here would buy nothing.
+
+**And the email carries a six-digit `{{ .Token }}`, which is what mobile actually
+uses.** Tapping the link on a phone opens a browser that then has to hand the
+scheme back to the app, and Chrome blocks launching an external app from a server
+redirect without a user gesture — harder still in incognito. The result is a
+blank tab: no error, nothing to tap. It works often enough to look fine in
+testing and fails often enough to be unusable.
+
+The code needs no browser, no scheme, and nothing another app can claim. It also
+works when mail is read on a different device from the one holding the app, which
+the link never could. `verifyOtp({ email, token, type: "email" })` exchanges it.
+
+The web still uses the link, correctly — a browser handing a redirect to itself
+has none of these problems. The code block says "Or enter this code in the app",
+so it is unambiguous who it is for.
+
+The logo is a PNG, generated from `mark.ts` by
+`scripts/build-email-logo.mjs` — the same geometry as the favicon and the site
+header, so it cannot drift. Regenerate it if the mark is ever revised:
+
+```
+node scripts/build-email-logo.mjs
+```
+
+It sits beside a text wordmark rather than replacing it, because most clients
+block images by default and an image-only header arrives as a broken icon.
+
+### A trap in `supabase config push`
+
+It pushes the **whole** file, not just the section you changed. `config.toml`
+previously declared all three OAuth providers `enabled = true` with empty
+credentials, so a push would have switched Google on with no client id — and
+`auth-settings.ts` renders a button for any provider the live project reports as
+enabled. The result would have been a Google button that ejects people onto a raw
+JSON error page.
+
+They are now `enabled = false`, matching the live project. Register the OAuth
+app, set the environment variables, then flip the flag.
+
+## The waitlist is retired
+
+`public.waitlist` and its migration remain; nothing writes to them.
+
+The landing page collected an email address and promised to be in touch "as soon
+as we open". That was true when Eraya opened in seven cities. It stopped being
+true when registration opened across India, and became contradictory: every call
+to action on the page pointed at a waitlist for a product the same page said was
+already open. The form is gone and every CTA now leads to `/signup`.
+
+The table is kept rather than dropped. Removing one to tidy a landing page is the
+wrong trade, the rows are real if any exist, and a waitlist may yet be useful for
+something specific — a city, a feature, an event. The RLS policy is unchanged:
+insert-only, unreadable without the service role.
+
+## Discovery, connections and messages
+
+Added after the experience redesign. Until then `profiles` was readable only by
+its owner and there was no way for one member to reach another.
+
+### `profiles` is still owner-only
+
+This is the load-bearing decision. A permissive select policy would have been the
+obvious way to build discovery, and it would have exposed every column —
+including `date_of_birth`. Eraya shows an **age**; the difference matters to
+someone deciding how much of themselves to hand over.
+
+So discovery goes through SECURITY DEFINER functions returning a fixed field set:
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `discover_members(n)` | A considered few | Deterministic per viewer per day |
+| `member_profile(id)` | One member | Same fields, same exclusions |
+| `express_interest(id, kind)` | Connection id or null | Atomic |
+| `interests_received()` | Who is interested | **Premium, checked in SQL** |
+
+The column list in those functions **is** the privacy policy. There is no second
+place it could quietly widen.
+
+### Why discovery is deterministic
+
+`discover_members` orders by `md5(target || viewer || current_date)`, so the same
+viewer sees the same few people all day. Without that, refreshing deals a new
+hand — and "a considered few" becomes a feed with extra steps. The mechanism is
+what makes the claim true.
+
+### Interest is private
+
+Expressing interest tells the other person nothing until they return it. Nobody
+learns they were passed over, and nobody can be pestered. A pass is recorded so
+the same person is not offered again tomorrow.
+
+`express_interest` is one function rather than an insert plus a check, because
+"have they already chosen me" and "create the connection" must be atomic. Two
+calls racing produce either two connections or none.
+
+### Connections are ordered pairs
+
+`member_a < member_b` is enforced by a check constraint, with a unique index on
+the pair. Without it the same two people can connect twice under two orderings,
+producing two conversations — the classic symmetric-relationship bug.
+
+### What messages deliberately do not have
+
+No `read_at`, no delivered state, no typing indicator, no unread count. Those
+exist to make one person feel owed and the other feel watched. `read_at` is
+absent from the schema rather than present-and-unused, because a column invites a
+feature.
+
+Sending also requires the connection to be open: the insert policy checks
+`ended_at is null`, so ending a connection genuinely stops messages rather than
+hiding them.
+
+### Premium is enforced in the database
+
+`interests_received()` reads the caller's subscription in SQL and returns nothing
+without one. It cannot be unlocked by calling the API directly — which is the
+difference between a paid feature and a hidden div.
+
+
+## Account deletion
+
+A member can delete their own account from Settings. It is irreversible and
+complete.
+
+### One delete, everything cascades
+
+`auth.admin.deleteUser` removes the row from `auth.users`; `profiles` hangs off
+it and everything else hangs off `profiles`, all with ON DELETE CASCADE —
+languages, interests, connections, messages, blocks, reports and subscriptions.
+
+Deleting the tables individually first would be slower and strictly worse: a
+failure halfway leaves someone half-deleted, which is a state nothing in the
+product knows how to render.
+
+### The id comes from the session, never the caller
+
+This is one of the only places `createAdminClient` is legitimate, because
+removing a row from `auth.users` is not something RLS can permit a member to do.
+The service role ignores every policy — so the action reads the id from the
+session and accepts no parameter. An id parameter here would be an endpoint for
+deleting other people.
+
+### Two things worth knowing
+
+**Conversations disappear for the other person too.** Messages cascade from their
+sender, so deleting an account removes that half of every conversation. That is
+the honest reading of "delete my data", and the confirmation says so explicitly
+rather than letting someone discover it afterwards.
+
+**Reports against a deleted member go with them.** `member_reports.reported_id`
+cascades, so someone could in principle delete their account to erase reports
+filed about them. Keeping those would mean retaining data about a person who has
+asked to be forgotten, which is a real tension between moderation and erasure and
+is not something to settle silently. Flagged rather than decided.
+
+### An env bug this uncovered
+
+`getServiceRoleKey` used `??` between the secret and service-role keys.
+`.env.example` produces `SUPABASE_SECRET_KEY=` with no value, which reads as `""`
+rather than `undefined` — so nullish coalescing selected the empty string, never
+reached the fallback, and reported the variable as unset while looking straight
+at it. It was latent because nothing used the admin client until now.
+
+Both key lookups now go through `firstSet`, which treats blank and whitespace as
+absent. It takes **values, not variable names**: `process.env[name]` is a
+computed lookup and defeats the static analysis Next.js uses to inline
+`NEXT_PUBLIC_*` into the browser bundle.

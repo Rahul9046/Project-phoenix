@@ -10,6 +10,16 @@
     "dev": "npm run dev --workspace @eraya/web",
     "build": "npm run build --workspace @eraya/web",
     "start": "npm run start --workspace @eraya/web",
-    "lint": "npm run lint --workspace @eraya/web"
+    "lint": "npm run lint --workspace @eraya/web",
+    "mobile": "npm run start --workspace @eraya/mobile",
+    "mobile:android": "npm run android --workspace @eraya/mobile",
+    "mobile:ios": "npm run ios --workspace @eraya/mobile",
+    "mobile:lint": "npm run lint --workspace @eraya/mobile",
+    "typecheck": "npm run typecheck --workspace @eraya/mobile && tsc --noEmit -p apps/web",
+    "demo:seed": "node scripts/demo-seed.mjs",
+    "demo:remove": "node scripts/demo-seed.mjs --remove",
+    "security": "node scripts/security-probe.mjs",
+    "auth:capacity": "node scripts/auth-capacity.mjs",
+    "config:push": "node scripts/supabase-config.mjs"
   }
 }

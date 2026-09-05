@@ -50,10 +50,11 @@ export async function createClient() {
 /**
  * A client that bypasses Row Level Security.
  *
- * Nothing in the member-facing application uses this, and nothing should — the
- * whole point of the RLS policies is that ordinary requests cannot overreach.
- * It exists for administrative work that has no session to run as, such as
- * reading the waitlist, and it is the only sanctioned way to do that.
+ * One caller: `deleteAccount`, which must reach `auth.users` and so cannot run
+ * under RLS. Everything else in the member-facing application runs as the
+ * signed-in member, and should — the whole point of the RLS policies is that
+ * ordinary requests cannot overreach. Adding a second caller deserves an
+ * argument, not a convenience.
  *
  * Server-only: importing this module from client code fails the build, and
  * `getServiceRoleKey` throws if it is somehow reached in a browser.

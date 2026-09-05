@@ -8,8 +8,26 @@ import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { navLinks } from "@/features/marketing/content";
 
-export function SiteHeader() {
+/**
+ * The public header, which now knows whether it is talking to a member.
+ *
+ * It used to show "Log in" and "Begin your journey" unconditionally. A signed-in
+ * member who reached the marketing site -- from "Not just yet" at the end of
+ * onboarding, from a footer link, or by typing the address -- was met with an
+ * invitation to log in, and reasonably concluded they had been logged out. They
+ * had not; the header simply had no idea who it was speaking to.
+ *
+ * The session is read in the layout and passed down, because this is a client
+ * component and must not fetch it itself.
+ */
+export function SiteHeader({
+  memberName,
+}: {
+  /** The signed-in member's first name, or null for a visitor. */
+  memberName?: string | null;
+}) {
   const [open, setOpen] = useState(false);
+  const signedIn = Boolean(memberName);
 
   // Keep the page behind the mobile menu from scrolling underneath it.
   useEffect(() => {
@@ -53,13 +71,28 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
-          <Link
-            href="/login"
-            className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
-          >
-            Log in
-          </Link>
-          <Button href="#begin">Begin your journey</Button>
+          {signedIn ? (
+            /*
+              Names the person, so the answer to "am I still logged in?" is on
+              screen rather than something to go and check.
+            */
+            <>
+              <span className="text-[0.95rem] text-ink-muted">
+                Signed in as {memberName}
+              </span>
+              <Button href="/home">My Eraya</Button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+              >
+                Log in
+              </Link>
+              <Button href="#begin">Begin your journey</Button>
+            </>
+          )}
         </div>
 
         <button
@@ -109,22 +142,22 @@ export function SiteHeader() {
                 ))}
                 <li>
                   <Link
-                    href="/login"
+                    href={signedIn ? "/account" : "/login"}
                     onClick={() => setOpen(false)}
                     className="block border-b border-line py-4 text-lg text-ink"
                   >
-                    Log in
+                    {signedIn ? "Your account" : "Log in"}
                   </Link>
                 </li>
               </ul>
             </nav>
             <Button
-              href="#begin"
+              href={signedIn ? "/home" : "#begin"}
               size="lg"
               className="mt-6 w-full"
               onClick={() => setOpen(false)}
             >
-              Begin your journey
+              {signedIn ? "My Eraya" : "Begin your journey"}
             </Button>
           </Container>
         </div>

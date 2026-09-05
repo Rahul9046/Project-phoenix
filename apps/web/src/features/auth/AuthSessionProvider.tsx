@@ -38,6 +38,7 @@ type AuthContextValue = {
   ready: boolean;
   signInWithSocial: (provider: SocialProviderId) => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
+  verifyEmailCode: (email: string, code: string) => Promise<void>;
   sendVerificationCode: (phone: PhoneNumber) => Promise<void>;
   /** Re-sends to the number already awaiting verification. */
   resendVerificationCode: () => Promise<void>;
@@ -109,6 +110,16 @@ export function AuthSessionProvider({
     [client],
   );
 
+  const verifyEmailCode = useCallback(
+    async (email: string, code: string) => {
+      await client.verifyEmailCode(email, code);
+      // The session cookie is set by the verification; the server components
+      // above this one still hold the signed-out render.
+      router.refresh();
+    },
+    [client, router],
+  );
+
   const sendVerificationCode = useCallback(
     async (phone: PhoneNumber) => {
       await client.sendVerificationCode(phone);
@@ -117,6 +128,13 @@ export function AuthSessionProvider({
     [client],
   );
 
+  /*
+   * No caller while phone verification is mocked -- the OTP screen dropped its
+   * resend control rather than offer a button that sends nothing. Kept because
+   * it is one half of the SMS seam described in
+   * features/auth/phone-verification.ts, and deleting it would only mean
+   * writing it again.
+   */
   const resendVerificationCode = useCallback(async () => {
     const phone = getPendingPhone();
     if (!phone) return;
@@ -146,6 +164,7 @@ export function AuthSessionProvider({
       ready,
       signInWithSocial,
       signInWithEmail,
+      verifyEmailCode,
       sendVerificationCode,
       resendVerificationCode,
       verifyCode,
@@ -156,6 +175,7 @@ export function AuthSessionProvider({
       ready,
       signInWithSocial,
       signInWithEmail,
+      verifyEmailCode,
       sendVerificationCode,
       resendVerificationCode,
       verifyCode,

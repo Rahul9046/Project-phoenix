@@ -16,16 +16,44 @@
  * Public project URL and key. Safe in the browser: the key identifies the
  * project, and Row Level Security — not secrecy — is what protects the data.
  */
+/**
+ * The first value that is actually set, treating blank as absent.
+ *
+ * Takes VALUES, not variable names. Passing names and doing `process.env[name]`
+ * is a computed lookup, which defeats the static analysis Next.js uses to inline
+ * `NEXT_PUBLIC_*` into the browser bundle -- they silently become undefined, and
+ * the whole client-side Supabase config disappears. The header comment above
+ * says exactly this; it is repeated here because this is where it is easy to get
+ * wrong.
+ *
+ * `??` is what this replaced, and why it existed as a bug: a variable declared
+ * but left empty -- `SUPABASE_SECRET_KEY=` on its own line, exactly what
+ * .env.example produces -- reads as `""`, not `undefined`. Nullish coalescing
+ * selects the empty string and never reaches the fallback, so a correctly-set
+ * fallback key is ignored and the app reports the variable as unset while
+ * looking straight at it.
+ *
+ * Whitespace counts as blank too: a trailing space after `=` is invisible in an
+ * editor and would otherwise be accepted as a key.
+ */
+function firstSet(...values: (string | undefined)[]): string | undefined {
+  for (const value of values) {
+    if (value && value.trim() !== "") return value.trim();
+  }
+  return undefined;
+}
+
 export function tryGetPublicSupabaseConfig(): {
   url: string;
   key: string;
 } | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = firstSet(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
   // Newer publishable key first, classic anon key as the fallback.
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = firstSet(
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
 
   return url && key ? { url, key } : null;
 }
@@ -47,10 +75,10 @@ export function getPublicSupabaseConfig(): { url: string; key: string } {
 /**
  * Server-only key that bypasses Row Level Security.
  *
- * Nothing in the current application needs it — every user-facing path runs as
- * the signed-in member under RLS, which is the point. It exists for
- * administrative work (reading the waitlist, back-office tooling) and is
- * deliberately awkward to reach.
+ * Exactly one thing needs it: deleting an account, which removes a row from
+ * `auth.users` and is therefore not something RLS can ever let a member do.
+ * Every other user-facing path runs as the signed-in member under RLS, which is
+ * the point. This is deliberately awkward to reach.
  *
  * Calling this from code that ends up in the browser bundle is a serious
  * mistake; the guard below turns it into an immediate, obvious error rather
@@ -63,8 +91,10 @@ export function getServiceRoleKey(): string {
     );
   }
 
-  const key =
-    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = firstSet(
+    process.env.SUPABASE_SECRET_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
 
   if (!key) {
     throw new Error(

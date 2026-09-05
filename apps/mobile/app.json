@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Eraya",
+    "slug": "eraya",
+    "scheme": "eraya",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FBF7F2",
+    "primaryColor": "#BD4F33",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.eraya.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "app.eraya.mobile",
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#BD4F33",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-image",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 148,
+          "resizeMode": "contain",
+          "backgroundColor": "#FBF7F2"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Eraya uses your photos so you can add one to your profile. Nothing is uploaded until you choose it."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "264ff5ce-fac6-44ac-812c-d3eb5ef1e156"
+      }
+    },
+    "owner": "logan9046"
+  }
+}

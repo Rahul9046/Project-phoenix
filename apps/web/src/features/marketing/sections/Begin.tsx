@@ -1,24 +1,41 @@
-import { BeginForm } from "@/features/marketing/sections/BeginForm";
+import { begin } from "@/features/marketing/content";
+import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { Section } from "@/shared/ui/Section";
 import { SectionHeading } from "@/shared/ui/SectionHeading";
-import { begin } from "@/features/marketing/content";
-import { getActiveCities } from "@/shared/data/reference";
 
-export async function Begin() {
-  // The same list the signup flow uses, so the landing form can never offer a
-  // city the server would then reject.
-  const cities = await getActiveCities();
-
+/**
+ * The closing invitation.
+ *
+ * Previously a waitlist form. Registration is open across India now, so asking
+ * for an email address in order to tell someone when they can join is asking
+ * them to wait for something already available.
+ */
+export function Begin() {
   return (
     <Section id="begin">
-      <Container className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start lg:gap-20">
-        <SectionHeading
-          eyebrow={begin.eyebrow}
-          title={begin.title}
-          lede={begin.lede}
-        />
-        <BeginForm cities={cities.map((city) => city.name)} />
+      <Container>
+        <div className="mx-auto max-w-2xl text-center">
+          <SectionHeading
+            eyebrow={begin.eyebrow}
+            title={begin.title}
+            lede={begin.lede}
+            align="center"
+          />
+
+          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button href={begin.cta.href} size="lg">
+              {begin.cta.label}
+            </Button>
+            <Button href={begin.secondary.href} variant="secondary" size="lg">
+              {begin.secondary.label}
+            </Button>
+          </div>
+
+          <p className="mt-8 text-sm leading-relaxed text-ink-subtle">
+            {begin.reassurance}
+          </p>
+        </div>
       </Container>
     </Section>
   );

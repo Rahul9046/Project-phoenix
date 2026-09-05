@@ -2,23 +2,29 @@
 
 import Link from "next/link";
 
-import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
 import { StartOverLink } from "@/features/auth/components/StartOverLink";
-import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
-import { WebAppNote } from "@/features/auth/components/WebAppNote";
+import { primaryButtonClasses } from "@/shared/ui/PrimaryButton";
 import { secondaryButtonClasses } from "@/shared/ui/SecondaryButton";
 import { completeStep } from "@/features/auth/content";
+import { appRoutes } from "@/features/app-shell/nav";
 import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
+import { ErayaMark } from "@/shared/brand/Logo";
 
 /**
- * The handover out of signup.
+ * The end of signup.
  *
- * Profile building itself is not part of this task, so the primary action is
- * honest about being a boundary rather than pretending to open a screen that
- * does not exist yet.
+ * Given more room and less furniture than any other screen in the flow: no
+ * progress marks, no back link, no "account created" receipt. Someone has just
+ * answered questions about a divorce or a death in order to try again, and the
+ * moment is worth a breath.
+ *
+ * The mark appears here at a size it takes nowhere else in the product. It is
+ * the approved lockup exactly as supplied — rounded square, solid ground, no
+ * surrounding circle — used once, where the phoenix actually means what the page
+ * is saying, rather than sprinkled through the app as decoration.
  */
 export function CompleteScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.complete);
@@ -27,36 +33,43 @@ export function CompleteScreen() {
   const firstName = session.profile.firstName;
 
   return (
-    <AuthLayout footer={<WebAppNote />}>
-      <SuccessMessage className="mb-7 justify-start">
-        Account created
-      </SuccessMessage>
+    <AuthLayout>
+      <div className="animate-rise text-center">
+        <div className="flex justify-center">
+          <ErayaMark className="h-20 w-20" />
+        </div>
 
-      <AuthHeader
-        title={
-          firstName ? `You're all set, ${firstName}.` : completeStep.title
-        }
-        lede={completeStep.lede}
-        showLogo={false}
-      />
+        <p className="mt-8 text-xs font-medium uppercase tracking-[0.22em] text-ember-text">
+          {completeStep.eyebrow}
+        </p>
 
-      <div className="mt-9 grid gap-3">
-        {/*
-          Profile setup is the next phase of work and has no route yet. Rather
-          than link to a 404, this returns to Eraya — and the button will point
-          at the profile builder the moment it exists.
-        */}
+        <h1 className="mt-5 text-heading text-ink">
+          {firstName
+            ? `You're ready, ${firstName}.`
+            : completeStep.title}
+        </h1>
+
+        <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-ink-muted">
+          {completeStep.lede}
+        </p>
+      </div>
+
+      {/*
+        Two ways forward, and "not just yet" is a real one. A completion screen
+        with a single insistent button treats leaving as a failure state; this is
+        a product whose whole claim is that nothing is urgent.
+      */}
+      <div className="mt-11 grid gap-3">
+        <Link href={appRoutes.home} className={`${primaryButtonClasses} w-full`}>
+          {completeStep.cta}
+        </Link>
+
         <Link href="/" className={`${secondaryButtonClasses} w-full`}>
           {completeStep.secondaryCta}
         </Link>
       </div>
 
-      {/*
-        Without this, a finished account is a one-way door: every entry screen
-        redirects a signed-in person back here, so there would be no way to
-        sign in as anyone else.
-      */}
-      <p className="mt-8 text-center text-[0.95rem] text-ink-muted">
+      <p className="mt-9 text-center text-[0.95rem] text-ink-subtle">
         Not {firstName ?? "you"}? <StartOverLink label="Sign out" />
       </p>
     </AuthLayout>
