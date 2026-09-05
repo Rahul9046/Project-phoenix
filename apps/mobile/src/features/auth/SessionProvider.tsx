@@ -150,12 +150,37 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (!row) {
         /*
-         * A signed-in user with no profile row is possible for a moment: the
-         * row is created by a trigger on `auth.users`, and a first sign-in can
-         * outrun it. Treat it as the earliest stage rather than as an error --
-         * the person lands on the first onboarding screen, which is where they
-         * belong anyway.
+         * No row has two causes, and they need opposite answers.
+         *
+         * The benign one is a race: the row is created by a trigger on
+         * `auth.users`, and a first sign-in can outrun it. Treat that as the
+         * earliest stage -- the person lands on the first onboarding screen,
+         * which is where they belong anyway.
+         *
+         * The other is that the account is gone: deleted from the dashboard, or
+         * closed by the member on another device. The token on this phone still
+         * looks valid, because nothing has asked the server about it --
+         * `getSession` reads what is stored locally and never checks. The row is
+         * missing for the plainest possible reason, and it is not coming.
+         *
+         * Treating both as the race is what trapped a deleted account on the
+         * first onboarding screen, which has no back control, on every launch,
+         * with no way to reach sign-in again.
+         *
+         * `getUser` is the one question only the server can answer. It fails for
+         * a deleted account and for a revoked token, and the correct response to
+         * that is to end the session rather than to start onboarding.
          */
+        const { data: whoami, error: whoamiError } = await supabase.auth.getUser();
+
+        if (whoamiError || !whoami?.user) {
+          if (ticket !== requestId.current) return null;
+          await supabase.auth.signOut();
+          // The auth listener clears the session and the profile from here, and
+          // the entry screen sends them to sign-in.
+          return null;
+        }
+
         const fallback: ProfileSnapshot = {
           id: activeSession.user.id,
           email: activeSession.user.email ?? null,

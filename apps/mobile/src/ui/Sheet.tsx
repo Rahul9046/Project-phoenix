@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Modal,
   Platform,
@@ -45,6 +45,40 @@ export function BottomSheet({
   maxHeightRatio?: number;
 }) {
   const insets = useSafeAreaInsets();
+
+  /*
+   * Mounted only while it is needed.
+   *
+   * `<Modal visible={false}>` is not free: it still creates a native host view,
+   * and Android's new renderer has to attach that view to a parent that may be
+   * mid-transition -- every onboarding step is pushed with a slide animation,
+   * and the first one someone reaches after signing in carries this sheet for
+   * the country code. Mounting a modal into a subtree that is still being
+   * inserted is a known way to get:
+   *
+   *   addViewAt: failed to insert view into parent
+   *   Caused by: The specified child already has a parent
+   *
+   * A closed sheet draws nothing, so there is nothing to keep mounted for.
+   *
+   * The unmount is delayed rather than immediate so the slide-out still plays;
+   * dropping the modal the instant `visible` goes false would make every sheet
+   * vanish rather than close.
+   */
+  const [mounted, setMounted] = useState(visible);
+
+  // Opening is immediate, and adjusting state during render is the supported
+  // way to do that -- an effect would mount a frame late and the sheet would
+  // visibly stutter on the way in.
+  if (visible && !mounted) setMounted(true);
+
+  useEffect(() => {
+    if (visible) return;
+    const timer = setTimeout(() => setMounted(false), 240);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  if (!mounted) return null;
 
   return (
     <Modal
