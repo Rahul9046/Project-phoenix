@@ -129,12 +129,25 @@ while believing otherwise.
    Supabase session and never will. The signature is the authentication:
 
 ```
-supabase functions deploy payments-webhook --no-verify-jwt
-supabase functions deploy payments-create-order payments-verify payments-checkout
+supabase functions deploy payments-webhook   --no-verify-jwt
+supabase functions deploy payments-checkout  --no-verify-jwt
+supabase functions deploy payments-create-order payments-verify
 ```
 
-`payments-checkout` also runs without a JWT: it is a page a browser opens, and
-it holds no secret, decides no price and proves nothing.
+**Two of the four take no JWT, and both must be deployed with the flag.**
+
+`payments-webhook` because Razorpay has no Supabase session and never will --
+its signature is the authentication.
+
+`payments-checkout` because it is a page the system browser opens during a
+mobile purchase, and a browser has no session to present either. Deployed with
+verification on, the gateway answers `UNAUTHORIZED_NO_AUTH_HEADER` and every
+mobile payment dies at the checkout screen. It is safe to expose: it holds no
+secret, decides no price and proves nothing, and the order id it carries buys
+nothing on its own.
+
+The other two are called by a signed-in client through `functions.invoke`, which
+sends the member's token, and they need it -- an order must belong to somebody.
 
 ## Refunds
 
