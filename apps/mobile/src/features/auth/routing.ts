@@ -39,6 +39,10 @@ export const routes = {
   connections: "/(tabs)/connections",
   messages: "/(tabs)/messages",
   you: "/(tabs)/you",
+
+  membership: "/you/membership",
+  /** Where Razorpay checkout hands back. See app/payment.tsx. */
+  paymentReturn: "/payment",
 } as const;
 
 /**

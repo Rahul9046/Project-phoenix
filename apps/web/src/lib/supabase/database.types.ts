@@ -718,6 +718,16 @@ export type Database = {
           paid_at: string | null
         }[]
       }
+      record_product_event: {
+        Args: {
+          event_name: string
+          plan_code?: string | null
+          amount_paise?: number | null
+          intro_offer_applied?: boolean | null
+          platform?: string | null
+        }
+        Returns: undefined
+      }
       record_auth_event: {
         Args: {
           event_name: string
