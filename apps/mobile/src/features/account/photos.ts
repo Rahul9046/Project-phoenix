@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { File } from "expo-file-system";
 
 import { supabase } from "@/lib/supabase/client";
 
@@ -112,13 +113,30 @@ export async function addPhotos(
    */
     const path = `${me}/${Date.now()}-${position}.jpg`;
 
-    const body = await fetch(processed.uri).then((response) => response.blob());
+    /*
+     * Bytes, not a Blob.
+     *
+     * This read the file with `fetch(uri).blob()`, which is the web answer and
+     * does not survive the crossing: React Native's Blob is a handle to native
+     * data rather than the bytes themselves, so what reached storage was a body
+     * the API would not take. Every upload failed with "That photo did not
+     * upload. Please check your connection", which reads like a network problem
+     * and never was one.
+     *
+     * `File` from expo-file-system hands over an ArrayBuffer that can actually
+     * be sent.
+     */
+    const body = await new File(processed.uri).arrayBuffer();
 
     const { error: uploadError } = await supabase.storage
       .from("profile-photos")
       .upload(path, body, { contentType: "image/jpeg", upsert: false });
 
     if (uploadError) {
+      // The person gets a sentence they can act on. The reason itself is worth
+      // having when somebody asks why their photo would not go on, and it took
+      // a round trip through a probe to find out last time.
+      console.warn("[eraya] photo upload failed:", uploadError.message);
       return paths.length > 0
         ? { ok: true, paths }
         : {

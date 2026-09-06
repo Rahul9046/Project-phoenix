@@ -60,8 +60,23 @@ export default function Welcome() {
     };
   }, [refresh]);
 
-  function enter() {
+  /*
+   * Wait for the stage to be written before leaving.
+   *
+   * The effect above starts that write on arrival, and this used to navigate
+   * regardless -- so anybody who read the sentence quickly reached the tab bar
+   * before their profile said they had finished. The guard there sends an
+   * unfinished profile back where it belongs, which is this screen. The result
+   * was this page twice, and it looked like the app had lost its place.
+   *
+   * Awaited here rather than disabling the button: the write has almost always
+   * landed by the time anybody presses, and on a slow connection a button that
+   * spins briefly is better than one that cannot be pressed at all.
+   */
+  async function enter() {
     setPending(true);
+    await completeOnboarding();
+    await refresh();
     router.replace(routes.home);
   }
 
@@ -104,7 +119,7 @@ export default function Welcome() {
 
       <Button
         label="Take a look"
-        onPress={enter}
+        onPress={() => void enter()}
         loading={pending}
         style={{ marginTop: space.region, alignSelf: "stretch" }}
       />
