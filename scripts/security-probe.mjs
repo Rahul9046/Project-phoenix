@@ -581,14 +581,27 @@ for (const fn of ["membership_catalogue", "my_membership", "my_payments"]) {
 }
 
 {
-  const { status } = await request(meera.token, `subscriptions?profile_id=eq.${meera.id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ current_period_end: "2099-01-01T00:00:00Z" }),
-  });
+  /*
+   * An update refused by RLS is not an error.
+   *
+   * With no update policy the rows are invisible to the write rather than
+   * rejected, so PostgREST matches nothing and answers 200 with an empty array.
+   * A status check would read that as a failure to refuse; what has to be
+   * asserted is that nothing changed.
+   */
+  const { status, body } = await request(
+    meera.token,
+    `subscriptions?profile_id=eq.${meera.id}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ current_period_end: "2099-01-01T00:00:00Z" }),
+    },
+  );
   check(
     "a member cannot extend their own membership",
-    status >= 400,
-    `status ${status}`,
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
   );
 }
 

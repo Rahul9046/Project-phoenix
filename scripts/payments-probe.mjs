@@ -185,8 +185,12 @@ check("a duplicate settlement is a no-op", again.data?.outcome === "already_paid
 }
 
 {
-  const firstClaim = await rpc("claim_payment_event", { p_event_id: "evt_probe_1", p_event_type: "payment.captured" });
-  const secondClaim = await rpc("claim_payment_event", { p_event_id: "evt_probe_1", p_event_type: "payment.captured" });
+  // Unique per run: `payment_events` is keyed on the provider's id and is not
+  // tied to an account, so it survives the cleanup below -- a fixed id would
+  // make the first run pass and every run after it fail.
+  const eventId = `evt_probe_${Date.now()}`;
+  const firstClaim = await rpc("claim_payment_event", { p_event_id: eventId, p_event_type: "payment.captured" });
+  const secondClaim = await rpc("claim_payment_event", { p_event_id: eventId, p_event_type: "payment.captured" });
   check("a webhook delivery is claimed once", firstClaim.data === true, JSON.stringify(firstClaim.data));
   check("and a retry of it is refused", !secondClaim.data, JSON.stringify(secondClaim.data));
 }
@@ -244,12 +248,21 @@ console.log("\nExpiry");
 // ---------------------------------------------------------------------------
 
 {
-  // Wind the term back by hand -- the only way to see what tomorrow looks like.
-  await fetch(`${url}/rest/v1/subscriptions?profile_id=eq.${me}`, {
+  /*
+   * Wind the whole term into the past -- the only way to see what tomorrow
+   * looks like. Both ends move: `subscriptions_period_order` requires the end
+   * to be after the start, so dragging the end back alone is rejected and the
+   * term silently stays where it was.
+   */
+  const wound = await fetch(`${url}/rest/v1/subscriptions?profile_id=eq.${me}`, {
     method: "PATCH",
-    headers: { ...svc, Prefer: "return=minimal" },
-    body: JSON.stringify({ current_period_end: new Date(Date.now() - 86400000).toISOString() }),
+    headers: { ...svc, Prefer: "return=representation" },
+    body: JSON.stringify({
+      current_period_start: new Date(Date.now() - 60 * 86400000).toISOString(),
+      current_period_end: new Date(Date.now() - 86400000).toISOString(),
+    }),
   });
+  check("the term can be wound back for the test", wound.ok, `status ${wound.status}: ${(await wound.text()).slice(0, 120)}`);
 
   const { data } = await rpc("my_membership", {}, asMember);
   check(
