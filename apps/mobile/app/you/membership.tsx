@@ -80,7 +80,9 @@ type Outcome =
   | { kind: "paid"; until: string | null }
   | { kind: "processing" }
   | { kind: "cancelled" }
-  | { kind: "failed" };
+  | { kind: "failed" }
+  /** Ours went wrong, not their bank's. See `PurchaseOutcome.unconfirmed`. */
+  | { kind: "unconfirmed" };
 
 export default function MembershipScreen() {
   const [plans, setPlans] = useState<Plan[] | null>(null);
@@ -152,6 +154,19 @@ export default function MembershipScreen() {
       // screen refreshes from the server rather than deciding for itself.
       setOutcome({ kind: "processing" });
       await load();
+      return;
+    }
+
+    /*
+     * Not a decline, and not something to record as one.
+     *
+     * `unconfirmed` is a fault of ours and `unavailable` means the checkout
+     * never opened; counting either as `payment_failed` would put Eraya's own
+     * bugs into the funnel as customers whose payments were refused, which is
+     * the number most likely to be read as "the provider is losing us money".
+     */
+    if (result.status === "unconfirmed" || result.status === "unavailable") {
+      setOutcome({ kind: "unconfirmed" });
       return;
     }
 
@@ -337,6 +352,12 @@ function OutcomeNote({ outcome }: { outcome: Outcome }) {
       tone: colors.danger,
       title: "That payment did not go through",
       body: "Please try again. If money has left your account, it will be confirmed here automatically.",
+    },
+    unconfirmed: {
+      icon: "help-circle-outline" as const,
+      tone: colors.inkMuted,
+      title: "We could not confirm this payment",
+      body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to hello@eraya.app and we will sort it out.",
     },
   }[outcome.kind];
 

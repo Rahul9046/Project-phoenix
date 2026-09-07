@@ -100,8 +100,49 @@ Deno.serve(async (request) => {
     const captured = found.payments.find((p) => p.status === "captured");
 
     if (!captured) {
-      const failed = found.payments.some((p) => p.status === "failed");
-      return json({ status: failed ? "failed" : "pending" });
+      const declined = found.payments.find((p) => p.status === "failed");
+
+      // Nothing captured and nothing declined: the order is still moving.
+      if (!declined) return json({ status: "pending" });
+
+      /*
+       * Record the decline rather than only reporting it.
+       *
+       * This branch used to return `failed` and stop, which left the row at
+       * `created` for ever -- the member's own payment history showed an
+       * attempt that never resolved, and nothing on this side knew a decline
+       * had happened, so there was nothing to answer a support question with.
+       *
+       * `settle_payment` refuses to touch a row that is already `paid`, so a
+       * webhook that lands between the fetch above and this call still wins.
+       */
+      await db.rpc("settle_payment", {
+        p_order_id: orderId,
+        p_provider_payment_id: declined.id ? String(declined.id) : null,
+        p_status: "failed",
+      });
+
+      /*
+       * The provider's reason, in the log and nowhere else.
+       *
+       * What the member reads is decided in the client and deliberately does
+       * not quote Razorpay -- a bank's wording is not ours to put in somebody's
+       * mouth. But a decline nobody can explain afterwards turns into a support
+       * conversation with no evidence in it, and the first question is always
+       * "why". These fields describe the transaction, not the person: no name,
+       * no card, no contact details.
+       */
+      log("payment_declined", {
+        payment_id: declined.id ? String(declined.id) : null,
+        error_code: declined.error_code ? String(declined.error_code) : null,
+        error_step: declined.error_step ? String(declined.error_step) : null,
+        error_reason: declined.error_reason ? String(declined.error_reason) : null,
+        error_description: declined.error_description
+          ? String(declined.error_description)
+          : null,
+      });
+
+      return json({ status: "failed" });
     }
 
     confirmedPaymentId = String(captured.id ?? "");

@@ -74,6 +74,14 @@ export type PurchaseOutcome =
   | { status: "processing" }
   | { status: "cancelled" }
   | { status: "failed" }
+  /**
+   * We could not work out what happened, and the reason is ours rather than
+   * the bank's -- an order the server does not recognise, a signature that did
+   * not check out, a status this build has never heard of. Distinct from
+   * `failed` because calling it a decline invents a reason, and distinct from
+   * `unavailable` because the network was fine and money may well have moved.
+   */
+  | { status: "unconfirmed" }
   | { status: "unavailable" };
 
 const rupeesFormatter = new Intl.NumberFormat("en-IN", {
@@ -228,19 +236,46 @@ export async function reconcile(
 
   if (!checked) return { status: "processing" };
 
-  if (checked.status === "paid") {
-    return { status: "paid", membership: asMembership(checked.membership) };
+  switch (checked.status) {
+    case "paid":
+      return { status: "paid", membership: asMembership(checked.membership) };
+
+    // Razorpay has a declined payment against this order and no captured one.
+    case "failed":
+      return { status: "failed" };
+
+    case "cancelled":
+      return { status: "cancelled" };
+
+    // Nothing captured against the order yet. If the person closed the sheet
+    // themselves, that is a cancellation; otherwise it is still moving.
+    case "pending":
+      return options.assumeCancelled
+        ? { status: "cancelled" }
+        : { status: "processing" };
+
+    /*
+     * Our fault, not the bank's.
+     *
+     * `unknown_order` means the server has no such order for this member;
+     * `invalid_signature` means what came back did not check out. Both arrive
+     * as HTTP 200, so both used to fall through to `failed` below -- which told
+     * somebody their bank had declined a payment their bank may well have
+     * taken, and told them nothing was charged when we did not know that.
+     */
+    case "unknown_order":
+    case "invalid_signature":
+      return { status: "unconfirmed" };
+
+    /*
+     * A status this build does not know -- a newer server, or one of
+     * `settle_payment`'s own outcomes passed straight through. Guessing
+     * "declined" would invent a reason and guessing "cancelled" would invent a
+     * fact, so it says neither.
+     */
+    default:
+      return { status: "unconfirmed" };
   }
-
-  if (checked.status === "failed") return { status: "failed" };
-
-  // Razorpay has no captured payment against this order. If the person closed
-  // the sheet themselves, that is a cancellation; otherwise it is still moving.
-  if (checked.status === "pending") {
-    return options.assumeCancelled ? { status: "cancelled" } : { status: "processing" };
-  }
-
-  return { status: "failed" };
 }
 
 function asMembership(value: unknown): Membership {
