@@ -1,11 +1,8 @@
 import { membershipCopy } from "@/features/account/content";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
-import {
-  formatPeriod,
-  formatRenewalDate,
-  formatRupees,
-} from "@/features/membership/format";
-import { loadMembership, loadPlans } from "@/features/membership/entitlements";
+import { formatRenewalDate } from "@/features/membership/format";
+import { loadMembership } from "@/features/membership/entitlements";
+import { PremiumCheckout } from "@/features/membership/PremiumCheckout";
 
 export const metadata = { title: "Membership" };
 
@@ -13,15 +10,19 @@ export const metadata = { title: "Membership" };
  * What the member has, and what Premium would add.
  *
  * Prices come from the database, never from a constant in here, so the
- * catalogue has one home. Nothing on this page can take money: no payment
- * provider is configured, and a button that appeared to charge and did not
- * would be worse than saying so plainly.
+ * catalogue has one home -- and the checkout below asks for them again from the
+ * browser, because the introductory price depends on who is asking and a server
+ * render cached for everybody would be wrong for exactly the people it matters
+ * to.
+ *
+ * The purchase itself is a client island. Everything around it stays a server
+ * component: entitlements are read where they cannot be tampered with, and only
+ * the part that has to talk to a payment sheet runs in the browser.
  */
 export default async function MembershipPage() {
-  const [membership, plans] = await Promise.all([
-    loadMembership(),
-    loadPlans(),
-  ]);
+  // The catalogue is fetched by the checkout island instead: its prices depend
+  // on who is asking, and this render is shared.
+  const membership = await loadMembership();
 
   const { entitlements, subscription } = membership;
   const isPremium = membership.tier === "premium";
@@ -123,52 +124,11 @@ export default async function MembershipPage() {
             {membershipCopy.plansLede}
           </p>
 
-          <ul className="mt-5 grid gap-3">
-            {plans.map((plan) => {
-              const hasIntro =
-                plan.introPricePaise !== null && plan.introPeriodMonths !== null;
-
-              return (
-                <li
-                  key={plan.id}
-                  className="rounded-xl border border-line px-4 py-4 sm:px-5"
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <span className="font-medium text-ink">{plan.name}</span>
-                    <span className="text-name text-ink">
-                      {formatRupees(
-                        hasIntro ? plan.introPricePaise! : plan.pricePaise,
-                      )}
-                    </span>
-                  </div>
-
-                  {/*
-                    The renewal price is stated next to the introductory one,
-                    never after a click. Someone must be able to see what they
-                    will pay in month two before they agree to month one.
-                  */}
-                  <p className="mt-1.5 text-sm leading-relaxed text-ink-subtle">
-                    {hasIntro
-                      ? membershipCopy.renewalNote(
-                          formatRupees(plan.introPricePaise!),
-                          formatRupees(plan.pricePaise),
-                        )
-                      : membershipCopy.oneOffNote(
-                          formatRupees(plan.pricePaise),
-                          formatPeriod(plan.periodMonths),
-                        )}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-5">
+            <PremiumCheckout premium={isPremium} />
+          </div>
         </Panel>
 
-        <Panel title={membershipCopy.paymentsUnavailableTitle}>
-          <p className="mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-ink-muted">
-            {membershipCopy.paymentsUnavailableBody}
-          </p>
-        </Panel>
       </div>
     </AppPage>
   );

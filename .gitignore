@@ -51,3 +51,12 @@ apps/web/public/__*
 # The folder's instructions are tracked; the images are not.
 scripts/demo-photos/*
 !scripts/demo-photos/README.md
+
+# Dropped at the repository root by running Expo from here, which is how the
+# root scripts start the app (`npm run mobile`). `apps/mobile/.gitignore`
+# already covers the copies inside the app; these are the stray ones.
+# `devices.json` is this machine's simulator list, and the root `tsconfig.json`
+# is a stub extending `expo/tsconfig.base` -- neither describes the monorepo,
+# whose real configs live in `apps/web` and `apps/mobile`.
+/.expo/
+/tsconfig.json

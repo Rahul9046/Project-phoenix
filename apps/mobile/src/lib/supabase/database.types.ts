@@ -690,6 +690,44 @@ export type Database = {
         }[]
       }
       delete_my_account: { Args: never; Returns: undefined }
+      membership_catalogue: {
+        Args: never
+        Returns: {
+          code: string
+          name: string
+          description: string | null
+          period_months: number
+          price_paise: number
+          standard_price_paise: number
+          intro_applies: boolean
+          currency: string
+        }[]
+      }
+      my_membership: { Args: never; Returns: Json }
+      my_payments: {
+        Args: never
+        Returns: {
+          id: string
+          plan_name: string
+          period_months: number
+          amount_paise: number
+          currency: string
+          status: string
+          intro_offer_applied: boolean
+          created_at: string
+          paid_at: string | null
+        }[]
+      }
+      record_product_event: {
+        Args: {
+          event_name: string
+          plan_code?: string | null
+          amount_paise?: number | null
+          intro_offer_applied?: boolean | null
+          platform?: string | null
+        }
+        Returns: undefined
+      }
       record_auth_event: {
         Args: {
           event_name: string
