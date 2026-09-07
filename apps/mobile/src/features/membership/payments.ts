@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase/client";
  * The shape of a purchase:
  *
  *   ask the server to create an order   (it picks the price)
- *   open Razorpay's own checkout        (in the browser, not in a screen we drew)
+ *   open the website's /checkout page   (in the browser, not in a screen we drew)
  *   hand what comes back to the server  (it checks the signature)
  *   read the membership the server now reports
  *
@@ -158,7 +158,7 @@ export async function purchase(planCode: string): Promise<PurchaseOutcome> {
   }
 
   const url =
-    `${supabaseUrl()}/functions/v1/payments-checkout` +
+    `${siteUrl()}/checkout` +
     `?order_id=${encodeURIComponent(created.orderId)}` +
     `&key_id=${encodeURIComponent(created.keyId)}` +
     `&plan=${encodeURIComponent(created.planName ?? "Eraya Premium")}`;
@@ -255,8 +255,22 @@ function asMembership(value: unknown): Membership {
   };
 }
 
-function supabaseUrl(): string {
-  return process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+/**
+ * Where the checkout page lives.
+ *
+ * The website, not an edge function. Supabase serves HTML returned from a
+ * function on the shared `*.supabase.co` domain as `text/plain` under a
+ * `sandbox` CSP, so a checkout page hosted there arrives as source text and
+ * never runs -- the hardening is the platform's, and no header this end can
+ * undo it. The web app has a domain that may serve HTML, and serves this page
+ * at `/checkout`.
+ *
+ * Read as a whole expression, never as `process.env[name]`: Expo inlines these
+ * by matching the literal text during the build, and a computed lookup yields
+ * undefined in a release build while working perfectly in development.
+ */
+function siteUrl(): string {
+  return process.env.EXPO_PUBLIC_SITE_URL ?? "";
 }
 
 async function invoke<T>(

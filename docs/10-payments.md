@@ -50,6 +50,27 @@ settle_payment             marks paid, extends the term — once, ever
 `payments-webhook` runs the same settlement independently, and is the path that
 does not depend on anybody still holding a phone.
 
+### Where the checkout page lives
+
+The website runs Razorpay inside its membership screen: it already has the
+session and never needs to leave the page. The app has no native Razorpay module
+on purpose, so it opens a browser instead -- at
+`apps/web/src/app/checkout/page.tsx`, which opens the sheet and hands the result
+back to `eraya://payment`.
+
+That page was an edge function once. It cannot be: HTML returned from a function
+on the shared `*.supabase.co` domain is served as `text/plain` under a
+`default-src 'none'; sandbox` CSP, injected by the platform after the function
+returns, so the page arrives as source text and no script on it runs. The
+`Content-Type` set in the handler is discarded while its other headers survive,
+which is how to recognise this from the outside. Only a domain that may serve
+HTML can host it, so a custom domain on the functions would work too -- hosting
+it on the site the product already has costs nothing extra.
+
+It holds no secret, decides no price and proves nothing, and needs no session:
+the order id it carries was created and priced by the server for a member who
+was authenticated at the time, and buys nothing on its own.
+
 ### What the client is never trusted with
 
 - **The amount.** A client sends a plan code. An order asking to pay ₹1 for
@@ -130,21 +151,16 @@ while believing otherwise.
 
 ```
 supabase functions deploy payments-webhook   --no-verify-jwt
-supabase functions deploy payments-checkout  --no-verify-jwt
 supabase functions deploy payments-create-order payments-verify
 ```
 
-**Two of the four take no JWT, and both must be deployed with the flag.**
+**One of the three takes no JWT, and it must be deployed with the flag.**
+`config.toml` carries no per-function settings, so a plain deploy applies the
+default and turns verification back on -- a successful-looking deploy that
+breaks payments, the same trap `npm run config:push` exists to prevent.
 
 `payments-webhook` because Razorpay has no Supabase session and never will --
 its signature is the authentication.
-
-`payments-checkout` because it is a page the system browser opens during a
-mobile purchase, and a browser has no session to present either. Deployed with
-verification on, the gateway answers `UNAUTHORIZED_NO_AUTH_HEADER` and every
-mobile payment dies at the checkout screen. It is safe to expose: it holds no
-secret, decides no price and proves nothing, and the order id it carries buys
-nothing on its own.
 
 The other two are called by a signed-in client through `functions.invoke`, which
 sends the member's token, and they need it -- an order must belong to somebody.
