@@ -115,11 +115,25 @@ means horizontal overflow cannot occur.
 `eraya.app` and the product are not the same thing, and confusing them is the
 easy mistake here.
 
+The decided structure:
+
 | Address | What answers it | Where it lives |
 | --- | --- | --- |
-| `www.eraya.app` | A static holding page saying the product is coming soon | `Rahul9046/eraya-site`, served by GitHub Pages |
-| `eraya.app` | A 301 to `www` | GoDaddy domain forwarding |
-| `app.eraya.app` | This app, once deployed. Not live yet | intended: a host serving `apps/web` |
+| `eraya.app` | The public holding page. Canonical | `Rahul9046/eraya-site`, GitHub Pages |
+| `www.eraya.app` | A 301 to `eraya.app` | GitHub Pages, automatically |
+| `app.eraya.app` | This app | a host serving `apps/web` |
+
+**Today it is the other way round.** `www` serves the page and the apex forwards
+to it, because the apex is not yet ours to point — see below. Reversing it is a
+DNS and `CNAME`-file change, not a code change, and the two must happen
+together or the site breaks in the gap.
+
+The `www` redirect needs no application and no third party. GitHub Pages issues
+it: when the custom domain is the apex and a `www` CNAME points at
+`rahul9046.github.io`, GitHub answers `www` with a 301 to the apex and covers
+both with the same certificate. The GoDaddy forwarding rule that currently sends
+the apex to `www` must be deleted at the same time, or the two redirects point
+at each other.
 
 **The holding page is not in this repository.** It is three static files —
 markup, the approved mark, and a `CNAME` — in a separate repo, deliberately: it
@@ -128,13 +142,17 @@ holding the door for, and the cheapest way to guarantee that is to give it
 nothing to depend on. The cost is that its palette is transcribed from
 [02-brand.md](02-brand.md) rather than imported, so a rebrand will not reach it.
 
-**Why `www` and not the bare domain.** A GoDaddy Airo "Coming Soon" site was
-auto-generated on `eraya.app` at registration and holds the apex. While it does,
-GoDaddy's DNS editor refuses any manual `@` A record — it fails with "Invalid
-data provided for record data", which reads like a typo and is not one. Records
-for any other name save normally, which is how it was isolated. Disconnecting
-the Airo site (Domain → Products) frees the apex; until then, `www` is the real
-host and the apex forwards to it.
+**What blocks the apex.** A GoDaddy Airo "Coming Soon" site was auto-generated on
+`eraya.app` at registration and holds the apex. While it does, GoDaddy's DNS
+editor refuses any manual `@` A record — it fails with "Invalid data provided for
+record data", which reads like a typo and is not one. Records for any other name
+save normally, which is how it was isolated: a throwaway `test` A record saved
+without complaint while `@` would not.
+
+Disconnecting the Airo site (Domain → Products) frees the apex. Until somebody
+does, `eraya.app` cannot serve anything and the structure above cannot be built.
+`app.eraya.app` is unaffected — it is not the apex, so its record saves
+normally.
 
 `.app` is on the HSTS preload list, so there is no plain-HTTP fallback for any
 of these. A certificate that has not been issued yet is a hard block in the
@@ -156,12 +174,38 @@ SUPABASE_SECRET_KEY             server only, never NEXT_PUBLIC_
 ```
 
 Razorpay, MSG91 and SMTP values do **not** belong here; they are Supabase edge
-function secrets.
+function secrets. Nothing secret is ever prefixed `NEXT_PUBLIC_`: that prefix is
+what puts a value into the browser bundle.
 
-Order matters. Deploy, point the subdomain at it, confirm it loads, and only
-then run `npm run config:push` — `supabase/config.toml` names `app.eraya.app` as
-the auth `site_url`, and pushing that before the domain resolves means sign-in
-emails link to nothing.
+`NEXT_PUBLIC_ALLOW_INDEXING` is deliberately **not** set, so the deployment is
+`noindex`. See below.
+
+### Not Vercel, on the free tier
+
+Vercel's Hobby plan forbids commercial use, and its own fair-use guidance names
+processing payments as an example. Eraya charges for Premium, so a Hobby
+deployment would be a terms violation from the first day regardless of how few
+people are using it. Commercial use starts at Pro, $20/month.
+
+**Netlify's free plan permits commercial use explicitly**, including a paying
+product, within its quota — currently 100 GB bandwidth, 300 build minutes and
+125,000 function invocations a month. It runs Next.js natively with no adapter,
+which matters here: the production build is dynamic on nearly every route and
+carries middleware, so this cannot be hosted as static files.
+
+Cloudflare Workers is the other free option that allows commercial use, and the
+`@opennextjs/cloudflare` adapter supports Next.js 16 — but it is an adapter and a
+build change, which is more to go wrong for the same result. Worth revisiting if
+Netlify's quota becomes the constraint.
+
+`netlify.toml` at the repository root carries the monorepo build settings.
+
+### Order of operations
+
+Deploy, point the subdomain at it, confirm it loads over HTTPS, and only then run
+`npm run config:push` — `supabase/config.toml` names `app.eraya.app` as the auth
+`site_url`, and pushing that before the domain resolves means sign-in emails link
+to nothing.
 
 ### Indexing is opt-in
 
