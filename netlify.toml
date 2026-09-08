@@ -1,4 +1,4 @@
-# Deployment settings for the Eraya web app at app.eraya.app.
+# Deployment settings for the Eraya web app at eraya.app.
 #
 # Netlify rather than Vercel for one reason: Vercel's Hobby plan forbids
 # commercial use and names processing payments as an example of it, so a free
