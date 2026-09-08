@@ -110,6 +110,75 @@ third-party scripts. Fonts are self-hosted and preloaded. Motion is one CSS
 keyframe. `overflow-x-hidden` on `<body>` plus a single `Container` measure
 means horizontal overflow cannot occur.
 
+## Two public addresses, and only one of them is this app
+
+`eraya.app` and the product are not the same thing, and confusing them is the
+easy mistake here.
+
+| Address | What answers it | Where it lives |
+| --- | --- | --- |
+| `www.eraya.app` | A static holding page saying the product is coming soon | `Rahul9046/eraya-site`, served by GitHub Pages |
+| `eraya.app` | A 301 to `www` | GoDaddy domain forwarding |
+| `app.eraya.app` | This app, once deployed. Not live yet | intended: a host serving `apps/web` |
+
+**The holding page is not in this repository.** It is three static files —
+markup, the approved mark, and a `CNAME` — in a separate repo, deliberately: it
+must survive a broken deploy, a migration or a rotated key in the product it is
+holding the door for, and the cheapest way to guarantee that is to give it
+nothing to depend on. The cost is that its palette is transcribed from
+[02-brand.md](02-brand.md) rather than imported, so a rebrand will not reach it.
+
+**Why `www` and not the bare domain.** A GoDaddy Airo "Coming Soon" site was
+auto-generated on `eraya.app` at registration and holds the apex. While it does,
+GoDaddy's DNS editor refuses any manual `@` A record — it fails with "Invalid
+data provided for record data", which reads like a typo and is not one. Records
+for any other name save normally, which is how it was isolated. Disconnecting
+the Airo site (Domain → Products) frees the apex; until then, `www` is the real
+host and the apex forwards to it.
+
+`.app` is on the HSTS preload list, so there is no plain-HTTP fallback for any
+of these. A certificate that has not been issued yet is a hard block in the
+browser, not a warning somebody can click past.
+
+## Deploying this app
+
+Not yet done. It matters beyond the website: the mobile app opens `/checkout` in
+a browser, so until `apps/web` is reachable publicly, payments in any
+distributed build fail silently — see [10-payments.md](10-payments.md).
+
+Four variables, one of them secret:
+
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+NEXT_PUBLIC_SITE_URL            https://app.eraya.app
+SUPABASE_SECRET_KEY             server only, never NEXT_PUBLIC_
+```
+
+Razorpay, MSG91 and SMTP values do **not** belong here; they are Supabase edge
+function secrets.
+
+Order matters. Deploy, point the subdomain at it, confirm it loads, and only
+then run `npm run config:push` — `supabase/config.toml` names `app.eraya.app` as
+the auth `site_url`, and pushing that before the domain resolves means sign-in
+emails link to nothing.
+
+### Indexing is opt-in
+
+`NEXT_PUBLIC_ALLOW_INDEXING` gates `robots` in the root layout, and only the
+literal string `true` enables it. Everything else — local, previews, branch
+builds, forks — is `noindex`.
+
+The product is deployed before it opens, so for a while there is a site inviting
+people to create an account while `eraya.app` says the product is coming soon.
+Of those two, the one a search engine keeps is not the one we would choose.
+
+It is an environment variable rather than a hardcoded `noindex` on purpose: a
+hardcoded one is a code change somebody must remember to revert on launch day,
+and forgetting it means launching invisible to search — a silent failure worse
+than the problem it solves. Auth and onboarding pages carry their own `noindex`
+and do not depend on this.
+
 ## Commands
 
 ```bash

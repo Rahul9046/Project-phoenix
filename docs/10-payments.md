@@ -118,6 +118,56 @@ Where the answer is not yet knowable, both clients say the payment is being
 confirmed. They never say "you have not been charged" unless the person
 cancelled the sheet themselves.
 
+### A decline is recorded, not only reported
+
+When Razorpay reports a declined payment and no captured one, `payments-verify`
+settles the row as `failed` before answering. It used to answer and stop, which
+left the row at `created` for ever: the member's payment history showed an
+attempt that never resolved, `failed_at` was never set, and our record could not
+be reconciled against Razorpay's — theirs held a decline, ours held an open
+attempt.
+
+The provider's payment id is stored, and the provider's stated reason is written
+to the function log as `payment_declined` with `error_code`, `error_step`,
+`error_reason` and `error_description`. Those describe the transaction, not the
+person: no name, no card, no contact details.
+
+The reason is logged and never shown. What somebody reads is decided by the
+product — a bank's wording is not ours to put in their mouth — but a decline
+nobody can explain afterwards is a support conversation with no evidence in it.
+
+### `unconfirmed` is not `failed`
+
+The mobile client has five outcomes plus `unconfirmed`, which exists because
+`unknown_order` and `invalid_signature` come back as HTTP 200 and used to fall
+through to `failed`. That told somebody their bank had declined a payment their
+bank may well have taken, and told them nothing was charged when we had not
+established it. Both halves were unverifiable.
+
+`unconfirmed` means the fault is ours. It is kept apart from `failed` because
+calling it a decline invents a reason, and apart from `unavailable` because the
+network was fine and money may have moved. It is also excluded from the
+`payment_failed` analytics event: counting our own bugs as declined payments
+corrupts the number used to judge whether the provider is performing.
+
+### International cards are refused
+
+Razorpay rejects them with `international_transaction_not_allowed` and
+`error_source: business` — the account's own configuration, not a bank. This is
+the default for Indian merchant accounts and applies in live mode as much as in
+test.
+
+It is a real constraint, not a test artefact: anyone paying with a non-Indian
+card cannot pay at all, and "try a different method" does not help somebody
+whose only card is foreign. Indians living abroad are a plausible part of this
+audience. Enabling international payments is an application to Razorpay with its
+own fees and compliance, so it is a commercial decision — see
+[07-open-questions.md](07-open-questions.md).
+
+Note for testing: `4111 1111 1111 1111` is classified international and always
+fails here. Use a domestic test card — `5267 3181 8797 5449` (Mastercard) or
+`4718 6091 0820 4366` (Visa) — or UPI `success@razorpay`.
+
 ## Environment
 
 Set as Supabase edge function secrets — never in `.env.local`, never prefixed
@@ -137,6 +187,27 @@ Test and live are told apart by the key itself (`rzp_test_` / `rzp_live_`)
 rather than by a separate flag, because a flag can disagree with the key
 actually in use — and the failure mode of that disagreement is taking real money
 while believing otherwise.
+
+### `EXPO_PUBLIC_SITE_URL` — the one that fails silently
+
+The mobile app builds its checkout address from this. Unset, `siteUrl()` returns
+an empty string, the URL becomes a schemeless `/checkout?…`, no payment sheet
+ever opens, and the order is left at `created`. There is no error and nothing in
+the log: it looks exactly like somebody deciding not to pay.
+
+Development never sees it. A dev client reads `.env.local` through Metro, so a
+value there works. **EAS builds do not read `.env.local`** — `preview` and
+`production` take environment variables from EAS, and until it is set there,
+every distributed build has payments quietly broken:
+
+```
+npx eas-cli env:list preview
+npx eas-cli env:create --scope project --name EXPO_PUBLIC_SITE_URL \
+  --value https://app.eraya.app --environment preview
+```
+
+It must point at a deployment of `apps/web`, because that is where `/checkout`
+lives. See [06-technical.md](06-technical.md).
 
 ## Dashboard setup
 

@@ -214,8 +214,27 @@ someone else.
 
 ## Membership
 
-Priced and unbuyable. No payment provider is integrated, so the screen says so
-rather than offering a button — and never simulates a success.
+Buyable. Razorpay is integrated and a purchase completes end to end — see
+[10-payments.md](10-payments.md) for the model; this section covers only what
+the app itself does.
+
+There is no native Razorpay module, deliberately. Buying opens `/checkout` on
+the website in the system browser, the same way sign-in opens Google, and the
+browser hands back to `eraya://payment`. Card details never touch this app, and
+the only things crossing back are an order id and a signature that is useless
+without the key secret.
+
+That means the app must be told where the website is, through
+`EXPO_PUBLIC_SITE_URL`. Unset, no payment sheet opens and nothing says why. A
+dev client reads it from `.env.local`; **EAS builds do not**, and take it from
+EAS environment variables instead. This is the one setting whose absence looks
+identical to somebody choosing not to pay.
+
+The app never concludes that a payment succeeded. It reports what it saw and the
+server answers, from a signature check or from Razorpay's own record. Six
+outcomes rather than a boolean, because money can leave an account while the
+confirmation does not arrive: `unconfirmed` in particular is kept apart from
+`failed` so a fault of ours is never described as somebody's bank declining.
 
 Entitlements are read by name from the `entitlements` table, never inferred from
 `tier === "premium"` in a component. The client decides what the UI offers; the
