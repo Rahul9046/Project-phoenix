@@ -26,6 +26,26 @@ significant personal data, and India's DPDP Act applies.
 **Contact address.** `hello@eraya.app` is used throughout, from `apps/web/src/features/marketing/content.ts`.
 It must exist and be monitored, or be changed in that one place.
 
+**Somewhere to deploy the web app.** Not only the website: the mobile app opens
+`/checkout` on it, so until `apps/web` is publicly reachable, payments in any
+build handed to anyone outside the team fail silently — no sheet, no error, an
+order left at `created`. Development never sees it, because a dev client reads
+`.env.local`. See [06-technical.md](06-technical.md) and
+[10-payments.md](10-payments.md).
+
+**International cards cannot pay.** Razorpay refuses them with
+`international_transaction_not_allowed` and `error_source: business` — the
+account's own configuration, the default for Indian merchants, and true in live
+mode as much as in test. Anyone whose only card is foreign reaches the payment
+screen and cannot get past it; "use a different method" is no help to them.
+
+This is a commercial decision, not an engineering one. Eraya is India-only by
+design, but Indians living abroad are a plausible part of an audience of
+divorced, separated and widowed people, and they are exactly the segment most
+likely to be paying with a foreign card. Enabling international payments is an
+application to Razorpay carrying higher fees and additional compliance.
+Answering it "no" is legitimate; answering it by accident is not.
+
 ## Brand — defects in the supplied logo pack
 
 Two problems in `assets/brand/` that need a corrected export. The mark geometry
