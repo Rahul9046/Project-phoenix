@@ -203,11 +203,10 @@ every distributed build has payments quietly broken:
 ```
 npx eas-cli env:list preview
 npx eas-cli env:create --scope project --name EXPO_PUBLIC_SITE_URL \
-  --value https://app.eraya.app --environment preview
+  --value https://eraya.app --environment preview
 ```
 
-It must point at a deployment of `apps/web`, because that is where `/checkout`
-lives. See [06-technical.md](06-technical.md).
+It must point at the deployed web app, because that is where `/checkout` lives. See [06-technical.md](06-technical.md).
 
 ## Dashboard setup
 

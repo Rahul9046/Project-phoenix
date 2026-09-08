@@ -110,49 +110,55 @@ third-party scripts. Fonts are self-hosted and preloaded. Motion is one CSS
 keyframe. `overflow-x-hidden` on `<body>` plus a single `Container` measure
 means horizontal overflow cannot occur.
 
-## Two public addresses, and only one of them is this app
+## One domain, one application
 
-`eraya.app` and the product are not the same thing, and confusing them is the
-easy mistake here.
+`eraya.app` is the product. Not a marketing site in front of it and not a
+subdomain beside it: the same Next.js application serves the landing page at
+`/`, the legal pages, and every signed-in route.
 
-The decided structure:
+| Address | What answers it |
+| --- | --- |
+| `eraya.app` | This application. Canonical |
+| `www.eraya.app` | A 301 to `eraya.app` |
 
-| Address | What answers it | Where it lives |
-| --- | --- | --- |
-| `eraya.app` | The public holding page. Canonical | `Rahul9046/eraya-site`, GitHub Pages |
-| `www.eraya.app` | A 301 to `eraya.app` | GitHub Pages, automatically |
-| `app.eraya.app` | This app | a host serving `apps/web` |
+There is no `app.` subdomain. One was planned and prepared, and the decision was
+reversed before anything was deployed — the history is in the repository if the
+question is reopened.
 
-**Today it is the other way round.** `www` serves the page and the apex forwards
-to it, because the apex is not yet ours to point — see below. Reversing it is a
-DNS and `CNAME`-file change, not a code change, and the two must happen
-together or the site breaks in the gap.
+`www` is a redirect issued by the host, not a second deployment. Netlify does it
+by making `eraya.app` the primary domain and adding `www.eraya.app` as an alias;
+both are covered by one certificate. Nothing needs to be built for it.
 
-The `www` redirect needs no application and no third party. GitHub Pages issues
-it: when the custom domain is the apex and a `www` CNAME points at
-`rahul9046.github.io`, GitHub answers `www` with a 301 to the apex and covers
-both with the same certificate. The GoDaddy forwarding rule that currently sends
-the apex to `www` must be deleted at the same time, or the two redirects point
-at each other.
+### What is at `eraya.app` today, and what replaces it
 
-**The holding page is not in this repository.** It is three static files —
-markup, the approved mark, and a `CNAME` — in a separate repo, deliberately: it
-must survive a broken deploy, a migration or a rotated key in the product it is
-holding the door for, and the cheapest way to guarantee that is to give it
-nothing to depend on. The cost is that its palette is transcribed from
-[02-brand.md](02-brand.md) rather than imported, so a rebrand will not reach it.
+Today it is a static holding page saying the product is coming soon. It lives in
+`Rahul9046/eraya-site` — three files, served by GitHub Pages, sharing no code
+with this repository so that a broken deploy here cannot take the public face of
+the company down. Its palette is transcribed from [02-brand.md](02-brand.md)
+rather than imported, so a rebrand will not reach it.
 
-**What blocks the apex.** A GoDaddy Airo "Coming Soon" site was auto-generated on
-`eraya.app` at registration and holds the apex. While it does, GoDaddy's DNS
-editor refuses any manual `@` A record — it fails with "Invalid data provided for
-record data", which reads like a typo and is not one. Records for any other name
-save normally, which is how it was isolated: a throwaway `test` A record saved
-without complaint while `@` would not.
+It is temporary. When this application deploys to `eraya.app`, the holding page
+is retired rather than moved — see the switchover below.
 
-Disconnecting the Airo site (Domain → Products) frees the apex. Until somebody
-does, `eraya.app` cannot serve anything and the structure above cannot be built.
-`app.eraya.app` is unaffected — it is not the apex, so its record saves
-normally.
+**Until then it must not break.** Today `www` serves the page and the apex
+forwards to it, so `eraya.app` reaches the holding page by redirect. That is
+adequate and should be left alone until the product is genuinely ready to take
+the domain.
+
+### The apex is not yet ours to point
+
+A GoDaddy Airo "Coming Soon" site was auto-generated on `eraya.app` at
+registration and holds the apex. While it does, GoDaddy's DNS editor refuses any
+manual `@` A record — it fails with "Invalid data provided for record data",
+which reads like a typo and is not one. Records for any other name save
+normally, which is how it was isolated: a throwaway `test` record saved without
+complaint while `@` would not.
+
+**This now blocks the whole deployment.** While the product was planned for a
+subdomain, Airo was an inconvenience affecting only the holding page. With
+`eraya.app` as the canonical product address, nothing can go live until the Airo
+site is disconnected from the domain (Domain → Products). It is the first step
+of the switchover, not a detail of it.
 
 `.app` is on the HSTS preload list, so there is no plain-HTTP fallback for any
 of these. A certificate that has not been issued yet is a hard block in the
@@ -169,7 +175,7 @@ Four variables, one of them secret:
 ```
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_SITE_URL            https://app.eraya.app
+NEXT_PUBLIC_SITE_URL            https://eraya.app
 SUPABASE_SECRET_KEY             server only, never NEXT_PUBLIC_
 ```
 
@@ -200,12 +206,33 @@ Netlify's quota becomes the constraint.
 
 `netlify.toml` at the repository root carries the monorepo build settings.
 
-### Order of operations
+### The switchover
 
-Deploy, point the subdomain at it, confirm it loads over HTTPS, and only then run
-`npm run config:push` — `supabase/config.toml` names `app.eraya.app` as the auth
-`site_url`, and pushing that before the domain resolves means sign-in emails link
-to nothing.
+Taking the apex means replacing the holding page rather than deploying beside it,
+so the steps are ordered to keep something answering `eraya.app` throughout.
+
+1. **Deploy to the host's own address first** (`<site>.netlify.app`). Nothing
+   about DNS changes yet, and the holding page keeps serving. Confirm the app
+   builds, loads, and that sign-in and checkout work there.
+2. **Disconnect the Airo site** at GoDaddy (Domain → Products). Until this is
+   done the apex cannot be pointed anywhere, and no amount of DNS editing will
+   change that.
+3. **Delete the GoDaddy forwarding rule** sending the apex to `www`. Leaving it
+   in place means the apex forwards to `www` while `www` redirects to the apex.
+4. **Point the apex at the host** with the records it gives you, and add
+   `www` as an alias so the host issues the `www` → apex 301 itself.
+5. **Retire the holding page.** Remove the `CNAME` file from `eraya-site` and
+   disable its GitHub Pages site. If that file still claims `eraya.app` or
+   `www.eraya.app`, GitHub keeps asserting the domain and the two hosts fight
+   over it. Archive the repository rather than deleting it.
+6. **Only now run `npm run config:push`.** `supabase/config.toml` names
+   `eraya.app` as the auth `site_url`; pushing it before the domain resolves
+   means sign-in emails point at nothing.
+7. **Set `EXPO_PUBLIC_SITE_URL`** in EAS to `https://eraya.app`, which closes the
+   silent payment failure described in [10-payments.md](10-payments.md).
+
+Steps 2 to 5 are the only window where `eraya.app` is unreliable. Do them in one
+sitting rather than across days.
 
 ### Indexing is opt-in
 
@@ -213,15 +240,25 @@ to nothing.
 literal string `true` enables it. Everything else — local, previews, branch
 builds, forks — is `noindex`.
 
-The product is deployed before it opens, so for a while there is a site inviting
-people to create an account while `eraya.app` says the product is coming soon.
-Of those two, the one a search engine keeps is not the one we would choose.
+The product is deployed before it opens, and it now serves the public landing
+page as well as the signed-in routes. A pre-launch deployment on the canonical
+domain is exactly what a crawler would otherwise keep and show.
 
 It is an environment variable rather than a hardcoded `noindex` on purpose: a
 hardcoded one is a code change somebody must remember to revert on launch day,
 and forgetting it means launching invisible to search — a silent failure worse
-than the problem it solves. Auth and onboarding pages carry their own `noindex`
-and do not depend on this.
+than the problem it solves.
+
+**Two locks, and launch day opens both.** `NEXT_PUBLIC_ALLOW_INDEXING` gates the
+`robots` meta tag; `netlify.toml` sends `X-Robots-Tag: noindex` as a header,
+which covers responses a crawler sees without parsing HTML. Setting the variable
+while leaving the header in place changes nothing, and is the likely way this
+gets half-done.
+
+What does **not** change on launch day: auth, onboarding and every signed-in
+route declare their own `robots: { index: false }` per page. Those are meant to
+stay out of search permanently, and they do not depend on either lock. Opening
+the two above makes the marketing and legal pages indexable and nothing else.
 
 ## Commands
 

@@ -41,7 +41,7 @@ enabled = true
 #
 # Local development still works: `http://localhost:3000/auth/...` is listed
 # below, and the client sends its own redirect address with each request.
-site_url = "https://app.eraya.app"
+site_url = "https://eraya.app"
 # Every address an auth redirect may land on. Anything not listed here comes back
 # as an error rather than a session, which is the single most common reason a
 # working OAuth setup appears broken.
@@ -57,8 +57,8 @@ site_url = "https://app.eraya.app"
 # sign-in cannot complete inside Expo Go; a development build registers the
 # `eraya` scheme and works normally. See docs/MOBILE_SETUP.md.
 additional_redirect_urls = [
-  "https://app.eraya.app/auth/callback",
-  "https://app.eraya.app/auth/confirm",
+  "https://eraya.app/auth/callback",
+  "https://eraya.app/auth/confirm",
   "http://localhost:3000/auth/callback",
   "http://localhost:3000/auth/confirm",
   "eraya://auth",
