@@ -357,7 +357,7 @@ function OutcomeNote({ outcome }: { outcome: Outcome }) {
       icon: "help-circle-outline" as const,
       tone: colors.inkMuted,
       title: "We could not confirm this payment",
-      body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to hello@eraya.app and we will sort it out.",
+      body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
     },
   }[outcome.kind];
 

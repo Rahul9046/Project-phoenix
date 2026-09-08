@@ -234,7 +234,7 @@ function noteFor(outcome: PurchaseOutcome): Note {
         tone: colors.inkMuted,
         tint: colors.sand,
         title: "We could not confirm this payment",
-        body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to hello@eraya.app and we will sort it out.",
+        body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
         action: "Back to membership",
       };
 

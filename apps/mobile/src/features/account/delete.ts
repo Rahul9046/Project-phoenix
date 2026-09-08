@@ -24,7 +24,7 @@ export async function deleteAccount(): Promise<DeleteResult> {
     return {
       ok: false,
       message:
-        "We could not delete your account just now. Please try again, or write to hello@eraya.app and a person will do it for you.",
+        "We could not delete your account just now. Please try again, or write to support@eraya.app and a person will do it for you.",
     };
   }
 

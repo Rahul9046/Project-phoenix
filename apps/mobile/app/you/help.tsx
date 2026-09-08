@@ -87,9 +87,9 @@ export default function Help() {
         A person reads this address.
       </Text>
       <Button
-        label="Write to hello@eraya.app"
+        label="Write to support@eraya.app"
         variant="secondary"
-        onPress={() => void Linking.openURL("mailto:hello@eraya.app")}
+        onPress={() => void Linking.openURL("mailto:support@eraya.app")}
         style={{ marginTop: space.lg }}
       />
     </Screen>
