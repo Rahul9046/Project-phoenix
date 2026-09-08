@@ -23,8 +23,31 @@ limiting per IP, and probably a challenge, before it is publicly linked.
 documents are being prepared. Real ones are required before collecting
 significant personal data, and India's DPDP Act applies.
 
-**Contact address.** `hello@eraya.app` is used throughout, from `apps/web/src/features/marketing/content.ts`.
-It must exist and be monitored, or be changed in that one place.
+**Contact address — resolved.** `support@eraya.app` is live on Zoho Mail and is
+now the only address the product gives anybody: the website, both clients, and
+the auth email. It comes from `apps/web/src/features/marketing/content.ts` on the
+web side, so changing it again is one edit there plus the mobile strings.
+
+It replaced `hello@eraya.app`, which was written into six places and never
+created. Mail to it bounced, and it was the only address the public holding page
+offered — so the single action that page asked for failed silently for everyone
+who took it. Worth remembering as a shape: an address in copy is a promise, and
+nothing in a build or a test suite checks that the mailbox exists.
+
+Still to confirm: **DKIM for Zoho**. `zoho._domainkey.eraya.app` returns nothing,
+though Zoho may use another selector. Check Zoho Mail → Domains, because DMARC is
+published at `p=quarantine` and mail that satisfies neither SPF nor DKIM is
+quarantined rather than rejected — invisible to the sender.
+
+**One SPF record, two senders.** `eraya.app` publishes
+`v=spf1 include:zoho.in ~all`, which authorises Zoho and not Resend — and Resend
+is what sends every sign-in code, as `no-reply@eraya.app`. Those emails currently
+pass DMARC on Resend's DKIM alone (`resend._domainkey` is published), so delivery
+works, but the margin is one broken key wide: if DKIM ever fails, SPF will not
+catch it and sign-in codes go to spam with no error anywhere.
+
+Resend's `include:` belongs in the **existing** record, never a second one — two
+SPF records is a hard failure for both senders.
 
 **Somewhere to deploy the web app.** Not only the website: the mobile app opens
 `/checkout` on it, so until `apps/web` is publicly reachable, payments in any

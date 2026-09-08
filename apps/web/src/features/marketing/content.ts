@@ -5,7 +5,7 @@ export const site = {
   domain: "eraya.app",
   url: "https://eraya.app",
   organization: "Phoenix Origins",
-  email: "hello@eraya.app",
+  email: "support@eraya.app",
   tagline: "Every ending can be a new beginning.",
   description:
     "Eraya is a trusted community for divorced, separated and widowed people in India who are ready for their next chapter.",
