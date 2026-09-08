@@ -24,6 +24,16 @@ const manrope = Manrope({
   display: "swap",
 });
 
+/**
+ * Whether search engines may keep this deployment.
+ *
+ * Read as a whole expression rather than through a computed lookup: Next
+ * inlines `NEXT_PUBLIC_*` by matching the literal text at build time, so a
+ * dynamic key is undefined in a production build while working in development.
+ * Only the exact string "true" counts, so an empty or absent value is noindex.
+ */
+const indexable = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
@@ -54,7 +64,23 @@ export const metadata: Metadata = {
     title: `${site.name} — ${site.tagline}`,
     description: site.description,
   },
-  robots: { index: true, follow: true },
+  /*
+   * Indexing is opt-in, and off unless a deployment says otherwise.
+   *
+   * The product is deployed before it opens, so for a while there is a site
+   * inviting people to create an account while eraya.app still says Eraya is
+   * coming soon. Two live pages contradicting each other is worse than either,
+   * and the one a search engine keeps is not the one we would choose.
+   *
+   * Defaulting to noindex means a new deployment -- a preview, a branch build,
+   * somebody's fork -- is never accidentally the indexed copy. Launch day sets
+   * NEXT_PUBLIC_ALLOW_INDEXING=true on the production deployment and nothing
+   * else changes. Individual pages that must never be indexed, the auth and
+   * onboarding screens, still say so themselves and do not rely on this.
+   */
+  robots: indexable
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
