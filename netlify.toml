@@ -26,17 +26,14 @@
   # a floating runtime is a build that breaks on a day nobody changed anything.
   NODE_VERSION = "22"
 
-# Security headers. The app sets no CSP of its own yet; these are the cheap
-# ones that need no per-page thought and cannot break a render.
-[[headers]]
-  for = "/*"
-
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Frame-Options = "DENY"
-    # The product is pre-launch and must not be indexed. This is a second lock
-    # on the same door as NEXT_PUBLIC_ALLOW_INDEXING, which gates the `robots`
-    # meta tag in the root layout: a header covers responses a crawler may see
-    # without parsing HTML. Remove BOTH on launch day, not one.
-    X-Robots-Tag = "noindex, nofollow"
+# Security headers are NOT set here, deliberately.
+#
+# They were, and they did nothing: deployed responses came back without any of
+# them, on server-rendered pages and static assets alike. A header a config
+# file claims and the server never sends is worse than no header, because the
+# documentation then promises protection that is not there.
+#
+# They live in `apps/web/next.config.ts` instead, where Next emits them itself.
+# That holds on any host and in `next start` locally, so it can be verified
+# before a deploy rather than discovered after one -- and this project has
+# already changed its mind about where it deploys.

@@ -249,11 +249,20 @@ hardcoded one is a code change somebody must remember to revert on launch day,
 and forgetting it means launching invisible to search — a silent failure worse
 than the problem it solves.
 
-**Two locks, and launch day opens both.** `NEXT_PUBLIC_ALLOW_INDEXING` gates the
-`robots` meta tag; `netlify.toml` sends `X-Robots-Tag: noindex` as a header,
-which covers responses a crawler sees without parsing HTML. Setting the variable
-while leaving the header in place changes nothing, and is the likely way this
-gets half-done.
+**One switch, two outputs.** `NEXT_PUBLIC_ALLOW_INDEXING` gates both the `robots`
+meta tag in the root layout and the `X-Robots-Tag` header set in
+`apps/web/next.config.ts`. Setting it to `true` releases both; unset, both hold.
+There is nothing to open twice and nothing to forget.
+
+It was briefly two independent locks — the meta tag here, the header in
+`netlify.toml` — which sounded safer written down and was not. The Netlify half
+turned out to be sending nothing at all on the deployed site, so the arrangement
+documented as belt-and-braces was one lock with a decorative second, and the
+remaining failure mode was opening one and believing the job done.
+
+The security headers moved into `next.config.ts` for the same reason: Next emits
+them itself, so they hold on any host and can be checked with `next start`
+before a deploy rather than discovered missing after one.
 
 What does **not** change on launch day: auth, onboarding and every signed-in
 route declare their own `robots: { index: false }` per page. Those are meant to
