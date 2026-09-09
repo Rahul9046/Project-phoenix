@@ -1,0 +1,71 @@
+# Build and deploy the web app to Cloudflare Workers.
+#
+# The build runs here rather than on the host on purpose. Netlify's free plan
+# meters builds -- roughly 4.5 credits each against 300 a month -- and this
+# project exhausted them in ten days of ordinary development, after which
+# production deploys were skipped while merges still reported success. Nothing
+# announced it. GitHub Actions is free and unmetered for a public repository,
+# and Cloudflare meters requests rather than deploys, so that failure mode has
+# nowhere to come back from.
+name: Deploy web
+
+on:
+  push:
+    branches: [develop]
+    # Only when something that affects the deployed app changes. Docs and the
+    # mobile app share this repository and have no business spending a deploy.
+    paths:
+      - "apps/web/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one midway: a half-applied Worker is
+# worse than a queued one.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Node the app is developed against. A floating runtime
+          # is a build that breaks on a day nobody changed anything.
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build and deploy
+        run: npm run cf:deploy --workspace @eraya/web
+        env:
+          # NEXT_PUBLIC_* are inlined into the browser bundle at build time, so
+          # they must exist here rather than at runtime. Both are public by
+          # design: the URL names the project and the publishable key is what
+          # Row Level Security is there to make safe.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://eraya.app
+
+          # NEXT_PUBLIC_ALLOW_INDEXING is deliberately absent. Its absence is
+          # what keeps the pre-launch product out of search results, through
+          # both the robots meta tag and the X-Robots-Tag header. Setting it to
+          # "true" here is the whole of launch day.
+
+          # The server-side Supabase credential. Present at build because a
+          # route rendered during the build would otherwise fail on a missing
+          # key; the deployed Worker reads it from `wrangler secret`, not from
+          # here.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

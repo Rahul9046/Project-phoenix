@@ -125,9 +125,9 @@ There is no `app.` subdomain. One was planned and prepared, and the decision was
 reversed before anything was deployed — the history is in the repository if the
 question is reopened.
 
-`www` is a redirect issued by the host, not a second deployment. Netlify does it
-by making `eraya.app` the primary domain and adding `www.eraya.app` as an alias;
-both are covered by one certificate. Nothing needs to be built for it.
+`www` is a redirect issued by the host, not a second deployment. On Cloudflare
+it is a route and a redirect rule on the same Worker, and both names sit under
+one certificate. Nothing needs to be built for it.
 
 ### What is at `eraya.app` today, and what replaces it
 
@@ -186,34 +186,57 @@ what puts a value into the browser bundle.
 `NEXT_PUBLIC_ALLOW_INDEXING` is deliberately **not** set, so the deployment is
 `noindex`. See below.
 
-### Not Vercel, on the free tier
+### Cloudflare Workers, built by GitHub Actions
 
-Vercel's Hobby plan forbids commercial use, and its own fair-use guidance names
-processing payments as an example. Eraya charges for Premium, so a Hobby
-deployment would be a terms violation from the first day regardless of how few
-people are using it. Commercial use starts at Pro, $20/month.
+The app is a Worker, compiled from the Next build by `@opennextjs/cloudflare`.
+It cannot be static files: the production build marks nearly every route dynamic
+and ships middleware.
 
-**Netlify's free plan permits commercial use explicitly**, including a paying
-product, within its quota — currently 100 GB bandwidth, 300 build minutes and
-125,000 function invocations a month. It runs Next.js natively with no adapter,
-which matters here: the production build is dynamic on nearly every route and
-carries middleware, so this cannot be hosted as static files.
+Two hosts were tried before this one, and the reasons both failed are worth
+keeping.
 
-Cloudflare Workers is the other free option that allows commercial use, and the
-`@opennextjs/cloudflare` adapter supports Next.js 16 — but it is an adapter and a
-build change, which is more to go wrong for the same result. Worth revisiting if
-Netlify's quota becomes the constraint.
+**Vercel Hobby forbids commercial use**, and its own fair-use guidance names
+processing payments as an example. Eraya sells Premium, so a free Vercel
+deployment would breach the terms on day one regardless of how few people use
+it. Commercial use starts at Pro, $20/month.
 
-`netlify.toml` at the repository root carries the monorepo build settings.
+**Netlify's free plan permits commercial use but meters builds**, not traffic —
+about 4.5 credits per build against 300 a month. Ten days of ordinary
+development exhausted them: roughly sixty builds, 35 build minutes, against 1.8
+MB of bandwidth and 391 requests. Traffic was never remotely the constraint, and
+the published "100 GB bandwidth" figure that made the plan look generous
+described a different plan structure than the one accounts are issued.
+
+The failure was silent, which is the part that matters. Production deploys were
+skipped with a note in the deploy list; merges still reported success; the site
+served a build three merges old. Nothing raised an error, and nobody would have
+noticed without checking a response header by hand.
+
+**Cloudflare meters requests** — 100,000 a day against the 391 a *month* this
+serves — and the build happens in GitHub Actions, which is free and unmetered
+for a public repository. There is no deploy budget to exhaust, so that failure
+mode is structurally absent rather than merely further away.
+
+Configuration lives in `apps/web/wrangler.jsonc` and `apps/web/open-next.config.ts`;
+the pipeline is `.github/workflows/deploy-web.yml`, which runs on pushes to
+`develop` that touch `apps/web`.
+
+**One caveat, verified rather than assumed.** The adapter warns that Node.js
+middleware support on Cloudflare is experimental and not officially maintained,
+and `src/proxy.ts` refreshes the Supabase session on every rendered request —
+so this is load-bearing. Tested against a local Worker build: routes serve, the
+signed-out redirect from `/home` to `/login` fires, all four security headers
+are present, and Supabase-backed pages render live data. Worth re-testing after
+an adapter upgrade rather than trusting it indefinitely.
 
 ### The switchover
 
 Taking the apex means replacing the holding page rather than deploying beside it,
 so the steps are ordered to keep something answering `eraya.app` throughout.
 
-1. **Deploy to the host's own address first** (`<site>.netlify.app`). Nothing
-   about DNS changes yet, and the holding page keeps serving. Confirm the app
-   builds, loads, and that sign-in and checkout work there.
+1. **Deploy to the Worker's own address first** (`eraya-web.<subdomain>.workers.dev`).
+   Nothing about DNS changes yet and the holding page keeps serving. Confirm the
+   app builds, loads, and that sign-in and checkout work there.
 2. **Disconnect the Airo site** at GoDaddy (Domain → Products). Until this is
    done the apex cannot be pointed anywhere, and no amount of DNS editing will
    change that.
@@ -254,8 +277,8 @@ meta tag in the root layout and the `X-Robots-Tag` header set in
 `apps/web/next.config.ts`. Setting it to `true` releases both; unset, both hold.
 There is nothing to open twice and nothing to forget.
 
-It was briefly two independent locks — the meta tag here, the header in
-`netlify.toml` — which sounded safer written down and was not. The Netlify half
+It was briefly two independent locks — the meta tag here, the header in the
+host's own config — which sounded safer written down and was not. The host half
 turned out to be sending nothing at all on the deployed site, so the arrangement
 documented as belt-and-braces was one lock with a decorative second, and the
 remaining failure mode was opening one and believing the job done.
@@ -276,7 +299,15 @@ npm run dev     # http://localhost:3000
 npm run build   # production build
 npm start       # serve the build
 npm run lint    # eslint
+
+# Cloudflare Workers, from apps/web
+npm run cf:build    --workspace @eraya/web   # compile the Worker
+npm run cf:preview  --workspace @eraya/web   # run it locally on workerd
+npm run cf:deploy   --workspace @eraya/web   # build and deploy
 ```
+
+`cf:preview` is the one worth knowing: it runs the real Worker bundle locally,
+which is how the middleware caveat above was tested without deploying.
 
 ## Conventions
 
