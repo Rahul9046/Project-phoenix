@@ -49,12 +49,20 @@ catch it and sign-in codes go to spam with no error anywhere.
 Resend's `include:` belongs in the **existing** record, never a second one — two
 SPF records is a hard failure for both senders.
 
-**Somewhere to deploy the web app.** Not only the website: the mobile app opens
-`/checkout` on it, so until `apps/web` is publicly reachable, payments in any
-build handed to anyone outside the team fail silently — no sheet, no error, an
-order left at `created`. Development never sees it, because a dev client reads
-`.env.local`. See [06-technical.md](06-technical.md) and
-[10-payments.md](10-payments.md).
+**Somewhere to deploy the web app — resolved.** Live at `https://eraya.app` as a
+Cloudflare Worker, built by GitHub Actions on pushes to `develop`.
+`EXPO_PUBLIC_SITE_URL` is set in the EAS `preview` and `production`
+environments, which closes the silent payment failure: the mobile app opens
+`/checkout` on the web app, and without that variable no sheet appeared, nothing
+was logged, and the order sat at `created` looking exactly like somebody
+changing their mind.
+
+Two hosts were rejected on the way, both for reasons worth remembering. Vercel's
+free tier forbids commercial use and names taking payments as the example.
+Netlify's free tier meters builds rather than traffic, and ten days of ordinary
+development exhausted a month's allowance — after which production deploys were
+skipped silently while merges kept reporting success. See
+[06-technical.md](06-technical.md).
 
 **International cards cannot pay.** Razorpay refuses them with
 `international_transaction_not_allowed` and `error_source: business` — the
