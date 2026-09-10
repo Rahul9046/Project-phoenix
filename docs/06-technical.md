@@ -129,46 +129,55 @@ question is reopened.
 it is a route and a redirect rule on the same Worker, and both names sit under
 one certificate. Nothing needs to be built for it.
 
-### What is at `eraya.app` today, and what replaces it
+### DNS is at Cloudflare; GoDaddy is only the registrar
 
-Today it is a static holding page saying the product is coming soon. It lives in
-`Rahul9046/eraya-site` — three files, served by GitHub Pages, sharing no code
-with this repository so that a broken deploy here cannot take the public face of
-the company down. Its palette is transcribed from [02-brand.md](02-brand.md)
-rather than imported, so a rebrand will not reach it.
+Nameservers point at Cloudflare (`angelina` / `weston.ns.cloudflare.com`), and
+every record — web and email — is managed there. GoDaddy still owns the
+registration and renews it; it answers nothing.
 
-It is temporary. When this application deploys to `eraya.app`, the holding page
-is retired rather than moved — see the switchover below.
+That split was forced rather than chosen, and the reason is worth keeping. A
+GoDaddy Airo "Coming Soon" site was auto-generated on `eraya.app` at
+registration and held the apex. While it did, GoDaddy's DNS editor refused every
+manual `@` A record with "Invalid data provided for record data" — which reads
+like a typo and is not one. Records for any other name saved without complaint,
+which is how it was isolated. Days went into trying to disconnect that site.
 
-**Until then it must not break.** Today `www` serves the page and the apex
-forwards to it, so `eraya.app` reaches the holding page by redirect. That is
-adequate and should be left alone until the product is genuinely ready to take
-the domain.
+Moving nameservers dissolved the problem instead of solving it: GoDaddy's DNS
+editor, its forwarding rules and the Airo site all stopped being consulted. If
+the apex ever misbehaves again, the answer is Cloudflare, not GoDaddy.
 
-### The apex is not yet ours to point
+**One consequence to expect if this is ever repeated.** GoDaddy's domain
+forwarding only works while GoDaddy hosts the DNS. The moment nameservers moved,
+the apex A records pointing at its forwarding service started returning 404 —
+`www` was unaffected, being a CNAME to GitHub Pages. Attaching the Worker to the
+apex fixed it. Plan for that gap rather than being surprised by it.
 
-A GoDaddy Airo "Coming Soon" site was auto-generated on `eraya.app` at
-registration and holds the apex. While it does, GoDaddy's DNS editor refuses any
-manual `@` A record — it fails with "Invalid data provided for record data",
-which reads like a typo and is not one. Records for any other name save
-normally, which is how it was isolated: a throwaway `test` record saved without
-complaint while `@` would not.
+`.app` is on the HSTS preload list, so there is no plain-HTTP fallback for any of
+these. A certificate that has not been issued yet is a hard block in the browser,
+not a warning somebody can click past.
 
-**This now blocks the whole deployment.** While the product was planned for a
-subdomain, Airo was an inconvenience affecting only the holding page. With
-`eraya.app` as the canonical product address, nothing can go live until the Airo
-site is disconnected from the domain (Domain → Products). It is the first step
-of the switchover, not a detail of it.
+### The holding page
 
-`.app` is on the HSTS preload list, so there is no plain-HTTP fallback for any
-of these. A certificate that has not been issued yet is a hard block in the
-browser, not a warning somebody can click past.
+`Rahul9046/eraya-site` — three static files served by GitHub Pages, sharing no
+code with this repository so that a broken deploy here could not take the public
+face of the company down. Its palette is transcribed from
+[02-brand.md](02-brand.md) rather than imported, so a rebrand never reached it.
+
+It served `eraya.app` until the product took the domain. It is retired rather
+than moved. Remove its `CNAME` file before repointing anything at it again, or
+GitHub keeps asserting a claim on the hostname.
 
 ## Deploying this app
 
-Not yet done. It matters beyond the website: the mobile app opens `/checkout` in
-a browser, so until `apps/web` is reachable publicly, payments in any
-distributed build fail silently — see [10-payments.md](10-payments.md).
+Live at `https://eraya.app`, as a Cloudflare Worker. Pushes to `develop` that
+touch `apps/web` deploy automatically.
+
+It matters beyond the website: the mobile app opens `/checkout` in a browser, so
+a web app that is not publicly reachable means payments fail silently in any
+distributed build — see [10-payments.md](10-payments.md). That is now closed;
+`EXPO_PUBLIC_SITE_URL` is set in the EAS `preview` and `production`
+environments. It is deliberately absent from `development`, where a dev client
+reads `.env.local` and points at localhost.
 
 Four variables, one of them secret:
 
@@ -229,33 +238,29 @@ signed-out redirect from `/home` to `/login` fires, all four security headers
 are present, and Supabase-backed pages render live data. Worth re-testing after
 an adapter upgrade rather than trusting it indefinitely.
 
-### The switchover
+### The switchover, as it actually happened
 
-Taking the apex means replacing the holding page rather than deploying beside it,
-so the steps are ordered to keep something answering `eraya.app` throughout.
+Done. Kept because the ordering is the reusable part.
 
-1. **Deploy to the Worker's own address first** (`eraya-web.<subdomain>.workers.dev`).
-   Nothing about DNS changes yet and the holding page keeps serving. Confirm the
-   app builds, loads, and that sign-in and checkout work there.
-2. **Disconnect the Airo site** at GoDaddy (Domain → Products). Until this is
-   done the apex cannot be pointed anywhere, and no amount of DNS editing will
-   change that.
-3. **Delete the GoDaddy forwarding rule** sending the apex to `www`. Leaving it
-   in place means the apex forwards to `www` while `www` redirects to the apex.
-4. **Point the apex at the host** with the records it gives you, and add
-   `www` as an alias so the host issues the `www` → apex 301 itself.
-5. **Retire the holding page.** Remove the `CNAME` file from `eraya-site` and
-   disable its GitHub Pages site. If that file still claims `eraya.app` or
-   `www.eraya.app`, GitHub keeps asserting the domain and the two hosts fight
-   over it. Archive the repository rather than deleting it.
-6. **Only now run `npm run config:push`.** `supabase/config.toml` names
-   `eraya.app` as the auth `site_url`; pushing it before the domain resolves
-   means sign-in emails point at nothing.
-7. **Set `EXPO_PUBLIC_SITE_URL`** in EAS to `https://eraya.app`, which closes the
-   silent payment failure described in [10-payments.md](10-payments.md).
+1. Deployed to the Worker's own address first (`eraya-web.<subdomain>.workers.dev`)
+   and verified it there — routes, middleware, headers, a live Supabase read.
+   No DNS involved, nothing public at risk.
+2. Added `eraya.app` to Cloudflare and let it import the existing zone.
+3. **Turned every imported record to DNS-only before switching.** New zones
+   default to Flexible SSL, which talks to origins over plain HTTP; GitHub Pages
+   and GoDaddy forwarding both force HTTPS, so proxying them would have produced
+   a redirect loop the moment nameservers propagated.
+4. Snapshotted every record, changed the nameservers at GoDaddy, then diffed the
+   zone against the snapshot once it resolved. All nine record sets identical —
+   MX, both SPF, three DKIM selectors, DMARC. Email never noticed.
+5. Deleted the dead apex A records and attached `eraya.app` to the Worker as a
+   Custom Domain, which writes its own DNS record and issues the certificate.
+6. Pushed the auth config, then set `EXPO_PUBLIC_SITE_URL` in EAS.
 
-Steps 2 to 5 are the only window where `eraya.app` is unreliable. Do them in one
-sitting rather than across days.
+Steps 3 and 4 are the ones worth repeating anywhere. A DNS migration carrying
+live email is checked by diffing the zone before and after, not by trusting the
+provider's import summary — the same lesson a Resend dashboard taught this
+project when it reported a record "Verified" that had never existed.
 
 ### Indexing is opt-in
 
