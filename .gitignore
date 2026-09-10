@@ -60,3 +60,13 @@ scripts/demo-photos/*
 # whose real configs live in `apps/web` and `apps/mobile`.
 /.expo/
 /tsconfig.json
+
+# Cloudflare Workers build output, produced by @opennextjs/cloudflare.
+.open-next/
+
+# Wrangler local runtime secrets. Never committed.
+.dev.vars
+.dev.vars.*
+
+# Wrangler local state.
+.wrangler/
