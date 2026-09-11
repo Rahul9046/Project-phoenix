@@ -17,6 +17,7 @@ export const authRoutes = {
   phone: "/auth/phone",
   otp: "/auth/otp",
   basics: "/onboarding/basics",
+  seeking: "/onboarding/seeking",
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
   languages: "/onboarding/languages",
@@ -25,9 +26,10 @@ export const authRoutes = {
 
 export type AuthRoute = (typeof authRoutes)[keyof typeof authRoutes];
 
-/** The four onboarding screens shown in the progress indicator. */
+/** The onboarding screens shown in the progress indicator. */
 export const onboardingSteps = [
   { route: authRoutes.basics, label: "About you" },
+  { route: authRoutes.seeking, label: "Who you'd like to meet" },
   { route: authRoutes.city, label: "City" },
   { route: authRoutes.relationship, label: "Chapter" },
   { route: authRoutes.languages, label: "Languages" },
@@ -40,6 +42,15 @@ export function onboardingStepIndex(route: string): number {
 /** Whether each onboarding screen has the answers it collects. */
 function hasBasics(session: AuthSession): boolean {
   return Boolean(session.profile.firstName);
+}
+
+/*
+ * An empty list, not a null check. The column is an array, and an empty one is
+ * indistinguishable to the matcher from never having been asked -- so a member
+ * who somehow got past this screen without choosing has not answered it.
+ */
+function hasSeeking(session: AuthSession): boolean {
+  return session.profile.seeking.length > 0;
 }
 
 function hasCity(session: AuthSession): boolean {
@@ -95,13 +106,19 @@ export function resolveRedirect(
   if (!isPhoneVerified) return authRoutes.phone;
 
   if (route === authRoutes.basics) return null;
-  if (route === authRoutes.city) return hasBasics(session) ? null : authRoutes.basics;
+  if (route === authRoutes.seeking) return hasBasics(session) ? null : authRoutes.basics;
+  if (route === authRoutes.city) {
+    if (!hasBasics(session)) return authRoutes.basics;
+    return hasSeeking(session) ? null : authRoutes.seeking;
+  }
   if (route === authRoutes.relationship) {
     if (!hasBasics(session)) return authRoutes.basics;
+    if (!hasSeeking(session)) return authRoutes.seeking;
     return hasCity(session) ? null : authRoutes.city;
   }
   if (route === authRoutes.languages) {
     if (!hasBasics(session)) return authRoutes.basics;
+    if (!hasSeeking(session)) return authRoutes.seeking;
     if (!hasCity(session)) return authRoutes.city;
     return hasRelationship(session) ? null : authRoutes.relationship;
   }
@@ -118,6 +135,7 @@ export function nextRoute(session: AuthSession): AuthRoute {
   if (!stageAtLeast(session.stage, "phoneVerified")) return authRoutes.phone;
   if (session.stage === "onboardingCompleted") return authRoutes.complete;
   if (!hasBasics(session)) return authRoutes.basics;
+  if (!hasSeeking(session)) return authRoutes.seeking;
   if (!hasCity(session)) return authRoutes.city;
   if (!hasRelationship(session)) return authRoutes.relationship;
   return authRoutes.languages;

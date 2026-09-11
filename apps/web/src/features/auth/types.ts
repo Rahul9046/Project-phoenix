@@ -74,6 +74,12 @@ export type OnboardingProfile = {
   firstName: string | null;
   dateOfBirth: string | null;
   gender: string | null;
+  /**
+   * Who this member would like to meet. Empty means "not answered", which
+   * `genders_are_compatible` treats as no constraint -- so leaving it unset is
+   * not a neutral default, it opts the member into being shown to everyone.
+   */
+  seeking: Gender[];
   city: string | null;
   /** Free text, only set when `city` is the "Another city" option. */
   otherCity: string | null;
@@ -96,6 +102,7 @@ export const emptyProfile: OnboardingProfile = {
   firstName: null,
   dateOfBirth: null,
   gender: null,
+  seeking: [],
   city: null,
   otherCity: null,
   relationshipStatus: null,

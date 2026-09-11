@@ -113,6 +113,13 @@ export const basicsStep = {
     hint: "This is the name shown on your profile.",
     placeholder: "Your first name",
     error: "Enter your first name to continue.",
+    /*
+     * The app has always required two characters and capped the field at forty;
+     * the website required one and capped nothing. So a name accepted here could
+     * be rejected by the app's own rules on the very next screen the member saw,
+     * and the two clients disagreed about what a valid profile was.
+     */
+    tooShort: "That looks a little short. Enter at least two characters.",
   },
   dateOfBirth: {
     label: "Date of birth",
@@ -145,6 +152,34 @@ export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "non_binary", label: "Non-binary" },
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
+
+/**
+ * Who you would like to meet.
+ *
+ * The mobile app has always asked this and the website never did, so every
+ * profile created in a browser was stored with no preference at all. That is
+ * not the neutral outcome it looks like: the matching function reads an unset
+ * preference as "no constraint", so those members were shown to everyone and
+ * their own answer -- which they were never asked for -- was never applied.
+ *
+ * `prefer_not_to_say` is deliberately absent, exactly as on mobile. It is a
+ * reasonable answer to "what is your gender" and an unusable one to "who would
+ * you like to meet", because there is nothing to match on.
+ */
+export const seekingOptions: readonly { value: Gender; label: string }[] = [
+  { value: "woman", label: "Women" },
+  { value: "man", label: "Men" },
+  { value: "non_binary", label: "Non-binary people" },
+];
+
+export const seekingStep = {
+  title: "Who would you like to meet?",
+  lede:
+    "Choose as many as apply. You can change this later, and it works both ways — " +
+    "you only appear to people you would also like to meet.",
+  cta: "Continue",
+  error: "Choose at least one.",
+} as const;
 
 export const cityStep = {
   title: "Where are you based?",

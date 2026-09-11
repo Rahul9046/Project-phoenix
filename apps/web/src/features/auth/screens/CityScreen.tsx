@@ -73,7 +73,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
 
   return (
     <AuthLayout
-      backHref={authRoutes.basics}
+      backHref={authRoutes.seeking}
       progress={
         <ProgressIndicator currentIndex={onboardingStepIndex(authRoutes.city)} />
       }
