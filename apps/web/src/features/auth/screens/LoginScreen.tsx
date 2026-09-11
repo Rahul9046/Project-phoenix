@@ -6,10 +6,11 @@ import { AuthLoading } from "@/features/auth/components/AuthLoading";
 import { AuthMethods } from "@/features/auth/components/AuthMethods";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { WebAppNote } from "@/features/auth/components/WebAppNote";
-import { login } from "@/features/auth/content";
+
 import { authRoutes } from "@/features/auth/flow";
 import type { SocialProviderId } from "@/features/auth/types";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 export function LoginScreen({
   providers,
@@ -19,12 +20,13 @@ export function LoginScreen({
   /** Explains a failed sign-in the person was redirected back from. */
   problem?: string | null;
 }) {
+  const t = useT();
   const { allowed } = useAuthGuard(authRoutes.login);
   if (!allowed) return <AuthLoading />;
 
   return (
     <AuthLayout showLegal footer={<WebAppNote />}>
-      <AuthHeader title={login.title} lede={login.lede} />
+      <AuthHeader title={t("auth.login.title")} lede={t("auth.login.lede")} />
 
       {/*
         ErrorMessage already carries role="alert", which is what this needs: the
@@ -40,10 +42,10 @@ export function LoginScreen({
 
           providers={providers}
           emailHref={authRoutes.email}
-          emailCta={login.emailCta}
-          dividerLabel={login.dividerLabel}
-          switchPrompt={login.switchPrompt}
-          switchCta={login.switchCta}
+          emailCta={t("auth.login.emailCta")}
+          dividerLabel={t("common.or")}
+          switchPrompt={t("auth.login.switchPrompt")}
+          switchCta={t("auth.login.switchCta")}
           switchHref={authRoutes.signup}
         />
       </div>

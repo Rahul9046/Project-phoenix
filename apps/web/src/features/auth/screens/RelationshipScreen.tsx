@@ -11,10 +11,11 @@ import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator"
 import { SelectableOption } from "@/features/auth/components/SelectableOption";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { saveRelationshipStatus } from "@/features/auth/actions";
-import { relationshipOptions, relationshipStep } from "@/features/auth/content";
+import { relationshipOptions } from "@/features/auth/content";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { RelationshipStatus } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 export function RelationshipScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.relationship);
@@ -27,6 +28,7 @@ function RelationshipForm({
 }: {
   stored: RelationshipStatus | null;
 }) {
+  const t = useT();
   const router = useRouter();
 
   const [status, setStatus] = useState<RelationshipStatus | null>(stored);
@@ -38,7 +40,7 @@ function RelationshipForm({
     if (pending) return;
 
     if (!status) {
-      setError(relationshipStep.error);
+      setError(t("onboarding.relationship.error"));
       return;
     }
 
@@ -65,8 +67,8 @@ function RelationshipForm({
       }
     >
       <AuthHeader
-        title={relationshipStep.title}
-        lede={relationshipStep.lede}
+        title={t("onboarding.relationship.title")}
+        lede={t("onboarding.relationship.lede")}
         showLogo={false}
       />
 
@@ -74,7 +76,7 @@ function RelationshipForm({
         <div
           className="grid gap-2.5"
           role="radiogroup"
-          aria-label={relationshipStep.title}
+          aria-label={t("onboarding.relationship.title")}
         >
           {relationshipOptions.map((option) => (
             <SelectableOption
@@ -82,8 +84,8 @@ function RelationshipForm({
               type="radio"
               name="relationship"
               value={option.value}
-              label={option.label}
-              description={option.description}
+              label={t(option.labelKey)}
+              description={t(option.descriptionKey)}
               checked={status === option.value}
               onChange={(value) => {
                 setStatus(value as RelationshipStatus);
@@ -101,7 +103,7 @@ function RelationshipForm({
           loadingLabel="Saving…"
           className="mt-8"
         >
-          {relationshipStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
     </AuthLayout>

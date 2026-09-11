@@ -5,6 +5,7 @@ import { Redirect } from "expo-router";
 import { ErayaMark } from "@/brand/ErayaMark";
 import { Button, TextButton } from "@/ui/Button";
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { colors, motion, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
@@ -23,6 +24,7 @@ import { Text } from "@/ui/Text";
  */
 export default function Entry() {
   const { loading, session, profile, error, refresh, signOut } = useSession();
+  const t = useT();
   const [retrying, setRetrying] = useState(false);
 
   /*
@@ -43,7 +45,7 @@ export default function Entry() {
       >
         <ErayaMark size={56} />
         <Text variant="headline" center style={{ marginTop: space.xxl }}>
-          We could not reach Eraya
+          {t("auth.entry.unreachableTitle")}
         </Text>
         <Text
           variant="body"
@@ -56,7 +58,7 @@ export default function Entry() {
 
         <View style={{ alignSelf: "stretch", marginTop: space.region, gap: space.md }}>
           <Button
-            label="Try again"
+            label={t("common.retry")}
             loading={retrying}
             onPress={() => {
               setRetrying(true);
@@ -66,7 +68,7 @@ export default function Entry() {
           {/* A way out that always works, for the case where the session itself
               is the problem. */}
           <TextButton
-            label="Sign in again"
+            label={t("auth.entry.signInAgain")}
             tone="muted"
             onPress={() => void signOut()}
           />

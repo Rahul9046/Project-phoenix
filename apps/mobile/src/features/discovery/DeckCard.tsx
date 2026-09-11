@@ -3,7 +3,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import { PhotoOrMonogram } from "@/features/discovery/MemberCard";
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 import type { Member } from "@/features/members/types";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { TrustMarks } from "@/ui/Person";
@@ -37,8 +38,9 @@ export function DeckCard({
   /** A short line explaining why this person is here, when there is one. */
   context?: string;
 }) {
+  const t = useT();
   const chapter = member.relationshipStatus
-    ? relationshipLabels[member.relationshipStatus]
+    ? t(relationshipLabelKeys[member.relationshipStatus])
     : null;
 
   return (

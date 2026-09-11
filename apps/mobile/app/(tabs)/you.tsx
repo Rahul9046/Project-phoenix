@@ -15,6 +15,7 @@ import { Avatar } from "@/ui/Person";
 import { Screen } from "@/ui/Screen";
 import { Card, Divider } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
+import { ScreenTitle } from "@/ui/ScreenTitle";
 
 /**
  * You.
@@ -50,7 +51,7 @@ export default function You() {
 
   return (
     <Screen topInset>
-      <Text variant="title">You</Text>
+      <ScreenTitle title={t("shell.navAccount")} />
 
       <Card
         onPress={() => router.push("/you/profile")}

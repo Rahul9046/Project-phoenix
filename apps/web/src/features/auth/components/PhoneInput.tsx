@@ -1,6 +1,6 @@
 "use client";
 
-import { phoneStep } from "@/features/auth/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Country code and national number as one control.
@@ -45,11 +45,12 @@ export function PhoneInput({
   describedBy?: string;
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex gap-2.5">
       <div className="shrink-0">
         <label htmlFor={`${id}-country`} className="sr-only">
-          {phoneStep.countryLabel}
+          {t("auth.phone.countryLabel")}
         </label>
         <select
           id={`${id}-country`}
@@ -75,7 +76,7 @@ export function PhoneInput({
         onChange={(event) =>
           onNationalNumberChange(normaliseNationalNumber(event.target.value))
         }
-        placeholder={phoneStep.placeholder}
+        placeholder={t("auth.phone.numberPlaceholder")}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         disabled={disabled}

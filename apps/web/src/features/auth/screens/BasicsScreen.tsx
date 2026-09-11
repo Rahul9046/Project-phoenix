@@ -13,11 +13,12 @@ import { SelectableOption } from "@/features/auth/components/SelectableOption";
 import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { saveBasics } from "@/features/auth/actions";
-import { basicsStep, genderOptions } from "@/features/auth/content";
+import { genderOptions } from "@/features/auth/content";
 import type { Gender } from "@/features/auth/types";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { OnboardingProfile } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The guard runs here and the form is a separate component, so the form only
@@ -74,6 +75,7 @@ export function BasicsScreen() {
 }
 
 function BasicsForm({ profile }: { profile: OnboardingProfile }) {
+  const t = useT();
   const router = useRouter();
 
   const nameId = useId();
@@ -110,18 +112,18 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
      */
     const next: typeof errors = {};
     if (!firstName.trim()) {
-      next.firstName = basicsStep.firstName.error;
+      next.firstName = t("onboarding.name.error");
     } else if (firstName.trim().length < NAME_MIN) {
-      next.firstName = basicsStep.firstName.tooShort;
+      next.firstName = t("onboarding.name.tooShort");
     }
     if (!dateOfBirth) {
-      next.dateOfBirth = basicsStep.dateOfBirth.error;
+      next.dateOfBirth = t("onboarding.birthday.error");
     } else if (dateOfBirth > latestAdultBirthDate()) {
-      next.dateOfBirth = basicsStep.dateOfBirth.tooYoung;
+      next.dateOfBirth = t("onboarding.birthday.tooYoung");
     } else if (dateOfBirth < EARLIEST_BIRTH_DATE) {
-      next.dateOfBirth = basicsStep.dateOfBirth.error;
+      next.dateOfBirth = t("onboarding.birthday.error");
     }
-    if (!gender) next.gender = basicsStep.gender.error;
+    if (!gender) next.gender = t("onboarding.gender.error");
 
     setErrors(next);
     // `|| !gender` is redundant at runtime — the check above already set an
@@ -156,16 +158,16 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
       }
     >
       <AuthHeader
-        title={basicsStep.title}
-        lede={basicsStep.lede}
+        title={t("onboarding.name.title")}
+        lede={t("onboarding.name.lede")}
         showLogo={false}
       />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9 grid gap-7">
         <FormField
           id={nameId}
-          label={basicsStep.firstName.label}
-          hint={basicsStep.firstName.hint}
+          label={t("onboarding.name.label")}
+          hint={t("onboarding.name.hint")}
           error={errors.firstName}
         >
           {(props) => (
@@ -177,7 +179,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               maxLength={NAME_MAX}
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
-              placeholder={basicsStep.firstName.placeholder}
+              placeholder={t("onboarding.name.placeholder")}
               className={inputClasses}
             />
           )}
@@ -185,8 +187,8 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
 
         <FormField
           id={dobId}
-          label={basicsStep.dateOfBirth.label}
-          hint={basicsStep.dateOfBirth.hint}
+          label={t("onboarding.birthday.label")}
+          hint={t("onboarding.birthday.hint")}
           error={errors.dateOfBirth}
         >
           {(props) => (
@@ -208,7 +210,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
 
         <fieldset>
           <legend id={genderId} className="text-[0.95rem] font-medium text-ink">
-            {basicsStep.gender.label}
+            {t("onboarding.gender.label")}
           </legend>
           <div
             className="mt-2.5 grid gap-2.5"
@@ -221,7 +223,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
                 type="radio"
                 name="gender"
                 value={option.value}
-                label={option.label}
+                label={t(option.labelKey)}
                 checked={gender === option.value}
                 onChange={(value) => setGender(value as Gender)}
               />
@@ -237,7 +239,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
         {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
 
         <PrimaryButton type="submit" loading={pending} loadingLabel="Saving…">
-          {basicsStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
 

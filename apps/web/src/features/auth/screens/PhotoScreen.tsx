@@ -10,9 +10,10 @@ import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { SecondaryButton } from "@/shared/ui/SecondaryButton";
-import { photoStep } from "@/features/auth/content";
+
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
+import { useT } from "@/features/i18n/LocaleProvider";
 import {
   ACCEPTED_IMAGE_TYPES,
   addPhotos,
@@ -47,6 +48,7 @@ export function PhotoScreen() {
 }
 
 function PhotoForm() {
+  const t = useT();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -139,8 +141,8 @@ function PhotoForm() {
       }
     >
       <AuthHeader
-        title={photoStep.title}
-        lede={photoStep.lede}
+        title={t("onboarding.photo.title")}
+        lede={t("onboarding.photo.lede")}
         showLogo={false}
       />
 
@@ -165,7 +167,7 @@ function PhotoForm() {
                   onClick={() => void remove(path)}
                   className="mt-1.5 min-h-11 w-full rounded-full text-[0.9rem] text-ember-text transition-colors hover:bg-sand disabled:opacity-60"
                 >
-                  {photoStep.removeCta}
+                  {t("common.remove")}
                 </button>
               </li>
             ))}
@@ -184,7 +186,7 @@ function PhotoForm() {
           type="file"
           accept={ACCEPTED_IMAGE_TYPES}
           multiple
-          aria-label={photoStep.addCta}
+          aria-label={t("onboarding.photo.addCta")}
           disabled={pending || full || loading}
           onChange={(event) => void onPicked(event)}
           className="sr-only"
@@ -198,12 +200,12 @@ function PhotoForm() {
             onClick={() => fileRef.current?.click()}
             className={paths.length > 0 ? "mt-4" : ""}
           >
-            {paths.length > 0 ? photoStep.addMoreCta : photoStep.addCta}
+            {paths.length > 0 ? t("onboarding.photo.addMoreCta") : t("onboarding.photo.addCta")}
           </SecondaryButton>
         ) : null}
 
         <p className="mt-3 text-sm leading-relaxed text-ink-subtle">
-          {photoStep.limitNote}
+          {t("onboarding.photo.limitNote")}
         </p>
 
         {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
@@ -215,7 +217,7 @@ function PhotoForm() {
           onClick={() => router.push(authRoutes.complete)}
           className="mt-8"
         >
-          {paths.length > 0 ? photoStep.continueCta : photoStep.skipCta}
+          {paths.length > 0 ? t("common.continue") : t("onboarding.photo.skipCta")}
         </PrimaryButton>
       </div>
     </AuthLayout>

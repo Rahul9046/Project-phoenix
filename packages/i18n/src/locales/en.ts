@@ -35,6 +35,13 @@ export const en = {
     notProvided: "Not provided",
     notAnswered: "Not answered",
     preferNotToSay: "Prefer not to say",
+    /*
+     * The label on the language control, for a screen reader and for the sheet
+     * it opens. Deliberately a verb: the control is there for somebody who
+     * cannot read the screen it sits on, and "Language" alone does not say
+     * that tapping it changes anything.
+     */
+    changeLanguage: "Change language",
   },
 
   shell: {
@@ -59,6 +66,38 @@ export const en = {
       emailCta: "Continue with email",
       switchPrompt: "New to Eraya?",
       switchCta: "Create an account",
+    },
+    /*
+     * The app's single sign-in screen, which is also its sign-up screen.
+     *
+     * The mobile app has no separate sign-up: a provider or an email address
+     * either matches an account or creates one, so `login` and `signup` above --
+     * which the website uses for its two pages -- do not fit it. Hence one more
+     * block rather than reusing a heading written for a page that knows which of
+     * the two the person is doing.
+     */
+    signIn: {
+      title: "Your next chapter.",
+      lede:
+        "For people who are divorced, separated or widowed, and ready to meet someone who understands.",
+      emailDivider: "or with your email",
+      emailHint:
+        "We will send you a six-digit code. There is no password to remember.",
+      /* Said before the first tap, not in a policy nobody opens. */
+      reassurance:
+        "Eraya is free to join. Nothing is shared with anyone until you choose it, and you can delete your account and everything in it at any time.",
+    },
+    /*
+     * The two screens that exist only to wait: the app's entry point, and
+     * where a tapped sign-in link lands. Nobody should read either for more
+     * than a moment -- but a stalled connection makes the first one the
+     * longest-lived screen in the product, and it must not be in a language
+     * the member cannot read.
+     */
+    entry: {
+      unreachableTitle: "We could not reach Eraya",
+      signInAgain: "Sign in again",
+      signingIn: "Signing you in…",
     },
     signup: {
       title: "Welcome to Eraya.",
@@ -94,6 +133,8 @@ export const en = {
       resend: "Send another code",
       resent: "Sent. Use the newest email.",
       sentRetry: "Use a different email address",
+      linkNote: "The same email has a button you can tap instead. On some phones the browser will not hand the link back to the app, which is why the code is here — it always works.",
+      codePlaceholder: "000000",
     },
     /*
      * Worded for a check that does not happen yet. No SMS provider is
@@ -111,6 +152,8 @@ export const en = {
       formatError: "That does not look like a phone number. Check the digits.",
       reassurance:
         "Only you can see it. Another member never sees your number, and neither does anyone you connect with.",
+      numberPlaceholder: "98765 43210",
+      notLiveNote: "Checking numbers by SMS is not switched on yet, so nothing will be sent. Your number is stored, and no other member ever sees it.",
     },
     otp: {
       title: "Confirm your number.",
@@ -123,6 +166,8 @@ export const en = {
       changeCta: "Change phone number",
       /* Not "Phone verified" -- the step is complete rather than verified. */
       success: "Phone number saved.",
+      resendIn: "You can ask for another code in {seconds}s.",
+      resendSent: "A new code is on its way.",
     },
     providers: {
       google: "Continue with Google",
@@ -192,6 +237,8 @@ export const en = {
       error: "Enter your date of birth to continue.",
       /* Names the actual problem. "Try again in a moment" cannot fix a birth date. */
       tooYoung: "Eraya is for people aged 18 and over. Please check the year.",
+      title: "When were you born?",
+      chooseCta: "Choose your date of birth",
     },
     gender: {
       label: "Gender",
@@ -200,6 +247,7 @@ export const en = {
       man: "Man",
       nonBinary: "Non-binary",
       preferNotToSay: "Prefer not to say",
+      title: "How do you describe yourself?",
     },
     seeking: {
       title: "Who would you like to meet?",
@@ -208,6 +256,7 @@ export const en = {
       women: "Women",
       men: "Men",
       nonBinaryPeople: "Non-binary people",
+      everyoneNote: "You will be introduced to anyone who would also like to meet you.",
     },
     city: {
       title: "Where are you based?",
@@ -237,12 +286,15 @@ export const en = {
       separatedBody: "I am living apart from my spouse.",
       widowed: "Widowed",
       widowedBody: "I lost my spouse.",
+      trustNote: "Eraya does not check this. It is taken on trust, the same way you are trusting everyone else here.",
     },
     languages: {
       title: "What languages do you speak?",
       lede: "Choose as many as you like. Conversations are easier in a language you're comfortable in.",
       error: "Choose at least one language, or select “Prefer not to say”.",
       preferNotToSay: "Prefer not to say",
+      selected: "{count} selected",
+      ratherNotSay: "I would rather not say",
     },
     /*
      * A photograph, if they want one. The last question and the only optional
@@ -257,6 +309,9 @@ export const en = {
       skipCta: "Not just now",
       /* Said plainly, because a limit discovered by being refused is a bad limit. */
       limitNote: "Up to three for now. You can add more from your account later.",
+      adding: "Adding…",
+      removeFailed: "That photo could not be removed. Please try again in a moment.",
+      privacyNote: "Photos are only shown inside Eraya, to members you are introduced to. Location information is removed from every picture before it leaves your phone.",
     },
     complete: {
       /*
@@ -292,6 +347,31 @@ export const en = {
     profileTitle: "Your profile",
     profileComplete: "Your profile is complete.",
     profileCta: "Review your profile",
+    today: "Today",
+    introductionsNone: "No new introductions today",
+    introductionsOne: "One person to meet",
+    introductionsMany: "{count} people to meet",
+    introductionsNoneBody: "More arrive as the community grows around you.",
+    introductionsSomeBody: "A few at a time, chosen without a ranking.",
+    introductionsLoading: "Introductions, loading",
+    waitingTitle: "Waiting for a first word",
+    waitingLedeOne: "You chose each other. Neither of you has said anything yet.",
+    waitingLedeMany: "You chose each other. Nothing has been said yet.",
+    sayHello: "Say hello when you are ready.",
+    startConversation: "Start a conversation with {name}",
+    conversationWith: "Conversation with {name}",
+    recentTitle: "Recent",
+    allMessages: "All messages",
+    fromYou: "You:",
+    unread: "Unread",
+    interestOne: "Someone is interested in you",
+    interestMany: "{count} people are interested in you",
+    interestSeeWho: "See who they are.",
+    interestPremium: "Seeing who they are is part of Eraya Premium.",
+    promptTitle: "Say a little more about yourself",
+    promptBody: "A few lines in your own words is the difference between a profile and a person. It takes a minute, and you can change it whenever you like.",
+    promptCta: "Add it now",
+    promptLater: "Later",
   },
 
   discovery: {

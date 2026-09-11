@@ -1,4 +1,6 @@
-import { webVsApp } from "@/features/auth/content";
+"use client";
+
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Sets expectations about web vs. the mobile app without ever reading as a
@@ -6,13 +8,15 @@ import { webVsApp } from "@/features/auth/content";
  * the phone. Quiet by design — a hairline box, no icon, no call to action.
  */
 export function WebAppNote({ className = "" }: { className?: string }) {
+  const t = useT();
+
   return (
     <aside
       className={`rounded-xl border border-line bg-sand/60 px-5 py-4 ${className}`.trim()}
     >
-      <p className="text-[0.95rem] font-medium text-ink">{webVsApp.title}</p>
+      <p className="text-[0.95rem] font-medium text-ink">{t("auth.webVsApp.title")}</p>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
-        {webVsApp.body}
+        {t("auth.webVsApp.body")}
       </p>
     </aside>
   );

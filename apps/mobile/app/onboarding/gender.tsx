@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { genderOptions, type Gender } from "@/features/auth/types";
 import { saveGender } from "@/features/onboarding/data";
@@ -23,6 +24,7 @@ import { SelectionCard } from "@/ui/Selection";
  */
 export default function GenderStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const [value, setValue] = useState<Gender | null>(profile?.gender ?? null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export default function GenderStep() {
   return (
     <Step
       step="gender"
-      title="How do you describe yourself?"
+      title={t("onboarding.gender.title")}
       onContinue={() => void submit()}
       canContinue={value !== null}
       pending={pending}
@@ -56,13 +58,13 @@ export default function GenderStep() {
     >
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel="How do you describe yourself?"
+        accessibilityLabel={t("onboarding.gender.title")}
         style={{ gap: space.md }}
       >
         {genderOptions.map((option) => (
           <SelectionCard
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={value === option.value}
             onPress={() => {
               setValue(option.value);

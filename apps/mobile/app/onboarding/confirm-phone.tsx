@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import {
   confirmCode,
@@ -33,6 +34,7 @@ import { useToast } from "@/ui/Toast";
  */
 export default function ConfirmPhoneStep() {
   const { refresh } = useSession();
+  const t = useT();
   const params = useLocalSearchParams<{ dialCode?: string; national?: string }>();
 
   const toast = useToast();
@@ -77,7 +79,7 @@ export default function ConfirmPhoneStep() {
 
     setCode("");
     setSecondsLeft(RESEND_COOLDOWN_SECONDS);
-    toast.show("A new code is on its way.", "positive");
+    toast.show(t("auth.otp.resendSent"), "positive");
   }
 
   const number =
@@ -127,13 +129,17 @@ export default function ConfirmPhoneStep() {
   return (
     <Step
       step="phone"
-      title="Confirm your number."
+      title={t("auth.otp.title")}
+      /*
+        The live wording is not translated yet and says so: `auth.otp.ledePrefix`
+        is written for the mock, which is what this build actually does. When SMS
+        is switched on both halves need a translated sentence, not only this one.
+      */
       lede={
         phoneVerificationIsLive
           ? `We sent a ${CODE_LENGTH}-digit code to ${number ?? "your phone"}.`
-          : `Checking codes by SMS is not switched on yet, so any ${CODE_LENGTH} digits will do for now. Your number is ${number ?? "saved"}.`
+          : `${t("auth.otp.ledePrefix")} ${number ?? ""}`.trim()
       }
-      continueLabel="Continue"
       onContinue={() => void submit()}
       canContinue={code.length === CODE_LENGTH}
       pending={pending}
@@ -146,17 +152,17 @@ export default function ConfirmPhoneStep() {
           if (error) setError(null);
         }}
         disabled={pending}
-        accessibilityLabel={`${CODE_LENGTH} digit code`}
+        accessibilityLabel={t("auth.otp.label")}
       />
 
       <View style={{ marginTop: space.xl, alignItems: "center" }}>
         {counting ? (
           <Text variant="bodySm" tone="subtle" center>
-            You can ask for another code in {secondsLeft}s.
+            {t("auth.otp.resendIn", { seconds: secondsLeft })}
           </Text>
         ) : (
           <TextButton
-            label={resending ? "Sending…" : "Send another code"}
+            label={resending ? t("common.sending") : t("auth.email.resend")}
             tone="muted"
             disabled={resending}
             onPress={() => void resend()}

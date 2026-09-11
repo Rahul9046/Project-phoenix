@@ -3,7 +3,9 @@ import { View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
+import { ScreenTitle } from "@/ui/ScreenTitle";
 import { getConversations, withPhotoUrls } from "@/features/members/data";
 import type { Conversation } from "@/features/members/types";
 import { colors, iconSize, space } from "@/theme/tokens";
@@ -29,6 +31,7 @@ import { Text } from "@/ui/Text";
 type Loaded = Conversation & { photoUrl: string | null };
 
 export default function Connections() {
+  const t = useT();
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -78,7 +81,7 @@ export default function Connections() {
   if (loading) {
     return (
       <Screen topInset>
-        <Text variant="title">Connections</Text>
+        <ScreenTitle title={t("shell.navConnections")} />
         <View style={{ marginTop: space.section }}>
           <SkeletonRow />
           <SkeletonRow />
@@ -90,7 +93,7 @@ export default function Connections() {
 
   return (
     <Screen topInset onRefresh={() => void refresh()} refreshing={refreshing}>
-      <Text variant="title">Connections</Text>
+      <ScreenTitle title={t("shell.navConnections")} />
 
       {failed ? (
         /*
@@ -149,6 +152,8 @@ function Group({
   conversations: Loaded[];
   muted?: boolean;
 }) {
+  const t = useT();
+
   return (
     <View style={{ marginTop: space.section }}>
       <SectionHeader title={title} lede={lede} />
@@ -189,7 +194,7 @@ function Group({
                   city={conversation.member.city}
                   relationship={
                     conversation.member.relationshipStatus
-                      ? relationshipLabels[conversation.member.relationshipStatus]
+                      ? t(relationshipLabelKeys[conversation.member.relationshipStatus])
                       : null
                   }
                   style={{ marginTop: space.xxs }}

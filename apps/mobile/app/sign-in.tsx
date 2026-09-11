@@ -2,8 +2,12 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 
+import type { TranslationKey } from "@eraya/i18n";
+
 import { ErayaMark } from "@/brand/ErayaMark";
 import { useSession } from "@/features/auth/SessionProvider";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { ProviderIcon } from "@/features/auth/ProviderIcon";
 import {
@@ -30,14 +34,15 @@ import { Text } from "@/ui/Text";
  * ever holds a credential.
  */
 
-const providerLabel: Record<SignInProvider, string> = {
-  google: "Continue with Google",
-  facebook: "Continue with Facebook",
-  apple: "Continue with Apple",
+const providerLabelKey: Record<SignInProvider, TranslationKey> = {
+  google: "auth.providers.google",
+  facebook: "auth.providers.facebook",
+  apple: "auth.providers.apple",
 };
 
 export default function SignIn() {
   const { loading, session, profile } = useSession();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState<SignInProvider | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +84,22 @@ export default function SignIn() {
 
   return (
     <Screen topInset contentStyle={{ flexGrow: 1, justifyContent: "center" }}>
+      {/*
+        Above everything, including the mark.
+
+        This is the first screen of the product and for some members it is the
+        first screen they cannot read. Putting the language control at the top
+        means the fix is visible before the thing it fixes -- not below a fold,
+        and not behind a tap on a screen whose labels are the problem.
+      */}
+      <View style={{ alignItems: "flex-end" }}>
+        <LanguageSwitcher variant="bordered" />
+      </View>
+
       <View style={{ alignItems: "center", marginBottom: space.region }}>
         <ErayaMark size={68} />
         <Text variant="display" center style={{ marginTop: space.xxl }}>
-          Your next chapter.
+          {t("auth.signIn.title")}
         </Text>
         <Text
           variant="body"
@@ -90,8 +107,7 @@ export default function SignIn() {
           center
           style={{ marginTop: space.md, maxWidth: 320 }}
         >
-          For people who are divorced, separated or widowed, and ready to meet
-          someone who understands.
+          {t("auth.signIn.lede")}
         </Text>
       </View>
 
@@ -99,7 +115,7 @@ export default function SignIn() {
         {availableProviders.map((provider) => (
           <Button
             key={provider}
-            label={providerLabel[provider]}
+            label={t(providerLabelKey[provider])}
             variant="secondary"
             loading={pending === provider}
             disabled={pending !== null && pending !== provider}
@@ -119,19 +135,19 @@ export default function SignIn() {
       >
         <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
         <Text variant="caption" tone="subtle">
-          or with your email
+          {t("auth.signIn.emailDivider")}
         </Text>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
       </View>
 
       <Field
-        label="Email address"
+        label={t("auth.email.label")}
         value={email}
         onChangeText={(next) => {
           setEmail(next);
           if (error) setError(null);
         }}
-        placeholder="you@example.com"
+        placeholder={t("auth.email.placeholder")}
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
@@ -140,11 +156,11 @@ export default function SignIn() {
         returnKeyType="go"
         onSubmitEditing={() => void withEmail()}
         error={error}
-        hint="We will send you a six-digit code. There is no password to remember."
+        hint={t("auth.signIn.emailHint")}
       />
 
       <Button
-        label="Continue"
+        label={t("common.continue")}
         loading={pending === "email"}
         disabled={email.trim().length === 0 || pending !== null}
         onPress={() => void withEmail()}
@@ -160,8 +176,7 @@ export default function SignIn() {
         }}
       >
         <Text variant="caption" tone="muted" center>
-          Eraya is free to join. Nothing is shared with anyone until you choose
-          it, and you can delete your account and everything in it at any time.
+          {t("auth.signIn.reassurance")}
         </Text>
       </View>
     </Screen>

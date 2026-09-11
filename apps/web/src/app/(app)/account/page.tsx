@@ -46,14 +46,16 @@ export default async function AccountPage() {
       : city.name
     : profile.otherCity;
 
-  const genderLabel =
-    genderOptions.find((option) => option.value === profile.gender)?.label ??
+  const genderKey =
+    genderOptions.find((option) => option.value === profile.gender)?.labelKey ??
     null;
+  const genderLabel = genderKey ? t(genderKey) : null;
 
-  const relationshipLabel =
+  const relationshipKey =
     relationshipOptions.find(
       (option) => option.value === profile.relationshipStatus,
-    )?.label ?? null;
+    )?.labelKey ?? null;
+  const relationshipLabel = relationshipKey ? t(relationshipKey) : null;
 
   const age = ageFrom(profile.dateOfBirth);
   const phoneVerified = session.stage !== "authenticated";

@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { colors } from "@/theme/tokens";
 import { fontFamily } from "@/theme/typography";
@@ -29,6 +30,13 @@ export default function YouLayout() {
         headerShadowVisible: false,
         headerTintColor: colors.ink,
         headerBackButtonDisplayMode: "minimal",
+        /*
+          Every screen in the account area, from one place. A member who has
+          landed in a language they cannot read is most likely to come looking
+          here, and the control should already be in front of them rather than
+          two taps further in.
+        */
+        headerRight: () => <LanguageSwitcher />,
         contentStyle: { backgroundColor: colors.canvas },
       }}
     >

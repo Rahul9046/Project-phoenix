@@ -29,6 +29,8 @@ import { TextButton } from "@/ui/Button";
 import { Text } from "@/ui/Text";
 import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { useToast } from "@/ui/Toast";
+import { ScreenTitle } from "@/ui/ScreenTitle";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Discover, one person at a time.
@@ -59,6 +61,7 @@ import { useToast } from "@/ui/Toast";
 type Loaded = Member & { photoUrl: string | null };
 
 export default function Discover() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { details } = useMyDetails();
   const toast = useToast();
@@ -250,17 +253,24 @@ export default function Discover() {
           gap: space.md,
         }}
       >
-        <Text variant="title" style={{ flex: 1 }}>
-          Discover
-        </Text>
+        <ScreenTitle
+          title={t("shell.navDiscovery")}
+          action={
+            <>
+              {reverts > 0 && cursor > 0 ? (
+                <TextButton
+                  label={t("discovery.undoPass")}
+                  onPress={() => void undo()}
+                />
+              ) : null}
 
-        {reverts > 0 && cursor > 0 ? (
-          <TextButton label="Undo last pass" onPress={() => void undo()} />
-        ) : null}
-
-        <FilterButton
-          activeCount={activeCount}
-          onPress={() => setFiltering(true)}
+              <FilterButton
+                activeCount={activeCount}
+                onPress={() => setFiltering(true)}
+              />
+            </>
+          }
+          style={{ marginTop: 0 }}
         />
       </View>
 

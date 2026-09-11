@@ -4,7 +4,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import type { Member } from "@/features/members/types";
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, iconSize, space } from "@/theme/tokens";
 import { TrustMarks } from "@/ui/Person";
 import { Card } from "@/ui/Surface";
@@ -46,10 +47,11 @@ export function MemberCard({
   onPress: () => void;
   context?: string;
 }) {
+  const t = useT();
   const languages = member.languages.slice(0, 3);
   const moreLanguages = member.languages.length - languages.length;
   const chapter = member.relationshipStatus
-    ? relationshipLabels[member.relationshipStatus]
+    ? t(relationshipLabelKeys[member.relationshipStatus])
     : null;
 
   return (

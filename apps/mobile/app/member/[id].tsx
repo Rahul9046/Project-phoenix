@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
 import { ConnectionMoment } from "@/features/connections/ConnectionMoment";
 import { SafetyActions } from "@/features/connections/SafetyActions";
 import {
@@ -25,6 +26,7 @@ import { Card, Divider } from "@/ui/Surface";
 import { ErrorState, Skeleton } from "@/ui/States";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * A person, in full.
@@ -46,6 +48,7 @@ import { useToast } from "@/ui/Toast";
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const toast = useToast();
   const { details } = useMyDetails();
 
@@ -242,7 +245,7 @@ export default function MemberProfile() {
             {member.relationshipStatus ? (
               <Detail
                 label="Chapter"
-                value={relationshipLabels[member.relationshipStatus]}
+                value={t(relationshipLabelKeys[member.relationshipStatus])}
               />
             ) : null}
 
@@ -334,15 +337,27 @@ export default function MemberProfile() {
 }
 
 function BackRow() {
+  const t = useT();
+
   return (
-    <IconButton
-      accessibilityLabel="Go back"
-      onPress={() => router.back()}
-      icon={
-        <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
-      }
-      style={{ marginLeft: -space.md }}
-    />
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <IconButton
+        accessibilityLabel={t("common.back")}
+        onPress={() => router.back()}
+        icon={
+          <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
+        }
+        style={{ marginLeft: -space.md }}
+      />
+
+      <LanguageSwitcher />
+    </View>
   );
 }
 

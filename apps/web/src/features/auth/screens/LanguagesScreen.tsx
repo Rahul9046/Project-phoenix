@@ -14,10 +14,11 @@ import {
 } from "@/features/auth/components/LanguageSelector";
 import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { languagesStep } from "@/features/auth/content";
+
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { LanguageOption } from "@/shared/data/reference";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 export function LanguagesScreen({
   languages,
@@ -39,6 +40,7 @@ function LanguagesForm({
   /** Language *names* already on the profile. */
   stored: string[];
 }) {
+  const t = useT();
   const router = useRouter();
 
   // The selector works in names; the database works in ids. Names are what the
@@ -52,7 +54,7 @@ function LanguagesForm({
     if (pending) return;
 
     if (selected.length === 0) {
-      setError(languagesStep.error);
+      setError(t("onboarding.languages.error"));
       return;
     }
 
@@ -89,8 +91,8 @@ function LanguagesForm({
       }
     >
       <AuthHeader
-        title={languagesStep.title}
-        lede={languagesStep.lede}
+        title={t("onboarding.languages.title")}
+        lede={t("onboarding.languages.lede")}
         showLogo={false}
       />
 
@@ -112,7 +114,7 @@ function LanguagesForm({
           loadingLabel="Saving…"
           className="mt-8"
         >
-          {languagesStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
     </AuthLayout>

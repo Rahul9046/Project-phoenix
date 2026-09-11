@@ -9,6 +9,7 @@ import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * What happened to the payment.
@@ -80,6 +81,12 @@ export default function PaymentReturn() {
 
   return (
     <Screen>
+      {/* No heading on this screen to sit beside, so the control takes the
+          corner on its own. */}
+      <View style={{ alignItems: "flex-end" }}>
+        <LanguageSwitcher />
+      </View>
+
       <View style={{ alignItems: "center", paddingVertical: space.region }}>
         <View
           style={{

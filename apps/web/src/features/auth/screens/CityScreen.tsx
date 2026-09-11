@@ -11,7 +11,6 @@ import { CitySearch } from "@/shared/ui/CitySearch";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { cityStep } from "@/features/auth/content";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import {
@@ -20,6 +19,7 @@ import {
   type CityChoice,
 } from "@/shared/data/cities";
 import type { OnboardingProfile } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 export function CityScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.city);
@@ -28,6 +28,7 @@ export function CityScreen() {
 }
 
 function CityForm({ profile }: { profile: OnboardingProfile }) {
+  const t = useT();
   const router = useRouter();
 
   /*
@@ -68,7 +69,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
     if (pending) return;
 
     if (!city) {
-      setError(cityStep.error);
+      setError(t("onboarding.city.error"));
       return;
     }
 
@@ -102,11 +103,19 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
         <ProgressIndicator currentIndex={onboardingStepIndex(authRoutes.city)} />
       }
     >
-      <AuthHeader title={cityStep.title} lede={cityStep.lede} showLogo={false} />
+      <AuthHeader title={t("onboarding.city.title")} lede={t("onboarding.city.lede")} showLogo={false} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
         <CitySearch
-          labels={cityStep}
+          labels={{
+            searchLabel: t("onboarding.city.searchLabel"),
+            searchPlaceholder: t("onboarding.city.searchPlaceholder"),
+            searching: t("onboarding.city.searching"),
+            noMatches: t("onboarding.city.noMatches"),
+            changeCta: t("common.change"),
+            useTyped: (typed) => t("onboarding.city.useTyped", { typed }),
+            typedSubtitle: t("onboarding.city.typedSubtitle"),
+          }}
           value={city}
           onChange={(next) => {
             setCity(next);
@@ -118,7 +127,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
 
         {!city ? (
           <p className="mt-2.5 text-sm leading-relaxed text-ink-subtle">
-            {cityStep.hint}
+            {t("onboarding.city.hint")}
           </p>
         ) : null}
 
@@ -130,7 +139,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
           loadingLabel="Saving…"
           className="mt-8"
         >
-          {cityStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
     </AuthLayout>
