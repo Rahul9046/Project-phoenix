@@ -322,9 +322,21 @@ export function authConfig() {
   };
 }
 
-/** Prices come from the seed migration -- never from the live database. */
+/**
+ * Prices and plan flags, from migrations -- never from the live database.
+ *
+ * Reading the seed alone is not enough, and getting that wrong once produced a
+ * review package claiming the monthly plan auto-renewed. It never did: the
+ * catalogue was seeded with `is_recurring = true` on an early assumption of a
+ * mandate, and a later migration clears it with the reasoning written out. A
+ * generator that stops at the seed reports a product decision that was reversed
+ * months ago, and reviewers then raise it as a bug.
+ *
+ * So later migrations are replayed over the seed for the flags that matter.
+ */
 export function plans() {
-  const seed = read("supabase/migrations/20260826100600_seed_membership.sql");
+  const seedFile = "supabase/migrations/20260826100600_seed_membership.sql";
+  const seed = read(seedFile);
   const rows = [...seed.matchAll(
     /\(\s*'([a-z_]+)',\s*'([^']+)',\s*'([a-z]+)',\s*(\d+),\s*(\d+),\s*(\d+|null),\s*(\d+|null),\s*(true|false),\s*(\d+)\s*\)/g,
   )].map((m) => ({
@@ -337,7 +349,35 @@ export function plans() {
     introPeriodMonths: m[7] === "null" ? null : Number(m[7]),
     isRecurring: m[8] === "true",
   }));
-  return { source: "supabase/migrations/20260826100600_seed_membership.sql", rows };
+
+  // Replay later corrections to `is_recurring` in migration order.
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const corrections = [];
+  for (const file of migrations) {
+    if (`supabase/migrations/${file}` === seedFile) continue;
+    const sql = read(`supabase/migrations/${file}`);
+    for (const m of sql.matchAll(
+      /update\s+public\.membership_plans\s+set\s+is_recurring\s*=\s*(true|false)([\s\S]{0,200}?);/g,
+    )) {
+      const value = m[1] === "true";
+      const scope = m[2];
+      const code = scope.match(/code\s*=\s*'([a-z_]+)'/)?.[1] ?? null;
+      corrections.push({ file, value, code });
+      for (const row of rows) {
+        if (code === null || row.code === code) row.isRecurring = value;
+      }
+    }
+  }
+
+  return {
+    source: seedFile,
+    corrections,
+    rows,
+    /* The product invariant, stated so a reviewer can check it at a glance. */
+    allPrepaid: rows.every((r) => !r.isRecurring),
+  };
 }
 
 /**
@@ -430,9 +470,29 @@ export function schema() {
     : [];
   const all = files.map((f) => read(`supabase/migrations/${f}`)).join("\n");
   const tables = [...new Set([...all.matchAll(/create table (?:if not exists )?public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
-  const rlsEnabled = [...new Set([...all.matchAll(/alter table public\.([a-z_]+) enable row level security/g)].map((m) => m[1]))].sort();
+
+  /*
+   * `\s+`, not a single space. The migrations align these statements in a
+   * column -- `alter table public.cities            enable row level security;`
+   * -- and a regex expecting one space matched only the longest table names.
+   * The resulting package reported ten tables as having no RLS when every one
+   * of them had it, which is exactly the kind of false alarm that sends someone
+   * to "fix" a database that was already correct.
+   */
+  const rlsEnabled = [
+    ...new Set(
+      [...all.matchAll(/alter table\s+public\.([a-z_]+)\s+enable row level security/g)].map((m) => m[1]),
+    ),
+  ].sort();
+
+  // Policies are the actual boundary; "RLS enabled" with no policy denies all.
+  const policies = {};
+  for (const m of all.matchAll(/create policy\s+"?([^"\n]+?)"?\s+on\s+public\.([a-z_]+)/g)) {
+    (policies[m[2]] ??= []).push(m[1].trim());
+  }
+
   const functions = [...new Set([...all.matchAll(/create (?:or replace )?function public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
-  return { migrationCount: files.length, latest: files.slice(-5), tables, rlsEnabled, functions };
+  return { migrationCount: files.length, latest: files.slice(-5), tables, rlsEnabled, policies, functions };
 }
 
 // ---------------------------------------------------------------------------

@@ -56,12 +56,10 @@ const narrative = {
   ],
 
   mockedOrIncomplete: [
-    ["Phone verification is a stub — any six digits pass while OTP_DEV_CODE is set; no SMS is sent", "apps/web/.env.example, supabase/functions/phone-otp-*", "mocked"],
+    ["Phone verification is a stub — any six digits pass while OTP_DEV_CODE is set; no SMS is sent. Deferred deliberately: real SMS needs DLT registration", "apps/web/.env.example, supabase/functions/phone-otp-*", "mocked"],
     ["Razorpay is in TEST mode — no real money moves", "mode is read from the key prefix, supabase/functions/_shared/razorpay.ts", "test-only"],
-    ["Waitlist writes to a file on disk, which cannot survive serverless hosting", "apps/web/src/features/waitlist/actions.ts", "not production-ready"],
     ["Privacy policy and terms are placeholders; DPDP Act applies", "apps/web/src/app/(marketing)/privacy, terms", "launch blocker"],
-    ["No profile review, photo review or moderation queue exists", "—", "absent"],
-    ["Reporting has database tables but no review tooling or workflow", "supabase/migrations/*connection_tables*", "partial"],
+    ["No profile review, photo review or automated moderation exists", "—", "absent"],
     ["International cards are refused by the Razorpay account (international_transaction_not_allowed)", "commercial setting, not code", "blocked"],
     ["Product is deployed but noindex — invisible to search until launch", "apps/web/next.config.ts, apps/web/src/app/layout.tsx", "deliberate"],
   ],
@@ -84,15 +82,14 @@ const narrative = {
     ["Premium expiry", "Premium is a date, not a boolean — active only while current_period_end > now().", "No renewal reminder exists."],
     ["Blocking", "Blocks are enforced in the database, not the UI.", "No notification to either party."],
     ["Reporting", "Rows can be written.", "Nothing reads them. No queue, no tooling, no SLA."],
-    ["Account deletion", "Deletes the auth user; profile and everything under it cascade. Audit rows keep history with a null actor.", "Storage objects are not reached by foreign keys and must be swept separately."],
+    ["Account deletion", "`delete_my_account()` takes the id from the session, deletes the member's objects from the `profile-photos` bucket first, then deletes the auth user so everything else cascades. Audit rows keep history with a null actor.", "Files go first deliberately — the reverse order would orphan objects with no owner to attribute them to. Note this applies to the product's own deletion path; deleting a user through the Supabase admin API bypasses it and leaves objects behind."],
   ],
 
   observations: [
-    ["security", "android.permission.RECORD_AUDIO is declared in app.json and referenced nowhere in the source. A relationship product asking for the microphone with no voice feature is a trust cost for nothing.", "apps/mobile/app.json"],
     ["launch blocker", "Privacy policy and terms are placeholders. India's DPDP Act applies and both app stores require them.", "apps/web/src/app/(marketing)/{privacy,terms}"],
     ["trust", "Phone verification accepts any six digits. Anything in the product that implies a verified number is currently untrue.", "supabase/functions/phone-otp-*"],
     ["product", "Analytics cover payments only. Registration, onboarding, discovery, interest, connection and messaging emit no events, so there is no funnel before the paywall.", "grep for recordProductEvent"],
-    ["product", "The waitlist writes to a file on disk. On serverless hosting that store does not survive, so entries can be lost silently.", "apps/web/src/features/waitlist/actions.ts"],
+    ["safety", "Reports can be filed but nothing reads them: no queue, no tooling, no one accountable. Trust copy must not imply review that does not happen.", "supabase/migrations/*connection_tables*"],
     ["UX", "Web and mobile onboarding ask for different fields. Someone starting on one and finishing on the other meets an inconsistent product.", "onboarding routes in both apps"],
     ["safety", "Reporting and blocking write rows, but nothing reads reports. Trust copy should not imply review that does not happen.", "supabase/migrations/*connection_tables*"],
     ["technical debt", "There is no test suite in any workspace. Every check is a type check, a linter or a probe script.", "package.json"],
@@ -422,7 +419,18 @@ table(
     p.isRecurring ? "yes" : "**no — prepaid, nothing auto-renews**",
   ]),
 );
-w(`\n_Prices read from \`${planData.source}\`, not from the live database._`);
+w(`\n_Prices read from \`${planData.source}\`, with later migrations replayed over it — not from the live database._`);
+if (planData.corrections.length) {
+  w("\nCorrections applied after the seed:");
+  planData.corrections.forEach((c) =>
+    bullet(`\`${c.file}\` — set \`is_recurring = ${c.value}\`${c.code ? ` for \`${c.code}\`` : " for every plan"}`),
+  );
+}
+w(
+  `\n**Product invariant: ${planData.allPrepaid ? "every plan is prepaid — nothing auto-renews." : "⚠ AT LEAST ONE PLAN IS MARKED RECURRING."}** ` +
+    "There is no Razorpay subscription, mandate or standing instruction anywhere in the codebase; a term ends when it ends " +
+    "and the member decides whether to buy another.",
+);
 table(
   ["Aspect", "State"],
   [
@@ -486,7 +494,7 @@ table(
 );
 bullet("Account deletion cascades from `auth.users` through `profiles` to languages, subscriptions, blocks, connections, messages and reports.");
 bullet("Razorpay receives no name, address or contact details — only an order note tying a payment to a member and plan.");
-bullet("**Flag:** the waitlist writes to a file on disk (`apps/web/src/features/waitlist/actions.ts`), which does not survive serverless hosting.");
+bullet("Account deletion removes the member's objects from the `profile-photos` bucket before deleting the auth row — storage is handled, not left to the foreign keys that cannot reach it.");
 
 /* --- N ------------------------------------------------------------------ */
 h2("N. Moderation and safety");
@@ -572,14 +580,26 @@ h2("S. Database schema");
 w(`${db.migrationCount} migrations. ${db.tables.length} tables, ${db.rlsEnabled.length} with RLS enabled, ${db.functions.length} functions.`);
 h3("Tables");
 w(db.tables.map((t) => `\`${t}\``).join(" · "));
-h3("RLS enabled");
-w(db.rlsEnabled.map((t) => `\`${t}\``).join(" · "));
+h3("Row Level Security");
 const noRls = db.tables.filter((t) => !db.rlsEnabled.includes(t));
+table(
+  ["Table", "RLS", "Policies"],
+  db.tables.map((t) => [
+    `\`${t}\``,
+    db.rlsEnabled.includes(t) ? "enabled" : "**NOT ENABLED**",
+    (db.policies[t] ?? []).length ? String((db.policies[t] ?? []).length) : "**none**",
+  ]),
+);
 if (noRls.length) {
-  h3("Tables without an explicit RLS statement");
-  w(noRls.map((t) => `\`${t}\``).join(" · "));
-  w("\n_Worth confirming each is deliberate (reference data such as cities and languages usually is)._");
+  w(`\n**Tables without an RLS statement:** ${noRls.map((t) => `\`${t}\``).join(", ")} — worth confirming each is deliberate.`);
+} else {
+  w("\nEvery table has RLS enabled.");
 }
+w(
+  "\nPolicy count matters as much as the flag: RLS enabled with no policy denies everything, which is safe but usually " +
+    "means the table is reached only through `SECURITY DEFINER` functions. Both are legitimate here — the functions are the " +
+    "boundary for anything a member should not query directly.",
+);
 h3("Recent migrations");
 db.latest.forEach((m) => bullet(`\`${m}\``));
 

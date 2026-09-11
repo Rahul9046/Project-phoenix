@@ -113,6 +113,34 @@ console.log("\nPricing, decided by the server");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\nNothing auto-renews");
+// ---------------------------------------------------------------------------
+//
+// Eraya sells prepaid terms: no mandate, no standing instruction, nothing to
+// cancel. The catalogue was seeded with `is_recurring = true` on the monthly
+// plan before that was decided, and a migration cleared it -- so the invariant
+// is asserted here rather than trusted to stay true. A plan that silently
+// became recurring would be the most expensive kind of regression: the first
+// anyone hears of it is a member being charged money they did not agree to.
+{
+  const { data } = await fetch(
+    `${url}/rest/v1/membership_plans?select=code,is_recurring,price_paise&is_active=eq.true`,
+    { headers: svc },
+  ).then((r) => r.json()).then((rows) => ({ data: rows }));
+
+  const plans = Array.isArray(data) ? data : [];
+  const recurring = plans.filter((p) => p.is_recurring);
+
+  check("every active plan is prepaid, none recurring", plans.length > 0 && recurring.length === 0,
+    recurring.length ? JSON.stringify(recurring) : `${plans.length} plans checked`);
+
+  const expected = { premium_monthly: 29900, premium_quarterly: 69900, premium_half_yearly: 129900, premium_annual: 239900 };
+  const wrong = plans.filter((p) => expected[p.code] !== undefined && p.price_paise !== expected[p.code]);
+  check("plan prices are unchanged", wrong.length === 0,
+    wrong.length ? JSON.stringify(wrong) : "₹299 / ₹699 / ₹1,299 / ₹2,399");
+}
+
+// ---------------------------------------------------------------------------
 console.log("\nA first purchase");
 // ---------------------------------------------------------------------------
 
