@@ -21,6 +21,8 @@
     "security": "node scripts/security-probe.mjs",
     "auth:capacity": "node scripts/auth-capacity.mjs",
     "payments:probe": "node scripts/payments-probe.mjs",
-    "config:push": "node scripts/supabase-config.mjs"
+    "config:push": "node scripts/supabase-config.mjs",
+    "review:package": "node scripts/review-package.mjs",
+    "review:package:fast": "node scripts/review-package.mjs --skip-checks"
   }
 }
