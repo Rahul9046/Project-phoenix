@@ -529,6 +529,217 @@ export const en = {
     retry: "Try again",
     persists: "If it keeps happening, write to us at support@eraya.app.",
   },
+  /*
+   * The public site.
+   *
+   * It was the last thing in the product still written in one language, which
+   * made the language control on its header a button that changed nothing. A
+   * person deciding whether Eraya is for them reads this before they have an
+   * account to hold a preference -- so this is the first thing they should be
+   * able to read in their own language, not the last.
+   */
+  marketing: {
+    nav: {
+      howItWorks: "How it works",
+      safety: "Safety & Trust",
+      pricing: "Pricing",
+      about: "About Eraya",
+      login: "Log in",
+      begin: "Begin your journey",
+      signedInAs: "Signed in as {name}",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+    },
+
+    hero: {
+      eyebrow: "For those beginning again",
+      /* Two lines, because the second is set in terracotta on its own. */
+      headlineOne: "Every ending can be",
+      headlineTwo: "a new beginning.",
+      lede: "Meet people who understand what starting again means.",
+      primaryCta: "Create your account",
+      secondaryCta: "How Eraya works",
+      note: "Open across India. Verified members. A considered few, never an endless list.",
+    },
+
+    trust: {
+      eyebrow: "Safety & Trust",
+      title: "Trust comes before connection.",
+      lede: "Meeting someone new asks a lot of you. Eraya's job is to make that feel safe long before it feels exciting — so the groundwork comes first.",
+      reachTitle: "Nobody can reach you uninvited",
+      reachBody: "A conversation opens only when you have both chosen it. There is no inbox for strangers, and no way to message someone who has not chosen you back.",
+      browsableTitle: "You are not browsable",
+      browsableBody: "Eraya introduces a considered few rather than listing everyone. There is no directory to search, and no way to look someone up.",
+      sharedTitle: "Only what you agreed to share",
+      sharedBody: "Your email address and phone number are never shown to another member, and your date of birth is never shown at all — only your age.",
+      chapterTitle: "Built for one chapter of life",
+      chapterBody: "Eraya is for people who are divorced, separated or widowed. Nobody creates a profile on someone else's behalf.",
+      interestTitle: "Interest is private",
+      interestBody: "If you pass on someone, they are never told. Nobody learns they were passed over, and nobody can be pestered.",
+    },
+    why: {
+      eyebrow: "About Eraya",
+      title: "Built for a different moment in life.",
+      lede: "Most platforms are designed for people starting out. Eraya is designed for people starting again — and that changes almost everything about how it should work.",
+      paywallTitle: "No paywall before a first conversation",
+      paywallBody: "You should not have to pay to find out whether there is anything to talk about. Starting a meaningful conversation is part of the experience, not the upsell.",
+      curiosityTitle: "No engineered curiosity",
+      curiosityBody: "No blurred faces, no “someone liked you” nudges designed to make you upgrade. What is true is what you are shown.",
+      collectingTitle: "No endless collecting",
+      collectingBody: "Eraya is not built to keep you scrolling. A smaller number of considered introductions respects your time far more than an infinite list.",
+      trustTitle: "Designed around trust",
+      trustBody: "Verification, review and privacy are not features bolted on at the end. They are the reason the rest of the product can exist.",
+    },
+
+    how: {
+      eyebrow: "How it works",
+      title: "Three simple steps.",
+      lede: "No jargon, no complicated setup. If you can send a message, you can use Eraya.",
+      oneTitle: "Create your profile",
+      oneBody: "Tell us a little about yourself — your name, your city, and the chapter you are in. It takes a few minutes.",
+      twoTitle: "Discover people at your pace",
+      twoBody: "See a small number of people at a time. Look today, come back next week — nothing expires.",
+      threeTitle: "Connect when you're comfortable",
+      threeBody: "A conversation only begins when you choose to open it. There is no rush, and no obligation.",
+    },
+
+    built: {
+      eyebrow: "Built differently",
+      title: "Fewer people. More thought.",
+      lede: "A few decisions shape everything else about Eraya.",
+      fewTitle: "A considered few, not an endless feed",
+      fewBody: "You see a limited set of people who genuinely fit what you are looking for, rather than an infinite list to work through.",
+      mindTitle: "Change your mind, freely",
+      mindBody: "Moved past someone too quickly? You can go back to the previous profile in a session, at no cost.",
+      privacyTitle: "Privacy-respecting communication",
+      privacyBody: "You talk within Eraya until you decide otherwise. Your personal contact details stay yours to give.",
+      pressureTitle: "No pressure to rush",
+      pressureBody: "No streaks, no countdowns, no reminders that someone is waiting. You set the pace.",
+    },
+
+    cities: {
+      eyebrow: "Where Eraya is",
+      title: "Open everywhere in India.",
+      body: "Every city and town in India is here — search for yours and it will be in the list. Where you live shapes who you are likely to meet, never whether you can join.",
+      elsewhere: "Eraya is young, so some places have more members than others. Create your account and take your time; introductions arrive as the community grows around you.",
+      cta: "Create your account",
+      coverageBody: "cities and towns to choose from, across all {states} states and union territories.",
+      coverageNote: "Your city is on the list. It decides who you are likely to meet nearby — never whether you can join.",
+    },
+
+    finalCta: {
+      title: "Your next chapter doesn't have to begin alone.",
+      lede: "Wherever you are in it — a year on, or ten — there are people who understand. Eraya is being built for them, and for you.",
+      cta: "Create your account",
+    },
+
+    begin: {
+      eyebrow: "Begin",
+      title: "Your next chapter starts when you are ready.",
+      lede: "Creating an account is free and takes a few minutes. Nothing is shared with anyone until you choose it, and nobody can reach you until you both do.",
+      cta: "Create your account",
+      secondary: "I already have an account",
+      reassurance: "Open across India. Free to join, and free to leave — you can delete your account and everything in it at any time.",
+    },
+
+    footer: {
+      erayaTitle: "Eraya",
+      about: "About",
+      howItWorks: "How it works",
+      safety: "Safety",
+      legalTitle: "Legal",
+      privacy: "Privacy",
+      terms: "Terms",
+      contact: "Contact",
+      tagline: "A trusted place to begin again, for people who are divorced, separated or widowed.",
+      social: "Social",
+      comingSoon: "coming soon",
+      copyright: "© {year} Eraya. A {organization} product.",
+    },
+    /*
+     * Prices, terms and the promise about renewal.
+     *
+     * The amounts are not here. They come from the `plans` table and are
+     * formatted by the page, so a price cannot be changed in one language and
+     * not the other five -- which is the sort of drift that stops being a
+     * translation bug and starts being a claim about money.
+     */
+    pricing: {
+      eyebrow: "Membership",
+      title: "Everything you need to meet someone is free.",
+      lede: "Browsing, filters, expressing interest and messaging the people you connect with cost nothing, and will not start costing something later. Eraya Premium adds a few things on top for those who want them.",
+      freeName: "Free",
+      freePriceNote: "Always. No card, no trial period.",
+      freeCta: "Create your account",
+      premiumName: "Eraya Premium",
+      premiumPriceNote: "from ₹199 for your first month",
+      premiumIntro: "Everything in Free, and:",
+      premiumFrom: "from",
+      premiumTerms: "One membership, four lengths: monthly, quarterly, half-yearly or annual.",
+      premiumCta: "Choose how long",
+      chooseCta: "Choose {name}",
+      chooseUnavailable: "Opens when payments do",
+      includedTitle: "Included with every account",
+      plansTitle: "Choose how long",
+      plansLede: "The same Premium membership either way — only the length of the term changes. Prices are fixed. There is nothing to work out.",
+      perMonth: "{amount} a month",
+      recurringNote: "{first} for your first month, then {thereafter} per month. Cancel any time.",
+      oneOffNote: "{price} for {period}, paid once. Not a recurring subscription.",
+      renewalPromiseTitle: "Nothing renews behind your back",
+      renewalPromiseBody: "The quarterly, half-yearly and annual terms are paid once and simply end. Nothing continues on its own, and no card is charged again. The monthly plan is the only one that renews, and you can stop it whenever you like.",
+      renewalPromiseNudge: "We will not ring you or fill your inbox asking you to come back. If a term ends and you would like to carry on, that is entirely your decision to make, in your own time.",
+      notYetTitle: "Premium is not on sale yet",
+      notYetBody: "We are still choosing how payments are handled, so nothing here can be purchased today and nothing will charge you. Create your account now — it is free — and we will tell you when Premium opens. You will always see the renewal price before agreeing to anything.",
+      faqTitle: "Before you ask",
+      faqFreeQ: "Will the free features start costing money later?",
+      faqFreeA: "No. Browsing, filters, expressing interest and messaging someone you have connected with are free, and are meant to stay that way. Premium adds to that rather than taking anything away.",
+      faqCancelQ: "Can I cancel?",
+      faqCancelA: "Yes, at any time. Cancelling stops the next payment; it does not end the term you have already paid for, and you keep Premium until that term runs out.",
+      faqRenewQ: "What happens after the first month at ₹199?",
+      faqRenewA: "The monthly plan renews at ₹299 a month. That is the only plan that renews on its own — the three, six and twelve month terms are paid once and simply end.",
+      freePrice: "₹0",
+      firstMonth: "first month",
+      insteadOf: "instead of",
+    },
+
+    /*
+     * The three standing pages. Both the privacy and terms pages say outright
+     * that they are not yet the legal documents, which is why translating them
+     * is reasonable: they describe what the product does today. The documents
+     * that replace them will need a lawyer in each language, not a translator.
+     */
+    privacy: {
+      eyebrow: "Privacy",
+      title: "Privacy at Eraya.",
+      intro: "The formal privacy policy is being written and will be published here before Eraya opens to the public. This page is not that document — it is a plain account of what Eraya stores today and who can see it.",
+      storeTitle: "What we store",
+      storeAccount: "When you create an account we store your email address, and the answers you give during onboarding: your first name, date of birth, gender, city, the chapter you are in, and the languages you speak. If you use Google or Facebook to sign in, we receive your name and email address from them.",
+      storePhone: "We record the phone number step, but we do not currently verify it against a mobile network and we do not store the number itself.",
+      storeActivity: "Once you are using Eraya we store who you have expressed interest in, who you have connected with, and the messages you exchange with them.",
+      seeTitle: "What other members see",
+      seeProfile: "Another member sees your first name, your age, your city, the chapter you are in, and the languages you speak. They never see your email address, your phone number, or your date of birth — only the age calculated from it.",
+      seeDirectory: "There is no directory and no search. You are introduced to a few people at a time and appear in theirs; nobody can look you up. If someone passes on your profile, you are never told, and nobody can message you unless you have both expressed interest.",
+      deleteTitle: "Deleting everything",
+      deleteBody: "You can delete your account from Settings at any time. It removes your profile, your answers, your connections and your messages permanently. There is no grace period and we cannot restore it afterwards.",
+      deleteContact: "If you would rather we did it, or you have any question about your data, write to",
+    },
+
+    terms: {
+      eyebrow: "Terms",
+      title: "Terms of use.",
+      body: "Eraya has not launched yet, so there is no service to set terms for. The full terms of use will be published on this page before the app opens, and before anyone is asked to agree to them.",
+      operator: "This site is operated by {organization}. If you have a question in the meantime, write to",
+    },
+
+    contact: {
+      eyebrow: "Contact",
+      title: "Talk to us.",
+      body: "Eraya is being built by a small team at {organization}. If you have a question, a concern, or something you think we should know about building this well — we would like to hear it.",
+      emailPrefix: "Email",
+      emailSuffix: "and a person will read it.",
+    },
+  },
+
 };
 
 /**

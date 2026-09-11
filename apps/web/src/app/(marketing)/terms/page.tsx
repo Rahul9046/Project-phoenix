@@ -2,23 +2,26 @@ import type { Metadata } from "next";
 
 import { PageShell } from "@/features/marketing/layout/PageShell";
 import { site } from "@/features/marketing/content";
+import { getT } from "@/features/i18n/server";
 
 export const metadata: Metadata = {
   title: "Terms",
   description: "Eraya's terms of use will be published before launch.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getT();
+
   return (
-    <PageShell eyebrow="Terms" title="Terms of use.">
+    <PageShell
+      eyebrow={t("marketing.terms.eyebrow")}
+      title={t("marketing.terms.title")}
+    >
+      <p>{t("marketing.terms.body")}</p>
       <p>
-        Eraya has not launched yet, so there is no service to set terms for. The
-        full terms of use will be published on this page before the app opens,
-        and before anyone is asked to agree to them.
-      </p>
-      <p>
-        This site is operated by {site.organization}. If you have a question in
-        the meantime, write to{" "}
+        {t("marketing.terms.operator", {
+          organization: site.organization,
+        })}{" "}
         <a
           href={`mailto:${site.email}`}
           className="text-ember-text underline underline-offset-4"

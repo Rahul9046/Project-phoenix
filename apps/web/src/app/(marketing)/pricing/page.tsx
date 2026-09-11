@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { pricing, site } from "@/features/marketing/content";
+import { site } from "@/features/marketing/content";
+import { getT } from "@/features/i18n/server";
 import {
   loadPlans,
   loadTierComparison,
@@ -45,9 +46,10 @@ function Tick() {
  * entitlements table does not grant, or a price the catalogue does not hold.
  */
 export default async function PricingPage() {
-  const [plans, capabilities] = await Promise.all([
+  const [plans, capabilities, t] = await Promise.all([
     loadPlans(),
     loadTierComparison(),
+    getT(),
   ]);
 
   /*
@@ -71,12 +73,12 @@ export default async function PricingPage() {
       <Section>
         <Container>
           <div className="mx-auto max-w-3xl text-center">
-            <Eyebrow>{pricing.eyebrow}</Eyebrow>
+            <Eyebrow>{t("marketing.pricing.eyebrow")}</Eyebrow>
             <h1 className="mt-6 text-title text-ink">
-              {pricing.title}
+              {t("marketing.pricing.title")}
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-ink-muted sm:text-xl">
-              {pricing.lede}
+              {t("marketing.pricing.lede")}
             </p>
           </div>
 
@@ -84,13 +86,13 @@ export default async function PricingPage() {
             {/* Free. Listed first, because it is what most people will use. */}
             <div className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
               <h2 className="text-subhead text-ink">
-                {pricing.freeName}
+                {t("marketing.pricing.freeName")}
               </h2>
               <p className="mt-4 text-ink text-4xl font-bold tracking-[-0.02em]">
-                {pricing.freePrice}
+                {t("marketing.pricing.freePrice")}
               </p>
               <p className="mt-2 text-[0.95rem] text-ink-subtle">
-                {pricing.freePriceNote}
+                {t("marketing.pricing.freePriceNote")}
               </p>
 
               <ul className="mt-7 grid gap-3">
@@ -116,7 +118,7 @@ export default async function PricingPage() {
 
               <div className="mt-8">
                 <Button href="/signup" variant="secondary" size="lg">
-                  {pricing.freeCta}
+                  {t("marketing.pricing.freeCta")}
                 </Button>
               </div>
             </div>
@@ -124,24 +126,24 @@ export default async function PricingPage() {
             {/* Premium. */}
             <div className="rounded-2xl border border-ember/35 bg-surface p-6 ring-1 ring-ember/10 sm:p-8">
               <h2 className="text-subhead text-ink">
-                {pricing.premiumName}
+                {t("marketing.pricing.premiumName")}
               </h2>
 
               <p className="mt-4 text-ink text-4xl font-bold tracking-[-0.02em]">
                 <span className="mr-1.5 align-middle font-sans text-base font-normal text-ink-subtle">
-                  {pricing.premiumFrom}
+                  {t("marketing.pricing.premiumFrom")}
                 </span>
                 {monthlyIntro !== null ? formatRupees(monthlyIntro) : "—"}
                 <span className="ml-2 align-middle font-sans text-base font-normal text-ink-subtle">
-                  first month
+                  {t("marketing.pricing.firstMonth")}
                 </span>
               </p>
               <p className="mt-2 text-[0.95rem] text-ink-subtle">
-                {pricing.premiumTerms}
+                {t("marketing.pricing.premiumTerms")}
               </p>
 
               <p className="mt-7 text-[0.95rem] font-medium text-ink">
-                {pricing.premiumIntro}
+                {t("marketing.pricing.premiumIntro")}
               </p>
               <ul className="mt-3 grid gap-3">
                 {premiumAdds.map((capability) => (
@@ -155,7 +157,8 @@ export default async function PricingPage() {
                       {capability.kind === "number" ? (
                         <span className="text-ink-subtle">
                           {" — "}
-                          {String(capability.premium)} instead of{" "}
+                          {String(capability.premium)}{" "}
+                          {t("marketing.pricing.insteadOf")}{" "}
                           {String(capability.free)}
                         </span>
                       ) : null}
@@ -166,7 +169,7 @@ export default async function PricingPage() {
 
               <div className="mt-8">
                 <Button href="#plans" size="lg">
-                  {pricing.premiumCta}
+                  {t("marketing.pricing.premiumCta")}
                 </Button>
               </div>
             </div>
@@ -176,7 +179,10 @@ export default async function PricingPage() {
 
       <Section id="plans" tone="sand">
         <Container>
-          <SectionHeading title={pricing.plansTitle} lede={pricing.plansLede} />
+          <SectionHeading
+            title={t("marketing.pricing.plansTitle")}
+            lede={t("marketing.pricing.plansLede")}
+          />
 
           <ul className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-2">
             {plans.map((plan) => {
@@ -212,19 +218,21 @@ export default async function PricingPage() {
                   </p>
 
                   <p className="mt-1 text-[0.95rem] text-ink-subtle">
-                    {pricing.perMonth(formatRupees(perMonthPaise))}
+                    {t("marketing.pricing.perMonth", {
+                      amount: formatRupees(perMonthPaise),
+                    })}
                   </p>
 
                   <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-muted">
                     {hasIntro
-                      ? pricing.recurringNote(
-                          formatRupees(introPaise),
-                          formatRupees(plan.pricePaise),
-                        )
-                      : pricing.oneOffNote(
-                          formatRupees(plan.pricePaise),
-                          formatPeriod(plan.periodMonths),
-                        )}
+                      ? t("marketing.pricing.recurringNote", {
+                          first: formatRupees(introPaise),
+                          thereafter: formatRupees(plan.pricePaise),
+                        })
+                      : t("marketing.pricing.oneOffNote", {
+                          price: formatRupees(plan.pricePaise),
+                          period: formatPeriod(plan.periodMonths),
+                        })}
                   </p>
 
                   {/*
@@ -244,13 +252,13 @@ export default async function PricingPage() {
                       aria-describedby={`plan-${plan.code}-unavailable`}
                       className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-full border border-line-strong bg-canvas px-5 text-[0.95rem] font-medium text-ink-subtle"
                     >
-                      {pricing.chooseCta(plan.name)}
+                      {t("marketing.pricing.chooseCta", { name: plan.name })}
                     </button>
                     <p
                       id={`plan-${plan.code}-unavailable`}
                       className="mt-2 text-center text-sm text-ink-subtle"
                     >
-                      {pricing.chooseUnavailable}
+                      {t("marketing.pricing.chooseUnavailable")}
                     </p>
                   </div>
 
@@ -267,24 +275,24 @@ export default async function PricingPage() {
           */}
           <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-line bg-surface p-6">
             <p className="font-medium text-ink">
-              {pricing.renewalPromiseTitle}
+              {t("marketing.pricing.renewalPromiseTitle")}
             </p>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-ink-muted">
-              {pricing.renewalPromiseBody}
+              {t("marketing.pricing.renewalPromiseBody")}
             </p>
             <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-muted">
-              {pricing.renewalPromiseNudge}
+              {t("marketing.pricing.renewalPromiseNudge")}
             </p>
           </div>
 
           <div className="mx-auto mt-5 max-w-2xl rounded-2xl border border-line-strong bg-canvas p-6 text-center">
-            <p className="font-medium text-ink">{pricing.notYetTitle}</p>
+            <p className="font-medium text-ink">{t("marketing.pricing.notYetTitle")}</p>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-ink-muted">
-              {pricing.notYetBody}
+              {t("marketing.pricing.notYetBody")}
             </p>
             <div className="mt-6 flex justify-center">
               <Button href="/signup" size="lg">
-                {pricing.freeCta}
+                {t("marketing.pricing.freeCta")}
               </Button>
             </div>
           </div>
@@ -293,13 +301,15 @@ export default async function PricingPage() {
 
       <Section>
         <Container>
-          <SectionHeading title={pricing.faqTitle} />
+          <SectionHeading title={t("marketing.pricing.faqTitle")} />
           <dl className="mx-auto mt-12 grid max-w-3xl gap-8">
-            {pricing.faq.map((item) => (
-              <div key={item.q}>
-                <dt className="text-name text-ink">{item.q}</dt>
+            {(["Free", "Cancel", "Renew"] as const).map((item) => (
+              <div key={item}>
+                <dt className="text-name text-ink">
+                  {t(`marketing.pricing.faq${item}Q`)}
+                </dt>
                 <dd className="mt-2.5 leading-relaxed text-ink-muted">
-                  {item.a}
+                  {t(`marketing.pricing.faq${item}A`)}
                 </dd>
               </div>
             ))}
