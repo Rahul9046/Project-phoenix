@@ -101,10 +101,21 @@ export async function withPhotoUrls(
 
 export const DISCOVERY_PAGE_SIZE = 10;
 
+/**
+ * A page of introductions, and whether asking for it worked.
+ *
+ * The failure is reported rather than folded into an empty array. They are not
+ * the same thing and the screen must not say they are: "nobody to introduce
+ * today" in place of "this did not load" tells a member the product is empty
+ * when it is in fact broken, and leaves them nothing to retry because nothing
+ * looked wrong.
+ */
+export type IntroductionPage = { members: Member[]; failed: boolean };
+
 export async function getIntroductions(
   filters: DiscoveryFilters,
   page = 0,
-): Promise<Member[]> {
+): Promise<IntroductionPage> {
   const { data, error } = await supabase.rpc("discover_members", {
     max_results: DISCOVERY_PAGE_SIZE,
     page_offset: page * DISCOVERY_PAGE_SIZE,
@@ -122,8 +133,16 @@ export async function getIntroductions(
       : undefined,
   });
 
-  if (error || !data) return [];
-  return (data as RawCard[]).map(toMember);
+  /*
+   * Counted per fetch, which makes paging a view and scrolling not one.
+   * `discover_members` is STABLE and cannot write, hence the separate call.
+   * Never awaited, and a failure is silent: a funnel measurement must not delay
+   * the deck or surface itself to the member.
+   */
+  void supabase.rpc("record_discovery_view").then(undefined, () => {});
+
+  if (error || !data) return { members: [], failed: true };
+  return { members: (data as RawCard[]).map(toMember), failed: false };
 }
 
 /**
@@ -219,10 +238,12 @@ export async function revertsRemaining(): Promise<number> {
 // ---------------------------------------------------------------------------
 
 /** Premium. Returns nothing for a free member -- checked in SQL, not here. */
-export async function getInterestsReceived(): Promise<Member[]> {
+export type InterestsReceived = { members: Member[]; failed: boolean };
+
+export async function getInterestsReceived(): Promise<InterestsReceived> {
   const { data, error } = await supabase.rpc("interests_received");
-  if (error || !data) return [];
-  return (data as RawCard[]).map(toMember);
+  if (error || !data) return { members: [], failed: true };
+  return { members: (data as RawCard[]).map(toMember), failed: false };
 }
 
 /**
@@ -245,12 +266,21 @@ export async function getInterestsReceivedCount(): Promise<number> {
 type RawConversation =
   Database["public"]["CompositeTypes"]["conversation_row"];
 
-export async function getConversations(): Promise<Conversation[]> {
+/**
+ * Conversations, and whether asking for them worked.
+ *
+ * Same reasoning as `getIntroductions`: an empty list and a failed request are
+ * different facts, and a screen that renders "no conversations yet" for a
+ * dropped connection tells somebody their messages are gone.
+ */
+export type ConversationList = { conversations: Conversation[]; failed: boolean };
+
+export async function getConversations(): Promise<ConversationList> {
   const { data, error } = await supabase.rpc("my_conversations");
 
-  if (error || !data) return [];
+  if (error || !data) return { conversations: [], failed: true };
 
-  return (data as RawConversation[])
+  const conversations = (data as RawConversation[])
     .filter((row) => row.member?.id)
     .map((row) => ({
       connectionId: row.connection_id ?? "",
@@ -262,6 +292,8 @@ export async function getConversations(): Promise<Conversation[]> {
       endedAt: row.ended_at,
       endedByMe: Boolean(row.ended_by_me),
     }));
+
+  return { conversations, failed: false };
 }
 
 export const MESSAGE_PAGE_SIZE = 40;

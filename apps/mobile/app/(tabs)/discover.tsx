@@ -27,7 +27,7 @@ import {
 import { colors, hit, iconSize, layout, radius, space } from "@/theme/tokens";
 import { TextButton } from "@/ui/Button";
 import { Text } from "@/ui/Text";
-import { EmptyState, SkeletonRow } from "@/ui/States";
+import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { useToast } from "@/ui/Toast";
 
 /**
@@ -69,6 +69,7 @@ export default function Discover() {
   const [page, setPage] = useState(0);
   const [exhausted, setExhausted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [filtering, setFiltering] = useState(false);
   const [deciding, setDeciding] = useState<"interested" | "passed" | null>(null);
   const [reverts, setReverts] = useState(0);
@@ -77,7 +78,23 @@ export default function Discover() {
 
   const load = useCallback(
     async (nextFilters: DiscoveryFilters, nextPage: number) => {
-      const found = await getIntroductions(nextFilters, nextPage);
+      const { members: found, failed: fetchFailed } = await getIntroductions(
+        nextFilters,
+        nextPage,
+      );
+
+      /*
+       * A failed prefetch is not worth a screen. There are still cards in hand
+       * -- that is the point of fetching early -- so it stays quiet and the next
+       * prefetch tries again. Only a first page that fails leaves nothing to
+       * show, and only then is there anything to tell the member about.
+       */
+      if (fetchFailed) {
+        if (nextPage === 0) setFailed(true);
+        return;
+      }
+
+      setFailed(false);
       const withPhotos = await withPhotoUrls(found);
 
       setExhausted(found.length < DISCOVERY_PAGE_SIZE);
@@ -179,6 +196,14 @@ export default function Discover() {
     setDeciding(null);
   }
 
+  async function retry() {
+    setLoading(true);
+    setFailed(false);
+    setCursor(0);
+    await load(filters, 0);
+    setLoading(false);
+  }
+
   async function undo() {
     const restored = await revertLastPass();
 
@@ -255,6 +280,15 @@ export default function Discover() {
             <SkeletonRow />
             <SkeletonRow />
           </View>
+        ) : failed ? (
+          /*
+           * Checked before the empty state, and that order is the whole fix.
+           * Both cases end with no cards; only one of them is true about the
+           * product. Telling somebody Eraya has nobody for them today, when in
+           * fact the request never arrived, is a discouraging thing to say and
+           * it is not so.
+           */
+          <ErrorState onRetry={() => void retry()} />
         ) : current ? (
           <>
             <Pressable

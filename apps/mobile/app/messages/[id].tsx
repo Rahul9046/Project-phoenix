@@ -84,7 +84,8 @@ export default function ConversationScreen() {
         getMessages(id, myId),
       ]);
 
-      const found = all.find((entry) => entry.connectionId === id) ?? null;
+      const found =
+        all.conversations.find((entry) => entry.connectionId === id) ?? null;
       const url = await photoUrlFor(found?.member.photoPath ?? null);
 
       if (!active) return;

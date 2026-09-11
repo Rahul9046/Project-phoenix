@@ -8,7 +8,7 @@ import type { Conversation } from "@/features/members/types";
 import { colors, layout, radius, space } from "@/theme/tokens";
 import { Avatar } from "@/ui/Person";
 import { Card } from "@/ui/Surface";
-import { EmptyState, SkeletonRow } from "@/ui/States";
+import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { Text } from "@/ui/Text";
 
 /**
@@ -30,10 +30,18 @@ export default function Messages() {
   const insets = useSafeAreaInsets();
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const rows = await getConversations();
+    const { conversations: rows, failed: fetchFailed } = await getConversations();
+
+    if (fetchFailed) {
+      setFailed(true);
+      return;
+    }
+
+    setFailed(false);
     const withPhotos = await withPhotoUrls(rows.map((row) => row.member));
     setConversations(
       rows.map((row, index) => ({
@@ -96,6 +104,18 @@ export default function Messages() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : failed ? (
+            /*
+             * Checked before the empty state. Telling somebody they have no
+             * conversations, when in fact the list did not load, reads as their
+             * messages having been lost.
+             */
+            <ErrorState
+              onRetry={() => {
+                setLoading(true);
+                void load().finally(() => setLoading(false));
+              }}
+            />
           ) : (
             <EmptyState
               icon="chatbubbles-outline"

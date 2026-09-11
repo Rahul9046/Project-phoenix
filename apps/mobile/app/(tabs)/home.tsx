@@ -49,7 +49,10 @@ export default function Home() {
       getConversations(),
     ]);
     setSummary(nextSummary);
-    setConversations(nextConversations);
+    // The home tab has no error state of its own: it is a summary, and a strip
+    // of recent conversations that briefly does not appear is a smaller wrong
+    // than an error card on the screen someone opens first.
+    setConversations(nextConversations.conversations);
   }, []);
 
   // Refetched when the tab regains focus rather than on an interval: coming back
