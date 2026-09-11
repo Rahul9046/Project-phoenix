@@ -27,6 +27,18 @@ export type MemberCard = {
   /** Only states the system can actually stand behind. */
   phoneVerified: boolean;
   emailVerified: boolean;
+  /**
+   * A short-lived signed URL for the member's first photo, or null.
+   *
+   * The signed URL and never the storage path. The path is a capability -- the
+   * storage policy grants read to any signed-in member who is not blocked, so
+   * knowing a path is most of knowing the photo -- and it has no business
+   * crossing into a component. Signing happens here, on the server, against the
+   * viewer's own session, so a URL is only ever minted for a photo that viewer
+   * was already allowed to load.
+   */
+  photoUrl: string | null;
+  photoCount: number;
 };
 
 type RawCard = {
@@ -40,6 +52,8 @@ type RawCard = {
   languages: string[] | null;
   phone_verified: boolean | null;
   email_verified: boolean | null;
+  photo_path: string | null;
+  photo_count: number | null;
 };
 
 function toCard(row: RawCard): MemberCard {
@@ -54,7 +68,57 @@ function toCard(row: RawCard): MemberCard {
     languages: row.languages ?? [],
     phoneVerified: Boolean(row.phone_verified),
     emailVerified: Boolean(row.email_verified),
+    // Filled in by `toCards`, which is the only way a card is built.
+    photoUrl: null,
+    photoCount: row.photo_count ?? 0,
   };
+}
+
+/** An hour. Long enough for a page to be read, short enough to expire. */
+const SIGNED_URL_TTL_SECONDS = 3600;
+
+/**
+ * Cards, with their photos signed.
+ *
+ * One batched call for the whole list rather than one per row: a discovery
+ * screen or an inbox would otherwise mint URLs in a loop, and the round trips
+ * are the slow part.
+ *
+ * The bucket is private and there is no public URL, so a signed one is the only
+ * way a browser can load these. It expires, which is the point -- a URL copied
+ * out of Eraya stops working rather than outliving a block, a deletion or a
+ * closed account. The storage policy refuses to sign a blocked member's object
+ * at all, so blocking is enforced on the file and not merely on the screen.
+ *
+ * A failure to sign leaves `photoUrl` null, and null renders the monogram. A
+ * member is shown as themselves-without-a-picture rather than as a broken image.
+ */
+async function toCards(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: RawCard[],
+): Promise<MemberCard[]> {
+  const cards = rows.map(toCard);
+
+  const paths = rows
+    .map((row) => row.photo_path)
+    .filter((path): path is string => Boolean(path));
+
+  if (paths.length === 0) return cards;
+
+  const { data: signed } = await supabase.storage
+    .from("profile-photos")
+    .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
+
+  const urls = new Map(
+    (signed ?? [])
+      .filter((entry) => entry.signedUrl && !entry.error)
+      .map((entry) => [entry.path, entry.signedUrl] as const),
+  );
+
+  return cards.map((card, index) => {
+    const path = rows[index].photo_path;
+    return path ? { ...card, photoUrl: urls.get(path) ?? null } : card;
+  });
 }
 
 /**
@@ -79,14 +143,15 @@ export async function getIntroductions(count = 3): Promise<MemberCard[]> {
    */
   void supabase.rpc("record_discovery_view").then(undefined, () => {});
 
-  return ((data ?? []) as RawCard[]).map(toCard);
+  return toCards(supabase, (data ?? []) as RawCard[]);
 }
 
 export async function getMember(id: string): Promise<MemberCard | null> {
   const supabase = await createClient();
   const { data } = await supabase.rpc("member_profile", { member_id: id });
   const rows = (data ?? []) as RawCard[];
-  return rows[0] ? toCard(rows[0]) : null;
+  if (!rows[0]) return null;
+  return (await toCards(supabase, [rows[0]]))[0];
 }
 
 /**
@@ -99,7 +164,7 @@ export async function getMember(id: string): Promise<MemberCard | null> {
 export async function getInterestsReceived(): Promise<MemberCard[]> {
   const supabase = await createClient();
   const { data } = await supabase.rpc("interests_received");
-  return ((data ?? []) as RawCard[]).map(toCard);
+  return toCards(supabase, (data ?? []) as RawCard[]);
 }
 
 export type Connection = {

@@ -9,15 +9,19 @@ import type { MemberCard } from "@/features/members/data";
  * This file carries most of the difference between Eraya and a dating app, so
  * the choices are worth stating.
  *
- * There is no photograph here, though there now are photographs. Onboarding on
- * both clients collects them and the app draws them; this surface still draws a
- * monogram, which is a gap rather than a decision — somebody who adds a photo in
- * a browser is seen with it by app users and without it here.
+ * A member's photograph is drawn by `MemberAvatar`, which falls back to the
+ * monogram below. Every surface that shows another person goes through it, so
+ * the choice between a face and an initial is made once.
  *
- * The monogram itself stays right for anybody with no photo. A placeholder
- * silhouette would imply one is missing, turning every such profile into an
- * incomplete-looking listing; a person's initial on a warm ground is a real
- * piece of them rather than an absence.
+ * The monogram is not a placeholder. A silhouette would imply a photo is
+ * missing, turning every profile without one into an incomplete-looking listing
+ * — and photos are optional here on purpose, because some of Eraya's members
+ * will not want a face on a screen for a long time. A person's initial on a warm
+ * ground is a real piece of them rather than an absence.
+ *
+ * One photograph, not a gallery. A card shows one picture and `member_card`
+ * carries one path for exactly that reason; `member_photos` exists for a screen
+ * that wants all of them, and the web does not have one.
  *
  * There is no heart, no swipe, no card stack. The actions are sentences, sized
  * equally: "I'd like to know more" does not shout louder than "Not for me",

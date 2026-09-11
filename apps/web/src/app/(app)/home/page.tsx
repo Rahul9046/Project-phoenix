@@ -86,6 +86,7 @@ export default async function HomePage() {
                     <MemberRowLink
                       href={`${appRoutes.discovery}/${member.id}`}
                       name={member.firstName}
+                      photoUrl={member.photoUrl}
                     >
                       <MemberSummary member={member} />
                     </MemberRowLink>
@@ -123,6 +124,7 @@ export default async function HomePage() {
                   <MemberRowLink
                     href={`${appRoutes.connections}/${connection.id}`}
                     name={connection.member.firstName}
+                    photoUrl={connection.member.photoUrl}
                   >
                     <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
                       {connection.lastMessage
@@ -154,6 +156,7 @@ export default async function HomePage() {
                     <MemberRowLink
                       href={`${appRoutes.discovery}/${member.id}`}
                       name={member.firstName}
+                      photoUrl={member.photoUrl}
                     >
                       <MemberSummary member={member} />
                     </MemberRowLink>
