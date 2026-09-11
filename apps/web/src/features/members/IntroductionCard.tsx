@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { discovery } from "@/features/app-shell/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { expressInterest, passOnMember } from "@/features/members/actions";
 import { MemberAvatar } from "@/features/members/MemberAvatar";
 import {
@@ -27,6 +27,7 @@ import { Spinner } from "@/shared/ui/Spinner";
  * what turns deciding into scrolling.
  */
 export function IntroductionCard({ member }: { member: MemberCard }) {
+  const t = useT();
   const router = useRouter();
   const [state, setState] = useState<
     "idle" | "working" | "interested" | "connected" | "passed"
@@ -78,10 +79,10 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
     return (
       <div className="rounded-2xl border border-ember/30 bg-surface p-6 sm:p-8">
         <p className="text-name text-ink">
-          {connected ? discovery.connected : discovery.interestSent}
+          {connected ? t("discovery.connected") : t("discovery.interestSent")}
         </p>
         <p className="mt-2.5 leading-relaxed text-ink-muted">
-          {connected ? discovery.connectedBody : discovery.interestSentBody}
+          {connected ? t("discovery.connectedBody") : t("discovery.interestSentBody")}
         </p>
       </div>
     );
@@ -130,7 +131,7 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
           className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full border border-ember bg-ember px-5 py-3.5 text-[0.95rem] font-medium text-canvas transition-colors hover:bg-ember-strong disabled:opacity-60"
         >
           {pressed === "interested" ? <Spinner className="h-4 w-4" /> : null}
-          {discovery.interested}
+          {t("discovery.interested")}
         </button>
         <button
           type="button"
@@ -140,7 +141,7 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
           className="inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full border border-line-strong bg-surface px-5 py-3.5 text-[0.95rem] font-medium text-ink transition-colors hover:border-ink hover:bg-sand disabled:opacity-60"
         >
           {pressed === "passed" ? <Spinner className="h-4 w-4" /> : null}
-          {discovery.pass}
+          {t("discovery.pass")}
         </button>
       </div>
     </article>

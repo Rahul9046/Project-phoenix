@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { account } from "@/features/account/content";
+import { getT } from "@/features/i18n/server";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
 import { accountNav, appRoutes } from "@/features/app-shell/nav";
 import { genderOptions, relationshipOptions } from "@/features/auth/content";
@@ -28,6 +28,7 @@ function ageFrom(iso: string | null): number | null {
 }
 
 export default async function AccountPage() {
+  const t = await getT();
   const [session, membership] = await Promise.all([
     loadAuthSession(),
     loadMembership(),
@@ -59,59 +60,59 @@ export default async function AccountPage() {
 
   const languages = profile.languages.length
     ? profile.languages.join(", ")
-    : account.languagesUndisclosed;
+    : t("common.preferNotToSay");
 
   const absent = (
-    <span className="text-ink-subtle">{account.notAnswered}</span>
+    <span className="text-ink-subtle">{t("common.notAnswered")}</span>
   );
 
   return (
-    <AppPage title={account.title} lede={account.lede}>
+    <AppPage title={t("account.title")} lede={t("account.lede")}>
       <div className="grid gap-5">
-        <Panel title={account.profileTitle}>
+        <Panel title={t("account.profileTitle")}>
           <p className="mt-1.5 text-[0.95rem] text-ink-muted">
-            {account.profileLede}
+            {t("account.profileLede")}
           </p>
           <dl className="mt-4">
             <DetailRow
-              label={account.labels.name}
+              label={t("account.labelName")}
               value={profile.firstName ?? absent}
             />
             <DetailRow
-              label={account.labels.age}
+              label={t("account.labelAge")}
               value={age !== null ? `${age}` : absent}
             />
             <DetailRow
-              label={account.labels.gender}
+              label={t("account.labelGender")}
               value={genderLabel ?? absent}
             />
-            <DetailRow label={account.labels.city} value={cityName ?? absent} />
+            <DetailRow label={t("account.labelCity")} value={cityName ?? absent} />
             <DetailRow
-              label={account.labels.relationship}
+              label={t("account.labelRelationship")}
               value={relationshipLabel ?? absent}
             />
-            <DetailRow label={account.labels.languages} value={languages} />
+            <DetailRow label={t("account.labelLanguages")} value={languages} />
           </dl>
         </Panel>
 
-        <Panel title={account.contactTitle}>
+        <Panel title={t("account.contactTitle")}>
           <dl className="mt-4">
             <DetailRow
-              label={account.labels.email}
+              label={t("account.labelEmail")}
               value={user?.email ?? absent}
             />
             <DetailRow
-              label={account.labels.phone}
+              label={t("account.labelPhone")}
               value={
                 <Pill tone={phoneVerified ? "positive" : "attention"}>
                   {phoneVerified
-                    ? account.phoneVerified
-                    : account.phoneUnverified}
+                    ? t("account.phoneAdded")
+                    : t("account.phoneNotAdded")}
                 </Pill>
               }
             />
             <DetailRow
-              label={account.labels.signInMethod}
+              label={t("account.labelSignInMethod")}
               value={
                 <span className="capitalize">{user?.provider ?? "email"}</span>
               }
@@ -119,7 +120,7 @@ export default async function AccountPage() {
           </dl>
         </Panel>
 
-        <Panel title={account.membershipTitle}>
+        <Panel title={t("account.membershipTitle")}>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
             <Pill tone={isPremium ? "positive" : "neutral"}>
               {isPremium ? "Eraya Premium" : "Free member"}

@@ -137,6 +137,7 @@ const backend = collect.backendSurface();
 const mod = collect.moderation();
 const states = collect.stateHandling();
 const parity = collect.onboardingParity();
+const i18n = collect.localization();
 const db = collect.schema();
 const envNames = collect.environmentVariableNames();
 const debt = collect.technicalDebt();
@@ -299,8 +300,7 @@ if (parity.onlyMobile.length || parity.onlyWeb.length) {
   w("\nBoth clients now write the same set of fields.");
 }
 w(
-  `
-_Screens are not the measure: the web asks across ${parity.webSteps} routes and the app across ${parity.mobileSteps}. ` +
+  `\n_Screens are not the measure: the web asks across ${parity.webSteps} routes and the app across ${parity.mobileSteps}. ` +
     "A field can still be written by one client's save layer and unreachable in its own UI, which is what this table cannot see. " +
     "Both clients now reach every field above from a screen: the web routes include `/onboarding/seeking` and `/onboarding/photo`, " +
     "and its city step offers the typed town the app has always offered._",
@@ -356,6 +356,73 @@ h3("Copy worth a second look");
 bullet("Any string implying verification: phone verification is mocked, so wording must not imply a checked number.");
 bullet("Payment failure copy must not assert 'you have not been charged' unless the server established it.");
 bullet("Mobile strings are inline and therefore drift from the web's wording without anything catching it.");
+
+/* --- F2 ----------------------------------------------------------------- */
+h2("F2. Localization");
+
+if (!i18n.present) {
+  w("_No shared localization package found. The product is English only._");
+} else {
+  table(
+    ["Locale", "Name", "Keys", "Matches English"],
+    i18n.locales.map((l) => [
+      `\`${l.code}\``,
+      l.name,
+      String(l.keys),
+      l.code === i18n.defaultLocale
+        ? "— (source)"
+        : l.keys === i18n.keyCount
+          ? "yes"
+          : "**NO**",
+    ]),
+  );
+
+  const behind = i18n.parity.filter((p) => !p.matches);
+
+  /*
+   * The line that matters. A locale behind on keys still renders -- every
+   * missing string falls back to English -- so a half-translated app looks
+   * finished to anybody who reads English, which is everybody reviewing it.
+   */
+  if (behind.length) {
+    w(
+      `\n> **${behind.length} locale(s) do not have every key:** ` +
+        `${behind.map((p) => `\`${p.code}\` (${p.keys}/${i18n.keyCount})`).join(", ")}. ` +
+        "The missing strings fall back to English rather than failing, so this is invisible unless you read the language.",
+    );
+  } else {
+    w(
+      `\n**${i18n.keyCount} keys, and every locale has all of them.** ` +
+        "Enforced twice: each locale is typed as `typeof en`, so a gap is a build error, and " +
+        "`npm run i18n:check` names every difference at once along with empty values and mismatched `{placeholders}`.\n",
+    );
+  }
+
+  table(
+    ["Decision", "Answer"],
+    [
+      ["Default locale", `\`${i18n.defaultLocale}\``],
+      ["Fallback when a key is missing", `\`${i18n.fallbackLocale}\` — never the raw key`],
+      ["Where the preference is stored", i18n.storedOn],
+      ["Web architecture", i18n.webResolvedOn],
+      ["Mobile architecture", i18n.mobileResolvedOn],
+      ["Changed on the web at", "Account → Settings → Language"],
+      ["Changed on mobile at", "You → Language"],
+      [
+        "Locale-prefixed URLs",
+        i18n.localeRoutes
+          ? "**present** — routes carry a locale segment"
+          : "none — language is a preference, not a URL",
+      ],
+    ],
+  );
+
+  w(
+    "\n_Interface language, not spoken languages._ `profiles.ui_locale` decides which translation of Eraya's own words " +
+      "a member reads. `profile_languages` is the separate, unchanged profile field that other members see and that " +
+      "discovery uses to introduce people who can talk to each other. Switching the interface to Bengali changes neither.",
+  );
+}
 
 /* --- G ------------------------------------------------------------------ */
 h2("G. Design system");

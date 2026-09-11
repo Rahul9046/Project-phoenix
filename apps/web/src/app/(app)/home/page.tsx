@@ -1,6 +1,8 @@
 import Link from "next/link";
 
-import { greetingFor, home } from "@/features/app-shell/content";
+import { greetingKey } from "@eraya/i18n";
+
+import { getT } from "@/features/i18n/server";
 import { appRoutes } from "@/features/app-shell/nav";
 import { loadAuthSession } from "@/features/auth/load-session";
 import { MemberSummary } from "@/features/members/MemberPresentation";
@@ -43,34 +45,35 @@ export default async function HomePage() {
     : [];
 
   const name = session.profile.firstName;
-  const greeting = greetingFor(new Date().getHours());
+  const t = await getT();
+  const greeting = t(greetingKey(new Date().getHours()));
   const openConnections = connections.filter((c) => !c.endedAt);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
       {/* The one moment of warmth, then out of the way. */}
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-subtle">
-        {home.eyebrow}
+        {t("home.eyebrow")}
       </p>
       <h1 className="mt-4 text-heading text-ink">
         {greeting}
         {name ? `, ${name}` : ""}.
       </h1>
-      <p className="mt-3 text-lg leading-relaxed text-ink-muted">{home.lede}</p>
+      <p className="mt-3 text-lg leading-relaxed text-ink-muted">{t("home.lede")}</p>
 
       <div className="mt-12 grid gap-12">
         {/* --- Introductions ------------------------------------------- */}
         <section>
           <div className="flex items-baseline justify-between gap-4">
             <h2 className="text-name text-ink">
-              {home.introductionsTitle}
+              {t("home.introductionsTitle")}
             </h2>
             {introductions.length > 0 ? (
               <Link
                 href={appRoutes.discovery}
                 className="shrink-0 text-[0.95rem] text-ember-text underline underline-offset-4 hover:text-ember-strong"
               >
-                {home.introductionsCta}
+                {t("home.introductionsCta")}
               </Link>
             ) : null}
           </div>
@@ -78,7 +81,7 @@ export default async function HomePage() {
           {introductions.length > 0 ? (
             <>
               <p className="mt-2 text-[0.95rem] leading-relaxed text-ink-subtle">
-                {home.introductionsLede}
+                {t("home.introductionsLede")}
               </p>
               <ul className="mt-6 grid gap-3">
                 {introductions.map((member) => (
@@ -96,7 +99,7 @@ export default async function HomePage() {
             </>
           ) : (
             <p className="mt-3 max-w-xl leading-relaxed text-ink-muted">
-              {home.introductionsEmpty}
+              {t("home.introductionsEmpty")}
             </p>
           )}
         </section>
@@ -105,7 +108,7 @@ export default async function HomePage() {
         <section>
           <div className="flex items-baseline justify-between gap-4">
             <h2 className="text-name text-ink">
-              {home.connectionsTitle}
+              {t("home.connectionsTitle")}
             </h2>
             {openConnections.length > 0 ? (
               <Link
@@ -137,7 +140,7 @@ export default async function HomePage() {
             </ul>
           ) : (
             <p className="mt-3 max-w-xl leading-relaxed text-ink-muted">
-              {home.connectionsEmpty}
+              {t("home.connectionsEmpty")}
             </p>
           )}
         </section>
@@ -145,7 +148,7 @@ export default async function HomePage() {
         {/* --- Interest received (premium) ------------------------------ */}
         <section>
           <h2 className="text-name text-ink">
-            {home.interestTitle}
+            {t("home.interestTitle")}
           </h2>
 
           {membership.entitlements.canSeeInteresters ? (
@@ -165,7 +168,7 @@ export default async function HomePage() {
               </ul>
             ) : (
               <p className="mt-3 leading-relaxed text-ink-muted">
-                {home.interestEmpty}
+                {t("home.interestEmpty")}
               </p>
             )
           ) : (
@@ -176,7 +179,7 @@ export default async function HomePage() {
             */
             <div className="mt-4 rounded-2xl border border-line bg-sand/50 p-5">
               <p className="leading-relaxed text-ink-muted">
-                {home.interestLocked}
+                {t("home.interestLocked")}
               </p>
               <Button
                 href={appRoutes.membership}
@@ -192,12 +195,12 @@ export default async function HomePage() {
         {/* --- Profile progress ----------------------------------------- */}
         <section>
           <h2 className="text-name text-ink">
-            {home.profileTitle}
+            {t("home.profileTitle")}
           </h2>
 
           {completeness.missing.length === 0 ? (
             <p className="mt-3 leading-relaxed text-ink-muted">
-              {home.profileComplete}
+              {t("home.profileComplete")}
             </p>
           ) : (
             <p className="mt-3 leading-relaxed text-ink-muted">
@@ -214,7 +217,7 @@ export default async function HomePage() {
             variant="secondary"
             className="mt-4"
           >
-            {home.profileCta}
+            {t("home.profileCta")}
           </Button>
         </section>
       </div>

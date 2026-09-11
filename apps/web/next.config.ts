@@ -44,6 +44,17 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  /*
+   * `@eraya/i18n` ships TypeScript source rather than a build artefact.
+   *
+   * It is a workspace package with one consumer on each side of the monorepo,
+   * and a build step between editing a sentence and seeing it is a build step
+   * that will eventually be skipped. Next compiles it with the app; Metro does
+   * the same for the app, so neither client needs the package to be published
+   * or pre-compiled.
+   */
+  transpilePackages: ["@eraya/i18n"],
+
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

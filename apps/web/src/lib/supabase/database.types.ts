@@ -744,6 +744,7 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender"] | null
           id: string
           languages_undisclosed: boolean
+          ui_locale: string
           looking_for: string | null
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
           other_city: string | null
@@ -768,6 +769,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           languages_undisclosed?: boolean
+          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
@@ -792,6 +794,7 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           languages_undisclosed?: boolean
+          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null

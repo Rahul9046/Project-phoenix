@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { errorState } from "@/features/app-shell/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
 /**
@@ -29,6 +29,8 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
+
   useEffect(() => {
     /*
      * The browser console is the only sink that exists today — there is no error
@@ -44,17 +46,17 @@ export default function AppError({
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
       <div className="rounded-2xl border border-line bg-surface p-8 text-center">
-        <h1 className="text-name text-ink">{errorState.title}</h1>
+        <h1 className="text-name text-ink">{t("errors.title")}</h1>
         <p className="mx-auto mt-3 max-w-md leading-relaxed text-ink-muted">
-          {errorState.body}
+          {t("errors.body")}
         </p>
 
         <div className="mt-6 flex justify-center">
-          <PrimaryButton fullWidth={false} onClick={reset}>{errorState.retry}</PrimaryButton>
+          <PrimaryButton fullWidth={false} onClick={reset}>{t("errors.retry")}</PrimaryButton>
         </div>
 
         <p className="mt-6 text-[0.9rem] leading-relaxed text-ink-subtle">
-          {errorState.persists}
+          {t("errors.persists")}
         </p>
       </div>
     </div>

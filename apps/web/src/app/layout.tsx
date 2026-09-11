@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 
+import { createTranslator, FONT_STACKS } from "@eraya/i18n";
+
+import { LocaleProvider } from "@/features/i18n/LocaleProvider";
+import { getLocale } from "@/features/i18n/server";
+
 import { site } from "@/features/marketing/content";
 import "./globals.css";
 
@@ -88,27 +93,62 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  /*
+   * Decided here, before a single word renders, so no member ever sees a flash
+   * of English before their own language arrives. Everything below -- the `lang`
+   * attribute, the font stack, the skip link, every server component in the
+   * tree -- is rendered already knowing the answer.
+   */
+  const locale = await getLocale();
+  const t = createTranslator(locale);
+
   return (
     <html
-      lang="en-IN"
+      /*
+       * `en-IN` for English because Eraya is an Indian product and the region
+       * affects how a browser reads dates and numbers aloud. The other five
+       * carry no region: there is one Hindi interface, not an Indian and a
+       * non-Indian one, and inventing `hi-IN` would imply a choice that is not
+       * offered.
+       */
+      lang={locale === "en" ? "en-IN" : locale}
       // Next.js 16 only manages smooth scrolling across navigations when asked.
       data-scroll-behavior="smooth"
       className={`${manrope.variable} h-full antialiased`}
+      /*
+       * Manrope covers Latin and nothing else, so a Devanagari, Bengali, Telugu
+       * or Tamil page set in it alone would render as empty boxes. The stack for
+       * the active script is handed to the stylesheet as a variable, keeping
+       * Manrope first -- browsers fall back glyph by glyph, so "Eraya" and an
+       * email address inside a Hindi sentence stay in Eraya's own typeface while
+       * only the Indic glyphs come from the system. Nothing is bought or
+       * bundled; every platform already ships these.
+       */
+      style={{ "--font-script": FONT_STACKS[locale] } as React.CSSProperties}
     >
       <body className="flex min-h-full flex-col overflow-x-hidden">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-ember focus:px-4 focus:py-2 focus:text-canvas"
         >
-          Skip to content
+          {t("shell.skipToContent")}
         </a>
         {/*
-          No session provider here. Reading it costs a Supabase round-trip, and
-          only the (auth) group needs it — the marketing pages are static and
-          should stay that way.
+          Still no session provider here: reading a session costs a Supabase
+          round-trip and only the (auth) group needs it.
+
+          `getLocale()` above does look for a user, and deliberately only when
+          there is an auth cookie to look at — a visitor who has never signed in
+          gets their language from a cookie or `Accept-Language` and pays for
+          nothing. A signed-in member pays one lookup on a page that was already
+          going to read their session several times over.
+
+          The provider itself is only given the answer. It makes no request of
+          its own, which is what keeps the server markup and the first client
+          render identical.
         */}
-        {children}
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

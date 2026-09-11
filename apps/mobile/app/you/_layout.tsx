@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors } from "@/theme/tokens";
 import { fontFamily } from "@/theme/typography";
 
@@ -13,6 +14,8 @@ import { fontFamily } from "@/theme/typography";
  * get for free.
  */
 export default function YouLayout() {
+  const t = useT();
+
   return (
     <Stack
       screenOptions={{
@@ -37,6 +40,14 @@ export default function YouLayout() {
       <Stack.Screen name="privacy" options={{ title: "Privacy" }} />
       <Stack.Screen name="blocked" options={{ title: "Blocked" }} />
       <Stack.Screen name="help" options={{ title: "Safety and help" }} />
+      {/*
+        The title comes from the translations, so the language screen's own
+        header is already in whichever language is active.
+      */}
+      <Stack.Screen
+        name="language"
+        options={{ title: t("account.language.title") }}
+      />
       <Stack.Screen name="settings" options={{ title: "Settings" }} />
       <Stack.Screen
         name="logout"

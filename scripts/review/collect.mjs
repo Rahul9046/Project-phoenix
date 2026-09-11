@@ -498,6 +498,77 @@ export function analyticsEvents() {
 }
 
 /**
+ * Localization: which languages, where the preference lives, and whether the
+ * translations are actually complete.
+ *
+ * Derived rather than described, because the interesting failure is silent. A
+ * locale that is behind by thirty keys still renders -- every one of them falls
+ * back to English -- so a half-translated app looks like a working one to
+ * anybody who reads English, which is everybody reviewing it.
+ */
+export function localization() {
+  const dir = "packages/i18n/src/locales";
+  const base = join(ROOT, dir);
+
+  if (!existsSync(base)) {
+    return { present: false, locales: [], keyCount: 0, parity: [], webPreference: "none", mobilePreference: "none" };
+  }
+
+  const config = read("packages/i18n/src/config.ts");
+  const locales = [...(config.match(/export const LOCALES = \[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([a-z]{2})"/g)].map((m) => m[1]);
+  /*
+   * Scoped to the LOCALE_NAMES block. `LOCALE_SCRIPTS` below it has the same
+   * `xx: "..."` shape, so an unscoped match reported every language's name as
+   * its writing system -- "Bengali: bengali" reads like a bug in the product
+   * rather than one in this file.
+   */
+  const nameBlock = config.match(/LOCALE_NAMES[^{]*\{([^}]*)\}/)?.[1] ?? "";
+  const names = Object.fromEntries(
+    [...nameBlock.matchAll(/([a-z]{2}):\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]),
+  );
+
+  /* The same shallow reader the parity script uses: count `key: "value"` leaves. */
+  const keysIn = (file) => {
+    const text = read(`${dir}/${file}.ts`)
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    return (text.match(/^\s*[A-Za-z_][A-Za-z0-9_]*\s*:\s*["'`]/gm) ?? []).length;
+  };
+
+  const english = keysIn("en");
+
+  return {
+    present: true,
+    locales: locales.map((code) => ({ code, name: names[code] ?? code, keys: keysIn(code) })),
+    keyCount: english,
+    defaultLocale: config.match(/DEFAULT_LOCALE: Locale = "([a-z]{2})"/)?.[1] ?? "unknown",
+    fallbackLocale: config.match(/FALLBACK_LOCALE: Locale = "([a-z]{2})"/)?.[1] ?? "unknown",
+    /* The parity the reviewer actually cares about: does every locale match en. */
+    parity: locales
+      .filter((code) => code !== "en")
+      .map((code) => ({ code, keys: keysIn(code), matches: keysIn(code) === english })),
+    storedOn: /ui_locale/.test(
+      readdirSync(join(ROOT, "supabase/migrations"))
+        .filter((f) => f.endsWith(".sql"))
+        .map((f) => read(`supabase/migrations/${f}`))
+        .join("\n"),
+    )
+      ? "profiles.ui_locale, plus a cookie on the web and the keystore on mobile"
+      : "not in the database",
+    webResolvedOn: existsSync(join(ROOT, "apps/web/src/features/i18n/server.ts"))
+      ? "the server, before render — no flash of English"
+      : "not found",
+    mobileResolvedOn: existsSync(join(ROOT, "apps/mobile/src/features/i18n/LocaleProvider.tsx"))
+      ? "a root provider holding the locale in state"
+      : "not found",
+    /* Locale prefixes were deliberately not introduced; say so, derived. */
+    localeRoutes: walk("apps/web/src/app", (f) => f === "page.tsx").some((f) =>
+      /\/(en|hi|bn|mr|te|ta)\//.test(f),
+    ),
+  };
+}
+
+/**
  * What each client asks during onboarding.
  *
  * Derived from the writes rather than from the screens, because the screens are

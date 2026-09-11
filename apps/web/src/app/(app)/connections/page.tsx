@@ -1,4 +1,4 @@
-import { connections as copy } from "@/features/app-shell/content";
+import { getT } from "@/features/i18n/server";
 import { appRoutes } from "@/features/app-shell/nav";
 import { MemberRowLink } from "@/features/members/MemberRowLink";
 import { getConnections } from "@/features/members/data";
@@ -13,6 +13,7 @@ export const metadata = { title: "Connections" };
  * for -- there is no score here, no compatibility percentage, and no count.
  */
 export default async function ConnectionsPage() {
+  const t = await getT();
   const all = await getConnections();
   const open = all.filter((c) => !c.endedAt);
   const ended = all.filter((c) => c.endedAt);
@@ -20,17 +21,17 @@ export default async function ConnectionsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
       <h1 className="text-heading text-ink">
-        {copy.title}
+        {t("connections.title")}
       </h1>
       <p className="mt-3 max-w-xl text-lg leading-relaxed text-ink-muted">
-        {copy.lede}
+        {t("connections.lede")}
       </p>
 
       {all.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-line bg-surface p-8 text-center">
-          <p className="text-name text-ink">{copy.empty.title}</p>
+          <p className="text-name text-ink">{t("connections.emptyTitle")}</p>
           <p className="mx-auto mt-3 max-w-md leading-relaxed text-ink-muted">
-            {copy.empty.body}
+            {t("connections.emptyBody")}
           </p>
         </div>
       ) : (
@@ -47,7 +48,7 @@ export default async function ConnectionsPage() {
                     <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
                       {connection.lastMessage
                         ? connection.lastMessage.body
-                        : copy.noMessages}
+                        : t("connections.noMessages")}
                     </span>
                   </MemberRowLink>
                 </li>
@@ -70,7 +71,7 @@ export default async function ConnectionsPage() {
                       muted
                     >
                       <span className="mt-0.5 block text-[0.95rem] text-ink-subtle">
-                        {copy.ended}
+                        {t("connections.ended")}
                       </span>
                     </MemberRowLink>
                   </li>
