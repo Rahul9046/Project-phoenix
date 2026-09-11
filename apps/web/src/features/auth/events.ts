@@ -53,8 +53,8 @@ export function recordAuthEvent(
     void createClient()
       .rpc("record_auth_event", {
         event_name: event,
-        masked_identifier: options.identifier ?? null,
-        reason: options.reason ?? null,
+        masked_identifier: options.identifier ?? undefined,
+        reason: options.reason ?? undefined,
       })
       .then(undefined, () => {
         // Deliberately silent.

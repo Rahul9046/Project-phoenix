@@ -99,9 +99,9 @@ export function PremiumCheckout({ premium }: { premium: boolean }) {
       void createClient()
         .rpc("record_product_event", {
           event_name: event,
-          plan_code: properties.planCode ?? null,
-          amount_paise: properties.amountPaise ?? null,
-          intro_offer_applied: properties.introOfferApplied ?? null,
+          plan_code: properties.planCode ?? undefined,
+          amount_paise: properties.amountPaise ?? undefined,
+          intro_offer_applied: properties.introOfferApplied ?? undefined,
           platform: "web",
         })
         .then(undefined, () => {
