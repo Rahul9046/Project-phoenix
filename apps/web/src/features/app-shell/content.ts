@@ -87,6 +87,26 @@ export const conversation = {
   reportCta: "Report",
 } as const;
 
+/**
+ * When something breaks on our side.
+ *
+ * Written to be read by somebody who has just been interrupted, which rules out
+ * two tempting things. It does not apologise twice, and it does not guess --
+ * "check your connection" is a good way to send a person to restart their
+ * router over a fault in our database.
+ *
+ * It also never appears where an empty result belongs. "Nobody to introduce
+ * today" and "this did not load" are different sentences about different
+ * situations, and showing the first one for the second is a small lie that
+ * makes the product look empty rather than broken.
+ */
+export const errorState = {
+  title: "This did not load.",
+  body: "Something on our side went wrong. Nothing you did caused it and nothing has been lost.",
+  retry: "Try again",
+  persists: "If it keeps happening, write to us at support@eraya.app.",
+} as const;
+
 export const webVsAppNote = {
   title: "Eraya on the web",
   body: "Create your Eraya account on the web today. The full Eraya experience will be available through our mobile app.",

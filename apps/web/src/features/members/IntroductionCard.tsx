@@ -5,9 +5,9 @@ import { useState } from "react";
 
 import { discovery } from "@/features/app-shell/content";
 import { expressInterest, passOnMember } from "@/features/members/actions";
+import { MemberAvatar } from "@/features/members/MemberAvatar";
 import {
   MemberLanguages,
-  MemberMonogram,
   MemberSummary,
   TrustMarks,
 } from "@/features/members/MemberPresentation";
@@ -90,7 +90,11 @@ export function IntroductionCard({ member }: { member: MemberCard }) {
   return (
     <article className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
       <div className="flex items-start gap-5">
-        <MemberMonogram name={member.firstName} size="lg" />
+        <MemberAvatar
+          name={member.firstName}
+          photoUrl={member.photoUrl}
+          size="lg"
+        />
         <div className="min-w-0 pt-1">
           <h3 className="text-subhead text-ink">
             {member.firstName}

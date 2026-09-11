@@ -10,7 +10,7 @@ import { colors, iconSize, space } from "@/theme/tokens";
 import { Avatar, PersonSummary } from "@/ui/Person";
 import { Screen } from "@/ui/Screen";
 import { Card, SectionHeader } from "@/ui/Surface";
-import { EmptyState, SkeletonRow } from "@/ui/States";
+import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { Text } from "@/ui/Text";
 
 /**
@@ -31,10 +31,18 @@ type Loaded = Conversation & { photoUrl: string | null };
 export default function Connections() {
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const rows = await getConversations();
+    const { conversations: rows, failed: fetchFailed } = await getConversations();
+
+    if (fetchFailed) {
+      setFailed(true);
+      return;
+    }
+
+    setFailed(false);
     const withPhotos = await withPhotoUrls(rows.map((row) => row.member));
 
     setConversations(
@@ -84,7 +92,19 @@ export default function Connections() {
     <Screen topInset onRefresh={() => void refresh()} refreshing={refreshing}>
       <Text variant="title">Connections</Text>
 
-      {conversations.length === 0 ? (
+      {failed ? (
+        /*
+         * Before the empty state, because both end with no rows and only one is
+         * true. "No connections yet" is a discouraging thing to tell somebody
+         * who has connections and a bad network.
+         */
+        <ErrorState
+          onRetry={() => {
+            setLoading(true);
+            void load().finally(() => setLoading(false));
+          }}
+        />
+      ) : conversations.length === 0 ? (
         <EmptyState
           icon="people-outline"
           title="No connections yet"

@@ -74,11 +74,23 @@ export type OnboardingProfile = {
   firstName: string | null;
   dateOfBirth: string | null;
   gender: string | null;
+  /**
+   * Who this member would like to meet. Empty means "not answered", which
+   * `genders_are_compatible` treats as no constraint -- so leaving it unset is
+   * not a neutral default, it opts the member into being shown to everyone.
+   */
+  seeking: Gender[];
   city: string | null;
   /** Free text, only set when `city` is the "Another city" option. */
   otherCity: string | null;
   relationshipStatus: RelationshipStatus | null;
   languages: string[];
+  /**
+   * "I would rather not say" is an answer, and an empty list is not. Without
+   * this flag the two are identical on the client, so the flow cannot tell a
+   * member who declined from one who has not reached the question yet.
+   */
+  languagesUndisclosed: boolean;
 };
 
 export type AuthSession = {
@@ -96,10 +108,12 @@ export const emptyProfile: OnboardingProfile = {
   firstName: null,
   dateOfBirth: null,
   gender: null,
+  seeking: [],
   city: null,
   otherCity: null,
   relationshipStatus: null,
   languages: [],
+  languagesUndisclosed: false,
 };
 
 export const anonymousSession: AuthSession = {

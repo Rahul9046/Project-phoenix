@@ -42,6 +42,7 @@ export default async function ConnectionsPage() {
                   <MemberRowLink
                     href={`${appRoutes.connections}/${connection.id}`}
                     name={connection.member.firstName}
+                    photoUrl={connection.member.photoUrl}
                   >
                     <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
                       {connection.lastMessage
@@ -65,6 +66,7 @@ export default async function ConnectionsPage() {
                     <MemberRowLink
                       href={`${appRoutes.connections}/${connection.id}`}
                       name={connection.member.firstName}
+                      photoUrl={connection.member.photoUrl}
                       muted
                     >
                       <span className="mt-0.5 block text-[0.95rem] text-ink-subtle">

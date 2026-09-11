@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { appRoutes } from "@/features/app-shell/nav";
 import { Conversation } from "@/features/members/Conversation";
 import { ConversationSafety } from "@/features/members/ConversationSafety";
-import { MemberMonogram, MemberSummary, TrustMarks } from "@/features/members/MemberPresentation";
+import { MemberAvatar } from "@/features/members/MemberAvatar";
+import { MemberSummary, TrustMarks } from "@/features/members/MemberPresentation";
 import { getConversation } from "@/features/members/data";
 
 export const metadata = { title: "Conversation" };
@@ -30,7 +31,10 @@ export default async function ConversationPage({
 
       {/* Who this is, kept present rather than reduced to a name in a bar. */}
       <header className="mt-4 flex items-start gap-4 border-b border-line pb-6">
-        <MemberMonogram name={connection.member.firstName} />
+        <MemberAvatar
+          name={connection.member.firstName}
+          photoUrl={connection.member.photoUrl}
+        />
         <div className="min-w-0 pt-0.5">
           <h1 className="text-subhead text-ink">
             {connection.member.firstName}

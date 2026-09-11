@@ -177,6 +177,80 @@ export async function saveCity(input: {
   return { ok: true };
 }
 
+/**
+ * Who this member would like to meet.
+ *
+ * Stored as an array of genders, the same column and the same values the app
+ * writes, so a profile started on one and finished on the other is one profile
+ * rather than two half-answered ones.
+ *
+ * Validated against the enum here as well as in the UI. The screen offers three
+ * choices, but a server action is a public endpoint -- it is reachable by
+ * anything that can sign in, not only by the form -- and the column would
+ * happily take `prefer_not_to_say`, which is a real gender and an unmatchable
+ * preference.
+ */
+/**
+ * Marks onboarding finished.
+ *
+ * Called by the last screen on arrival rather than by the last question, so a
+ * profile is only complete once every question has actually been put -- the
+ * optional photo step included. Safe to call more than once: the screen calls it
+ * on arrival and again if somebody presses the button before the first write has
+ * landed, and writing the same stage twice changes nothing.
+ */
+export async function completeOnboarding(): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!userId) return { ok: false, message: "Please sign in again." };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ onboarding_stage: stageToDatabase("onboardingCompleted") })
+    .eq("id", userId);
+
+  if (error) {
+    logFailure("completeOnboarding", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
+
+  revalidatePath("/onboarding", "layout");
+  return { ok: true };
+}
+
+export async function saveSeeking(seeking: string[]): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!userId) return { ok: false, message: "Please sign in again." };
+
+  const allowed: Gender[] = ["woman", "man", "non_binary"];
+  const chosen = [...new Set(seeking)].filter((value): value is Gender =>
+    (allowed as string[]).includes(value),
+  );
+
+  if (chosen.length === 0) {
+    return { ok: false, message: "Choose at least one." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      seeking: chosen,
+      onboarding_stage: await advanceStage(userId, "onboarding_started"),
+    })
+    .eq("id", userId);
+
+  if (error) {
+    logFailure("saveSeeking", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
+
+  revalidatePath("/onboarding", "layout");
+  return { ok: true };
+}
+
 export async function saveRelationshipStatus(
   status: string,
 ): Promise<ActionResult> {
@@ -203,7 +277,7 @@ export async function saveRelationshipStatus(
 }
 
 /**
- * Replaces the member's languages, and finishes onboarding.
+ * Replaces the member's languages.
  *
  * `undisclosed` is stored as a flag rather than a language row, so declining to
  * answer can never be mistaken for speaking something.
@@ -243,7 +317,14 @@ export async function saveLanguages(input: {
     .from("profiles")
     .update({
       languages_undisclosed: input.undisclosed,
-      onboarding_stage: stageToDatabase("onboardingCompleted"),
+      /*
+       * Not `onboardingCompleted`. Languages used to finish onboarding, which
+       * meant somebody who closed the tab on the last question was silently
+       * marked complete -- and left no room for the optional photo step that
+       * comes after it. The stage is written by the screen at the end now,
+       * exactly as the app writes it on its welcome screen.
+       */
+      onboarding_stage: await advanceStage(userId, "onboarding_started"),
     })
     .eq("id", userId);
 

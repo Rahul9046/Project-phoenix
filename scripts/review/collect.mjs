@@ -322,9 +322,21 @@ export function authConfig() {
   };
 }
 
-/** Prices come from the seed migration -- never from the live database. */
+/**
+ * Prices and plan flags, from migrations -- never from the live database.
+ *
+ * Reading the seed alone is not enough, and getting that wrong once produced a
+ * review package claiming the monthly plan auto-renewed. It never did: the
+ * catalogue was seeded with `is_recurring = true` on an early assumption of a
+ * mandate, and a later migration clears it with the reasoning written out. A
+ * generator that stops at the seed reports a product decision that was reversed
+ * months ago, and reviewers then raise it as a bug.
+ *
+ * So later migrations are replayed over the seed for the flags that matter.
+ */
 export function plans() {
-  const seed = read("supabase/migrations/20260826100600_seed_membership.sql");
+  const seedFile = "supabase/migrations/20260826100600_seed_membership.sql";
+  const seed = read(seedFile);
   const rows = [...seed.matchAll(
     /\(\s*'([a-z_]+)',\s*'([^']+)',\s*'([a-z]+)',\s*(\d+),\s*(\d+),\s*(\d+|null),\s*(\d+|null),\s*(true|false),\s*(\d+)\s*\)/g,
   )].map((m) => ({
@@ -337,7 +349,35 @@ export function plans() {
     introPeriodMonths: m[7] === "null" ? null : Number(m[7]),
     isRecurring: m[8] === "true",
   }));
-  return { source: "supabase/migrations/20260826100600_seed_membership.sql", rows };
+
+  // Replay later corrections to `is_recurring` in migration order.
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const corrections = [];
+  for (const file of migrations) {
+    if (`supabase/migrations/${file}` === seedFile) continue;
+    const sql = read(`supabase/migrations/${file}`);
+    for (const m of sql.matchAll(
+      /update\s+public\.membership_plans\s+set\s+is_recurring\s*=\s*(true|false)([\s\S]{0,200}?);/g,
+    )) {
+      const value = m[1] === "true";
+      const scope = m[2];
+      const code = scope.match(/code\s*=\s*'([a-z_]+)'/)?.[1] ?? null;
+      corrections.push({ file, value, code });
+      for (const row of rows) {
+        if (code === null || row.code === code) row.isRecurring = value;
+      }
+    }
+  }
+
+  return {
+    source: seedFile,
+    corrections,
+    rows,
+    /* The product invariant, stated so a reviewer can check it at a glance. */
+    allPrepaid: rows.every((r) => !r.isRecurring),
+  };
 }
 
 /**
@@ -393,17 +433,263 @@ export function paymentSurface() {
 // Q / R / S. Analytics, backend, schema
 // ---------------------------------------------------------------------------
 
+/**
+ * The funnel, and the one thing about it that fails without saying so.
+ *
+ * `product_events` constrains `event` to a known list, and the recording
+ * function swallows every exception so a measurement can never break a
+ * purchase. An event name that is not on the list is therefore dropped in
+ * silence: no error, no log, no row, and a funnel that reads as "nobody is
+ * using the product" rather than "the pipeline is broken".
+ *
+ * So this reports three things and compares them. Which events the clients
+ * record, which the database records, and which the constraint will accept.
+ * `unrecordable` is the interesting one -- anything in it is being thrown away
+ * right now.
+ */
 export function analyticsEvents() {
-  const sources = [
+  const clientFiles = [
     ...walk("apps/web/src", (f) => f.endsWith(".ts") || f.endsWith(".tsx")),
     ...walk("apps/mobile/src", (f) => f.endsWith(".ts")),
     ...walk("apps/mobile/app", (f) => f.endsWith(".tsx")),
   ];
-  const events = new Set();
-  for (const file of sources) {
-    for (const m of read(file).matchAll(/record(?:ProductEvent)?\(\s*"([a-z_]+)"/g)) events.add(m[1]);
+
+  const client = new Set();
+  for (const file of clientFiles) {
+    const text = read(file);
+    for (const m of text.matchAll(/record(?:ProductEvent)?\(\s*"([a-z_]+)"/g)) client.add(m[1]);
+    // Both clients type the call with this union, so it is the complete list.
+    for (const union of text.matchAll(/export type ProductEvent\s*=([^;]+);/g)) {
+      for (const name of union[1].matchAll(/"([a-z_]+)"/g)) client.add(name[1]);
+    }
   }
-  return [...events].sort();
+
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const sql = migrations.map((f) => read(`supabase/migrations/${f}`)).join("\n");
+
+  const server = new Set();
+  for (const m of sql.matchAll(/record_product_event\(\s*'([a-z_]+)'/g)) server.add(m[1]);
+  // Triggers that insert straight into the table, having no session to read.
+  for (const m of sql.matchAll(/values\s*\(\s*'([a-z_]+)'\s*,\s*new\./g)) server.add(m[1]);
+
+  /*
+   * The last `product_events_known_event` constraint in migration order wins,
+   * because a later migration drops and recreates it.
+   */
+  const constraints = [...sql.matchAll(/constraint product_events_known_event check \(\s*event in \(([^)]*)\)/g)];
+  const allowed = new Set(
+    constraints.length
+      ? [...constraints[constraints.length - 1][1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
+      : [],
+  );
+
+  const recorded = [...new Set([...client, ...server])].sort();
+
+  return {
+    client: [...client].sort(),
+    server: [...server].sort(),
+    allowed: [...allowed].sort(),
+    recorded,
+    unrecordable: recorded.filter((e) => !allowed.has(e)),
+    unused: [...allowed].filter((e) => !recorded.includes(e)).sort(),
+  };
+}
+
+/**
+ * What each client asks during onboarding.
+ *
+ * Derived from the writes rather than from the screens, because the screens are
+ * where the two apps look different and the columns are where that difference
+ * actually costs something. A field one client collects and the other does not
+ * is a profile that means different things depending on where it was made --
+ * and the consequence is rarely a missing label. `seeking` was absent from the
+ * web for months: the matcher reads an unset preference as "no constraint", so
+ * those members were shown to everyone and their own answer was never applied.
+ */
+export function onboardingParity() {
+  /*
+   * Both lists include the app's own photo module, because in both clients the
+   * photo step calls into `features/account/photos` rather than writing the row
+   * itself. Reading only the onboarding folders would report photos as absent on
+   * whichever side happened to be checked that way -- a difference in where the
+   * code lives, reported as a difference in what the product asks.
+   */
+  const webFiles = [
+    ...walk("apps/web/src/features/auth", (f) => f.endsWith(".ts") || f.endsWith(".tsx")),
+    ...walk("apps/web/src/features/account", (f) => f === "photos.ts"),
+  ];
+  const mobileFiles = [
+    ...walk("apps/mobile/src/features/onboarding", (f) => f.endsWith(".ts")),
+    ...walk("apps/mobile/app/onboarding", (f) => f.endsWith(".tsx")),
+    ...walk("apps/mobile/src/features/account", (f) => f === "photos.ts"),
+  ];
+
+  /*
+   * Columns named in an update/upsert payload. Web writes through server
+   * actions with `.update({ ... })`, mobile through `patch({ ... })`; both end
+   * up naming the column, which is the thing worth comparing.
+   */
+  const columnsIn = (files) => {
+    const found = new Set();
+    const known = [
+      "first_name", "date_of_birth", "gender", "seeking", "city_id",
+      "other_city", "relationship_status", "languages_undisclosed",
+      "onboarding_stage", "phone_verified_at",
+    ];
+    for (const file of files) {
+      const text = read(file);
+      for (const column of known) {
+        if (new RegExp(`\\b${column}\\s*:`).test(text)) found.add(column);
+      }
+      if (/profile_languages/.test(text)) found.add("profile_languages");
+      if (/profile_photos/.test(text)) found.add("profile_photos");
+    }
+    return found;
+  };
+
+  const web = columnsIn(webFiles);
+  const mobile = columnsIn(mobileFiles);
+
+  const every = [...new Set([...web, ...mobile])].sort();
+
+  return {
+    fields: every.map((field) => ({
+      field,
+      web: web.has(field),
+      mobile: mobile.has(field),
+    })),
+    onlyMobile: every.filter((f) => mobile.has(f) && !web.has(f)),
+    onlyWeb: every.filter((f) => web.has(f) && !mobile.has(f)),
+    webSteps: walk("apps/web/src/app/(auth)/onboarding", (f) => f === "page.tsx").length,
+    mobileSteps: walk("apps/mobile/app/onboarding", (f) => f.endsWith(".tsx")).length,
+  };
+}
+
+/**
+ * Empty, loading and error handling on the screens where a list can be empty.
+ *
+ * A heuristic, and labelled as one in the package: it reports whether each
+ * screen has a branch for the case, not whether that branch reads well. The
+ * previous version of this section asserted "needs review -- not confirmed
+ * present" for screens that had had empty states all along, which sent a
+ * reviewer looking for work that did not exist.
+ */
+export function stateHandling() {
+  const screens = [
+    ["web", "Discovery", "apps/web/src/app/(app)/discovery/page.tsx"],
+    ["web", "Member profile", "apps/web/src/app/(app)/discovery/[id]/page.tsx"],
+    ["web", "Connections", "apps/web/src/app/(app)/connections/page.tsx"],
+    ["web", "Conversation", "apps/web/src/app/(app)/connections/[id]/page.tsx"],
+    ["web", "Home", "apps/web/src/app/(app)/home/page.tsx"],
+    ["mobile", "Discovery", "apps/mobile/app/(tabs)/discover.tsx"],
+    ["mobile", "Connections", "apps/mobile/app/(tabs)/connections.tsx"],
+    ["mobile", "Messages", "apps/mobile/app/(tabs)/messages.tsx"],
+    ["mobile", "Interest received", "apps/mobile/app/interests.tsx"],
+    ["mobile", "Blocked members", "apps/mobile/app/you/blocked.tsx"],
+  ];
+
+  /*
+   * The two apps handle this in different places, so they are measured
+   * differently. A web page is a server component: Next takes loading and error
+   * from sibling `loading.tsx` and `error.tsx` files, and looking for a spinner
+   * inside the page would report "missing" for a route that handles it
+   * correctly. A mobile screen holds its own state, so the branch is in the file.
+   */
+  /** Every directory from the file's own up to `apps/web/src/app`. */
+  const ancestorsOf = (dir) => {
+    const out = [];
+    let at = dir;
+    while (at.startsWith("apps/web/src/app")) {
+      out.push(at);
+      at = at.slice(0, at.lastIndexOf("/"));
+    }
+    return out;
+  };
+
+  const rows = screens
+    .filter(([, , file]) => existsSync(join(ROOT, file)))
+    .map(([app, name, file]) => {
+      const text = read(file);
+      const dir = file.slice(0, file.lastIndexOf("/"));
+      return {
+        app,
+        screen: name,
+        file,
+        empty: /<EmptyState|length === 0|length > 0 \?|\.length \?/.test(text),
+        loading:
+          app === "web"
+            ? existsSync(join(ROOT, `${dir}/loading.tsx`))
+            : /<SkeletonRow|loading \?|isLoading|setLoading/.test(text),
+        /*
+         * Walked up to the app root, not just the sibling directory. A Next
+         * error boundary catches everything below it, so one at `(app)/` covers
+         * every signed-in route -- reporting those as unhandled would send a
+         * reviewer to add four more boundaries that already exist.
+         */
+        error:
+          app === "web"
+            ? ancestorsOf(dir).some((d) => existsSync(join(ROOT, `${d}/error.tsx`)))
+            : /error \?|<ErrorState|onRetry|Retry/.test(text),
+      };
+    });
+
+  /*
+   * An error boundary anywhere above a route catches it, so the absence that
+   * matters is the absence of any boundary at all -- reported separately rather
+   * than as a missing tick on every row.
+   */
+  const boundaries = walk("apps/web/src/app", (f) => f === "error.tsx" || f === "global-error.tsx");
+
+  return { rows, webErrorBoundaries: boundaries };
+}
+
+/**
+ * Moderation: the routes, what guards them, and what a moderator can do.
+ *
+ * Reported separately from the rest of the web surface because an admin route
+ * that stops being guarded looks identical, in a route listing, to one that is.
+ */
+export function moderation() {
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const sql = migrations.map((f) => read(`supabase/migrations/${f}`)).join("\n");
+
+  const adminPages = walk("apps/web/src/app/admin", (f) => f === "page.tsx").map((f) =>
+    f.replace("apps/web/src/app", "").replace(/\/page\.tsx$/, "") || "/",
+  );
+
+  // Every admin page must call the guard; a page that does not is the finding.
+  const unguarded = walk("apps/web/src/app/admin", (f) => f === "page.tsx").filter(
+    (f) => !read(f).includes("requireModerator"),
+  );
+
+  const adminFunctions = [
+    ...new Set([...sql.matchAll(/create (?:or replace )?function public\.(admin_[a-z_]+)/g)].map((m) => m[1])),
+  ].sort();
+
+  // Each of those must check `is_moderator()` in its own body, not rely on the page.
+  const bodies = [...sql.matchAll(/create (?:or replace )?function public\.(admin_[a-z_]+)[\s\S]*?\$\$;/g)];
+  const unchecked = bodies
+    .filter((m) => !m[0].includes("is_moderator()"))
+    .map((m) => m[1]);
+
+  return {
+    adminPages,
+    unguardedPages: unguarded,
+    guard: sql.includes("create or replace function public.is_moderator")
+      ? "is_moderator() — an allowlist of addresses in ops_config, compared against the session's verified email"
+      : "none found",
+    allowlistKey: /'(moderation_admins)'/.test(sql) ? "ops_config.moderation_admins" : "not found",
+    adminFunctions,
+    functionsNotSelfChecking: [...new Set(unchecked)].sort(),
+    suspensionSupported: /alter table public\.profiles[\s\S]{0,200}suspended_at/.test(sql),
+    auditTable: /create table (?:if not exists )?public\.moderation_actions/.test(sql)
+      ? "moderation_actions"
+      : "none",
+  };
 }
 
 export function backendSurface() {
@@ -430,9 +716,29 @@ export function schema() {
     : [];
   const all = files.map((f) => read(`supabase/migrations/${f}`)).join("\n");
   const tables = [...new Set([...all.matchAll(/create table (?:if not exists )?public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
-  const rlsEnabled = [...new Set([...all.matchAll(/alter table public\.([a-z_]+) enable row level security/g)].map((m) => m[1]))].sort();
+
+  /*
+   * `\s+`, not a single space. The migrations align these statements in a
+   * column -- `alter table public.cities            enable row level security;`
+   * -- and a regex expecting one space matched only the longest table names.
+   * The resulting package reported ten tables as having no RLS when every one
+   * of them had it, which is exactly the kind of false alarm that sends someone
+   * to "fix" a database that was already correct.
+   */
+  const rlsEnabled = [
+    ...new Set(
+      [...all.matchAll(/alter table\s+public\.([a-z_]+)\s+enable row level security/g)].map((m) => m[1]),
+    ),
+  ].sort();
+
+  // Policies are the actual boundary; "RLS enabled" with no policy denies all.
+  const policies = {};
+  for (const m of all.matchAll(/create policy\s+"?([^"\n]+?)"?\s+on\s+public\.([a-z_]+)/g)) {
+    (policies[m[2]] ??= []).push(m[1].trim());
+  }
+
   const functions = [...new Set([...all.matchAll(/create (?:or replace )?function public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
-  return { migrationCount: files.length, latest: files.slice(-5), tables, rlsEnabled, functions };
+  return { migrationCount: files.length, latest: files.slice(-5), tables, rlsEnabled, policies, functions };
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +820,36 @@ export function runChecks({ skip = false } = {}) {
   run("ESLint (mobile)", "npm run mobile:lint");
   run("Next.js production build", "npm run build");
 
+  /*
+   * The four probes are listed, not run.
+   *
+   * Each one signs in against the live project and creates throwaway accounts,
+   * which it then deletes. That is the right way to prove a boundary -- an
+   * authorisation check can only be tested by a real unauthorised caller -- and
+   * entirely the wrong thing for a documentation generator to do every time
+   * somebody wants a review package. Generating a document must not write to
+   * the production database.
+   *
+   * So they are reported with what they prove and the command to run them, and
+   * a reviewer can see at a glance which boundaries have a test at all.
+   */
   const pkg = readJson("package.json") ?? {};
+  const probes = [
+    ["Security probe", "security", "RLS and grants, as an ordinary member: that nobody can grant themselves membership, read another member's rows, or call a function they should not"],
+    ["Payments probe", "payments:probe", "server-side pricing, idempotent settlement, expiry as a date, and that every plan is prepaid rather than recurring"],
+    ["Moderation probe", "moderation:probe", "that the admin RPCs refuse an ordinary member who knows their names, not merely that the page hides a button"],
+    ["Analytics probe", "analytics:probe", "that each funnel event is actually recorded, by performing the transition and looking for the row"],
+  ];
+  for (const [name, script, proves] of probes) {
+    results.push({
+      name,
+      status: pkg.scripts?.[script] ? "not run here" : "absent",
+      detail: pkg.scripts?.[script]
+        ? `\`npm run ${script}\` — ${proves}. Needs credentials and touches the live project, so it is not run by this generator.`
+        : "no script",
+    });
+  }
+
   results.push({
     name: "Unit/integration tests",
     status: pkg.scripts?.test ? "unknown" : "absent",

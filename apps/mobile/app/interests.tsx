@@ -17,7 +17,7 @@ import { fontFamily } from "@/theme/typography";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Card } from "@/ui/Surface";
-import { EmptyState, SkeletonRow } from "@/ui/States";
+import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { Text } from "@/ui/Text";
 
 /**
@@ -42,6 +42,9 @@ export default function Interests() {
   const [members, setMembers] = useState<Loaded[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  /* Bumped by the retry button; the effect below reads it as an input. */
+  const [attempt, setAttempt] = useState(0);
 
   /*
    * The fetch is written out here rather than hidden behind a callback that
@@ -53,13 +56,22 @@ export default function Interests() {
     let active = true;
 
     void (async () => {
-      const [found, total] = await Promise.all([
+      const [received, total] = await Promise.all([
         getInterestsReceived(),
         getInterestsReceivedCount(),
       ]);
-      const withPhotos = await withPhotoUrls(found);
+
+      if (received.failed) {
+        if (!active) return;
+        setFailed(true);
+        setLoading(false);
+        return;
+      }
+
+      const withPhotos = await withPhotoUrls(received.members);
 
       if (!active) return;
+      setFailed(false);
       setMembers(withPhotos);
       setCount(total);
       setLoading(false);
@@ -68,7 +80,7 @@ export default function Interests() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
   const me = { city: details.cityName, languages: details.languageNames };
 
@@ -146,6 +158,20 @@ export default function Interests() {
               you will find each other through your introductions anyway.
             </Text>
           </View>
+        ) : failed ? (
+          /*
+           * Checked before the empty state, and here it matters more than
+           * anywhere else in the product: that empty state says "this is
+           * genuinely empty", which is a promise. Showing it because a request
+           * failed would make the one screen that explicitly swears it is not
+           * hiding anything the one screen that is.
+           */
+          <ErrorState
+            onRetry={() => {
+              setLoading(true);
+              setAttempt((n) => n + 1);
+            }}
+          />
         ) : members.length === 0 ? (
           <EmptyState
             icon="mail-outline"

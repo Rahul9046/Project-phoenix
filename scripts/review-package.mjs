@@ -56,12 +56,10 @@ const narrative = {
   ],
 
   mockedOrIncomplete: [
-    ["Phone verification is a stub — any six digits pass while OTP_DEV_CODE is set; no SMS is sent", "apps/web/.env.example, supabase/functions/phone-otp-*", "mocked"],
+    ["Phone verification is a stub — any six digits pass while OTP_DEV_CODE is set; no SMS is sent. Deferred deliberately: real SMS needs DLT registration", "apps/web/.env.example, supabase/functions/phone-otp-*", "mocked"],
     ["Razorpay is in TEST mode — no real money moves", "mode is read from the key prefix, supabase/functions/_shared/razorpay.ts", "test-only"],
-    ["Waitlist writes to a file on disk, which cannot survive serverless hosting", "apps/web/src/features/waitlist/actions.ts", "not production-ready"],
     ["Privacy policy and terms are placeholders; DPDP Act applies", "apps/web/src/app/(marketing)/privacy, terms", "launch blocker"],
-    ["No profile review, photo review or moderation queue exists", "—", "absent"],
-    ["Reporting has database tables but no review tooling or workflow", "supabase/migrations/*connection_tables*", "partial"],
+    ["No profile review, photo review or automated moderation exists. Reports are read and acted on by a founder, by hand", "apps/web/src/app/admin/reports", "manual only"],
     ["International cards are refused by the Razorpay account (international_transaction_not_allowed)", "commercial setting, not code", "blocked"],
     ["Product is deployed but noindex — invisible to search until launch", "apps/web/next.config.ts, apps/web/src/app/layout.tsx", "deliberate"],
   ],
@@ -76,25 +74,22 @@ const narrative = {
     ["New user registration", "Email address → six-digit code → onboarding. No password exists anywhere in the product.", "Nothing verifies identity beyond control of the mailbox."],
     ["Email authentication", "Supabase OTP; the email carries a code, never a link, because a PKCE link cannot be opened on a different device from the one that requested it.", "Deliverability depends on Resend; sender is no-reply@eraya.app."],
     ["Phone verification", "Six digits collected and stored against the profile.", "MOCKED — any six digits pass while OTP_DEV_CODE is set. Real DLT-registered SMS is a launch blocker."],
-    ["Onboarding", "Nine steps on mobile, five on web. Photo is optional; a profile without one is complete.", "Web and mobile ask for different things — see the screen inventory."],
-    ["Discovery", "A considered few rather than an endless feed. Filters are free-tier.", "Behaviour with an empty result set needs review."],
+    ["Onboarding", "Twelve screens on mobile, seven routes on the web, asking the same questions. Photo is optional on both; a profile without one is complete.", "Both clients now write the same fields — see the parity table in section C."],
+    ["Discovery", "A considered few rather than an endless feed. Filters are free-tier.", "Empty, loading and error states exist on both clients."],
     ["Expressing interest / connection", "Interest is one-way until reciprocated; a connection opens messaging.", "Who has expressed interest in you is a premium capability."],
     ["Messaging", "Only between connected members.", "No moderation, no reporting inside a thread."],
     ["Premium purchase", "Server creates and prices the order; client opens /checkout in a browser; signature verified server-side; settle_payment is idempotent.", "Verified end to end in test mode."],
     ["Premium expiry", "Premium is a date, not a boolean — active only while current_period_end > now().", "No renewal reminder exists."],
     ["Blocking", "Blocks are enforced in the database, not the UI.", "No notification to either party."],
-    ["Reporting", "Rows can be written.", "Nothing reads them. No queue, no tooling, no SLA."],
-    ["Account deletion", "Deletes the auth user; profile and everything under it cascade. Audit rows keep history with a null actor.", "Storage objects are not reached by foreign keys and must be swept separately."],
+    ["Reporting", "A member reports another; the row lands in a queue at /admin/reports that a founder reads.", "A moderator can dismiss a report or suspend the member. Suspension is reversible and removes them from discovery, interest and messaging. No SLA is promised anywhere in the copy."],
+    ["Account deletion", "`delete_my_account()` takes the id from the session, deletes the member's objects from the `profile-photos` bucket first, then deletes the auth user so everything else cascades. Audit rows keep history with a null actor.", "Files go first deliberately — the reverse order would orphan objects with no owner to attribute them to. Note this applies to the product's own deletion path; deleting a user through the Supabase admin API bypasses it and leaves objects behind."],
   ],
 
   observations: [
-    ["security", "android.permission.RECORD_AUDIO is declared in app.json and referenced nowhere in the source. A relationship product asking for the microphone with no voice feature is a trust cost for nothing.", "apps/mobile/app.json"],
     ["launch blocker", "Privacy policy and terms are placeholders. India's DPDP Act applies and both app stores require them.", "apps/web/src/app/(marketing)/{privacy,terms}"],
     ["trust", "Phone verification accepts any six digits. Anything in the product that implies a verified number is currently untrue.", "supabase/functions/phone-otp-*"],
-    ["product", "Analytics cover payments only. Registration, onboarding, discovery, interest, connection and messaging emit no events, so there is no funnel before the paywall.", "grep for recordProductEvent"],
-    ["product", "The waitlist writes to a file on disk. On serverless hosting that store does not survive, so entries can be lost silently.", "apps/web/src/features/waitlist/actions.ts"],
-    ["UX", "Web and mobile onboarding ask for different fields. Someone starting on one and finishing on the other meets an inconsistent product.", "onboarding routes in both apps"],
-    ["safety", "Reporting and blocking write rows, but nothing reads reports. Trust copy should not imply review that does not happen.", "supabase/migrations/*connection_tables*"],
+    ["product", "The funnel is instrumented end to end and proved by `npm run analytics:probe`. Events are recorded by the database on the write itself, so the clients cannot drift or double-count and no event can carry anything personal.", "supabase/migrations/*funnel*"],
+    ["safety", "Reports are read at /admin/reports, guarded by an allowlist of addresses held in `ops_config` and checked inside every admin function as well as on the page. The queue is manual and unstaffed outside founder hours — trust copy must still not imply a review SLA.", "apps/web/src/features/admin"],
     ["technical debt", "There is no test suite in any workspace. Every check is a type check, a linter or a probe script.", "package.json"],
     ["product", "International cards are refused. NRIs are a plausible part of this audience and currently cannot pay at all.", "Razorpay account setting"],
     ["UX", "Mobile copy is inline in screens; the web keeps all copy in content.ts. Revising wording on mobile means touching layout files.", "apps/mobile/app/**"],
@@ -139,6 +134,9 @@ const entitlements = collect.entitlementMatrix();
 const payments = collect.paymentSurface();
 const events = collect.analyticsEvents();
 const backend = collect.backendSurface();
+const mod = collect.moderation();
+const states = collect.stateHandling();
+const parity = collect.onboardingParity();
 const db = collect.schema();
 const envNames = collect.environmentVariableNames();
 const debt = collect.technicalDebt();
@@ -157,7 +155,7 @@ const manifest = {
     webRoutes: web.map((r) => r.route).sort(),
     mobileScreens: mobile.map((r) => r.screen).sort(),
     androidPermissions: [...perms.android].sort(),
-    analyticsEvents: events,
+    analyticsEvents: events.recorded,
     plans: planData.rows.map((p) => `${p.code}:${p.pricePaise}`).sort(),
     tables: db.tables,
     edgeFunctions: backend.edgeFunctions.sort(),
@@ -277,6 +275,36 @@ bullet(
   `Only on mobile: ${mobileOnboarding.filter((s) => !webOnboarding.includes(s)).join(", ") || "—"} — **a reviewer should check whether this divergence is intended.**`,
 );
 bullet("Mobile has a five-tab bottom navigation; the web uses a signed-in shell with a header. Messaging exists on both.");
+
+h3("Onboarding parity, by field");
+w(
+  "Compared by the columns each client writes, not by the screens. Two apps can ask the same thing on a different number of screens and still store the same profile; " +
+    "asking for different things is what makes a profile mean something different depending on where it was created.\n",
+);
+table(
+  ["Field", "Web", "Mobile"],
+  parity.fields.map((f) => [
+    `\`${f.field}\``,
+    f.web ? "asked" : "**not asked**",
+    f.mobile ? "asked" : "**not asked**",
+  ]),
+);
+
+if (parity.onlyMobile.length || parity.onlyWeb.length) {
+  w(
+    `\nStill divergent — only on mobile: ${parity.onlyMobile.map((f) => `\`${f}\``).join(", ") || "—"}; ` +
+      `only on the web: ${parity.onlyWeb.map((f) => `\`${f}\``).join(", ") || "—"}.`,
+  );
+} else {
+  w("\nBoth clients now write the same set of fields.");
+}
+w(
+  `
+_Screens are not the measure: the web asks across ${parity.webSteps} routes and the app across ${parity.mobileSteps}. ` +
+    "A field can still be written by one client's save layer and unreachable in its own UI, which is what this table cannot see. " +
+    "Both clients now reach every field above from a screen: the web routes include `/onboarding/seeking` and `/onboarding/photo`, " +
+    "and its city step offers the typed town the app has always offered._",
+);
 
 /* --- D ------------------------------------------------------------------ */
 h2("D. Navigation map");
@@ -422,7 +450,18 @@ table(
     p.isRecurring ? "yes" : "**no — prepaid, nothing auto-renews**",
   ]),
 );
-w(`\n_Prices read from \`${planData.source}\`, not from the live database._`);
+w(`\n_Prices read from \`${planData.source}\`, with later migrations replayed over it — not from the live database._`);
+if (planData.corrections.length) {
+  w("\nCorrections applied after the seed:");
+  planData.corrections.forEach((c) =>
+    bullet(`\`${c.file}\` — set \`is_recurring = ${c.value}\`${c.code ? ` for \`${c.code}\`` : " for every plan"}`),
+  );
+}
+w(
+  `\n**Product invariant: ${planData.allPrepaid ? "every plan is prepaid — nothing auto-renews." : "⚠ AT LEAST ONE PLAN IS MARKED RECURRING."}** ` +
+    "There is no Razorpay subscription, mandate or standing instruction anywhere in the codebase; a term ends when it ends " +
+    "and the member decides whether to buy another.",
+);
 table(
   ["Aspect", "State"],
   [
@@ -486,25 +525,64 @@ table(
 );
 bullet("Account deletion cascades from `auth.users` through `profiles` to languages, subscriptions, blocks, connections, messages and reports.");
 bullet("Razorpay receives no name, address or contact details — only an order note tying a payment to a member and plan.");
-bullet("**Flag:** the waitlist writes to a file on disk (`apps/web/src/features/waitlist/actions.ts`), which does not survive serverless hosting.");
+bullet("Account deletion removes the member's objects from the `profile-photos` bucket before deleting the auth row — storage is handled, not left to the foreign keys that cannot reach it.");
 
 /* --- N ------------------------------------------------------------------ */
 h2("N. Moderation and safety");
 table(
   ["Capability", "State"],
   [
-    ["Block", "**implemented** — enforced in the database"],
-    ["Report", "**partial** — rows can be written; nothing reads them"],
-    ["Moderation queue", "**does not exist**"],
-    ["Moderation tooling", "**does not exist**"],
+    ["Block", "**implemented** — enforced in the database, not the UI"],
+    ["Report", "**implemented** — written by members, read at the routes below"],
+    [
+      "Moderation queue",
+      mod.adminPages.length
+        ? `**implemented** — ${mod.adminPages.map((r) => `\`${r}\``).join(", ")}`
+        : "**does not exist**",
+    ],
+    ["Moderator actions", mod.adminFunctions.map((f) => `\`${f}\``).join(", ") || "none"],
+    ["Suspension", mod.suspensionSupported ? "**implemented** — reversible, `profiles.suspended_at`" : "**does not exist**"],
+    ["Audit trail", mod.auditTable === "none" ? "**none**" : `\`${mod.auditTable}\``],
+    ["Who may moderate", mod.guard],
+    ["Allowlist location", `\`${mod.allowlistKey}\``],
     ["Profile review before going live", "**does not exist**"],
     ["Photo review", "**does not exist**"],
     ["Automated moderation", "**does not exist**"],
-    ["Human moderation / escalation", "**does not exist**"],
     ["Support address", "`support@eraya.app` — live"],
   ],
 );
-w("\n**This is the section most likely to contradict marketing copy.** Trust language must not imply review that does not happen.");
+
+/*
+ * The two ways this can quietly stop being true. A page that forgets the guard
+ * looks identical in a route listing to one that has it, and an admin function
+ * that trusts the page rather than checking for itself is a bypass waiting for
+ * the first caller that is not the page.
+ */
+if (mod.unguardedPages.length) {
+  w(
+    `\n> **${mod.unguardedPages.length} admin page(s) do not call \`requireModerator()\`:** ` +
+      `${mod.unguardedPages.map((f) => `\`${f}\``).join(", ")}.`,
+  );
+}
+if (mod.functionsNotSelfChecking.length) {
+  w(
+    `\n> **${mod.functionsNotSelfChecking.length} admin function(s) do not check \`is_moderator()\` in their own body:** ` +
+      `${mod.functionsNotSelfChecking.map((f) => `\`${f}\``).join(", ")}. ` +
+      "A page guard is not a boundary — anything that can sign in can call an RPC by name.",
+  );
+}
+if (!mod.unguardedPages.length && !mod.functionsNotSelfChecking.length && mod.adminPages.length) {
+  w(
+    "\nEvery admin page calls `requireModerator()` and every admin function re-checks `is_moderator()` in its own body. " +
+      "The page guard answers 404 rather than 403, so the route does not confirm its own existence to somebody probing. " +
+      "`npm run moderation:probe` proves the boundary against the live API as an ordinary member, not as the service role.",
+  );
+}
+
+w(
+  "\n**This is still the section most likely to contradict marketing copy.** " +
+    "The queue is read by a founder by hand, with no staffing and no SLA — trust language must not imply review that is faster or more certain than that.",
+);
 
 /* --- O ------------------------------------------------------------------ */
 h2("O. Accessibility");
@@ -536,19 +614,79 @@ table(
     ["Checkout unreachable", "`unavailable`"],
     ["Auth failure", "handled at `/auth/*`"],
     ["OTP failure", "handled in the code screens"],
-    ["Empty discovery", "**needs review — not confirmed present**"],
-    ["No connections / no messages", "**needs review — not confirmed present**"],
-    ["Offline", "**no explicit handling found**"],
   ],
+);
+
+/*
+ * Measured rather than asserted. The previous version of this section claimed
+ * the list screens' empty states "needed review", for screens that had had them
+ * all along -- which sends a reviewer looking for work that does not exist.
+ */
+w("\n**Per screen.** Web loading and error come from Next's `loading.tsx` / `error.tsx` conventions; mobile holds the branch in the screen.\n");
+table(
+  ["App", "Screen", "Empty", "Loading", "Error / retry"],
+  states.rows.map((r) => [
+    r.app,
+    r.screen,
+    r.empty ? "yes" : "—",
+    r.loading ? "yes" : "—",
+    r.error ? "yes" : "**no**",
+  ]),
+);
+
+w(
+  states.webErrorBoundaries.length
+    ? `\nWeb error boundaries: ${states.webErrorBoundaries.map((f) => `\`${f}\``).join(", ")}.`
+    : "\n> **The web app has no `error.tsx` or `global-error.tsx` anywhere.** Any throw in a server component replaces the product with Next's default error page.",
+);
+
+w(
+  "\n_A screen with no error branch is not neutral: every one of these fetches returns an empty list when it fails, " +
+    "so the member is told there is nobody to introduce when in fact the request never arrived. " +
+    "Empty and broken are different sentences and the product must not confuse them._",
 );
 
 /* --- Q ------------------------------------------------------------------ */
 h2("Q. Analytics");
-table(["Event", "Area"], events.map((e) => [`\`${e}\``, e.startsWith("payment") || e.startsWith("premium") || e.startsWith("membership") ? "payments" : "other"]));
-w(
-  `\n**${events.length} events, all in the payment funnel.** No events exist for registration, onboarding completion, ` +
-    "discovery, expressing interest, connection, or messaging — so there is no measurable funnel before the paywall.",
+table(
+  ["Event", "Recorded by", "Accepted by the table"],
+  events.recorded.map((e) => [
+    `\`${e}\``,
+    events.server.includes(e) ? "the database, on the write itself" : "a client",
+    events.allowed.includes(e) ? "yes" : "**NO — silently discarded**",
+  ]),
 );
+
+/*
+ * The line that matters. `product_events` constrains `event` to a known list
+ * and the recording function swallows every exception, so a name that is not on
+ * the list produces no error, no log and no row. A funnel broken that way reads
+ * exactly like a product nobody is using, which is the wrong conclusion and the
+ * easier one to reach.
+ */
+if (events.unrecordable.length) {
+  w(
+    `\n> **${events.unrecordable.length} event(s) are being thrown away right now:** ` +
+      `${events.unrecordable.map((e) => `\`${e}\``).join(", ")}. ` +
+      "They are recorded by the code but rejected by the `product_events_known_event` constraint, " +
+      "and the recording function swallows the error — so nothing anywhere reports this. " +
+      "Adding an event is two changes: the instrumentation, and the allowlist.",
+  );
+} else {
+  w(
+    `\n**${events.recorded.length} events, and every one of them is on the allowlist.** ` +
+      `${events.server.length} are recorded by the database on the write itself, which is why the two clients ` +
+      "cannot drift or double-count, and why no event can carry anything personal — the recording function takes " +
+      "an event name and payment fields, and reads the actor from the session. " +
+      "`npm run analytics:probe` proves each one by performing the transition and looking for the row.",
+  );
+}
+
+if (events.unused.length) {
+  w(
+    `\n_On the allowlist but recorded by nothing: ${events.unused.map((e) => `\`${e}\``).join(", ")}._`,
+  );
+}
 
 /* --- R ------------------------------------------------------------------ */
 h2("R. Backend surface");
@@ -572,14 +710,26 @@ h2("S. Database schema");
 w(`${db.migrationCount} migrations. ${db.tables.length} tables, ${db.rlsEnabled.length} with RLS enabled, ${db.functions.length} functions.`);
 h3("Tables");
 w(db.tables.map((t) => `\`${t}\``).join(" · "));
-h3("RLS enabled");
-w(db.rlsEnabled.map((t) => `\`${t}\``).join(" · "));
+h3("Row Level Security");
 const noRls = db.tables.filter((t) => !db.rlsEnabled.includes(t));
+table(
+  ["Table", "RLS", "Policies"],
+  db.tables.map((t) => [
+    `\`${t}\``,
+    db.rlsEnabled.includes(t) ? "enabled" : "**NOT ENABLED**",
+    (db.policies[t] ?? []).length ? String((db.policies[t] ?? []).length) : "**none**",
+  ]),
+);
 if (noRls.length) {
-  h3("Tables without an explicit RLS statement");
-  w(noRls.map((t) => `\`${t}\``).join(" · "));
-  w("\n_Worth confirming each is deliberate (reference data such as cities and languages usually is)._");
+  w(`\n**Tables without an RLS statement:** ${noRls.map((t) => `\`${t}\``).join(", ")} — worth confirming each is deliberate.`);
+} else {
+  w("\nEvery table has RLS enabled.");
 }
+w(
+  "\nPolicy count matters as much as the flag: RLS enabled with no policy denies everything, which is safe but usually " +
+    "means the table is reached only through `SECURITY DEFINER` functions. Both are legitimate here — the functions are the " +
+    "boundary for anything a member should not query directly.",
+);
 h3("Recent migrations");
 db.latest.forEach((m) => bullet(`\`${m}\``));
 
@@ -645,11 +795,25 @@ table(
   checks.map((c) => [
     c.name,
     c.status === "pass" ? "✅ pass" : c.status === "fail" ? "❌ **fail**" : c.status === "could not run" ? "⚠ could not run" : c.status,
-    c.detail ? `\`${String(c.detail).split("\n")[0].slice(0, 120)}\`` : c.seconds ? `${c.seconds}s` : "",
+    /*
+     * A probe detail is prose that already contains code spans, so it is not
+     * wrapped again -- doing so produced a doubled backtick and swallowed the
+     * markup. A failure detail is raw compiler output, which does need it.
+     */
+    c.detail
+      ? c.status === "not run here" || c.status === "absent"
+        ? String(c.detail)
+        : `\`${String(c.detail).split("\n")[0].slice(0, 120)}\``
+      : c.seconds
+        ? `${c.seconds}s`
+        : "",
   ]),
 );
-bullet("`npm run security` — 50 Row Level Security probes against a throwaway account. Not run here to avoid touching the live project; run it separately.");
-bullet("`npm run payments:probe` — 23 payment-rule probes, same reason.");
+w(
+  "\n_The probes above are the only checks that test a boundary rather than a type. " +
+    "Each signs in as an ordinary member against the live project, which is the only way to prove that an unauthorised caller " +
+    "is actually refused — and the reason a document generator must not run them on its own._",
+);
 
 /* --- X ------------------------------------------------------------------ */
 h2("X. Observations from the repository");

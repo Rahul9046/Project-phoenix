@@ -63,7 +63,7 @@ export async function loadAuthSession(
       // One string literal, deliberately: Supabase infers the row type from
       // the select at compile time, and a concatenated expression defeats it.
       .select(
-        "first_name, date_of_birth, gender, city_id, other_city, relationship_status, languages_undisclosed, onboarding_stage, phone_verified_at",
+        "first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, onboarding_stage, phone_verified_at",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -107,12 +107,14 @@ export async function loadAuthSession(
       firstName: profile.first_name,
       dateOfBirth: profile.date_of_birth,
       gender: profile.gender,
+      seeking: profile.seeking ?? [],
       // `city` carries the city id, or the OTHER_CITY sentinel when the person
       // named somewhere unlisted.
       city: profile.city_id ?? (profile.other_city ? "other" : null),
       otherCity: profile.other_city,
       relationshipStatus: profile.relationship_status,
       languages: profile.languages_undisclosed ? [] : languages,
+      languagesUndisclosed: profile.languages_undisclosed ?? false,
     },
   };
 }

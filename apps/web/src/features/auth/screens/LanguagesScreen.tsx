@@ -76,7 +76,7 @@ function LanguagesForm({
       return;
     }
 
-    router.push(authRoutes.complete);
+    router.push(authRoutes.photo);
   }
 
   return (

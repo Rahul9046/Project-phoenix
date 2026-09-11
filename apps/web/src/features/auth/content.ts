@@ -113,6 +113,13 @@ export const basicsStep = {
     hint: "This is the name shown on your profile.",
     placeholder: "Your first name",
     error: "Enter your first name to continue.",
+    /*
+     * The app has always required two characters and capped the field at forty;
+     * the website required one and capped nothing. So a name accepted here could
+     * be rejected by the app's own rules on the very next screen the member saw,
+     * and the two clients disagreed about what a valid profile was.
+     */
+    tooShort: "That looks a little short. Enter at least two characters.",
   },
   dateOfBirth: {
     label: "Date of birth",
@@ -146,6 +153,34 @@ export const genderOptions: readonly { value: Gender; label: string }[] = [
   { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
+/**
+ * Who you would like to meet.
+ *
+ * The mobile app has always asked this and the website never did, so every
+ * profile created in a browser was stored with no preference at all. That is
+ * not the neutral outcome it looks like: the matching function reads an unset
+ * preference as "no constraint", so those members were shown to everyone and
+ * their own answer -- which they were never asked for -- was never applied.
+ *
+ * `prefer_not_to_say` is deliberately absent, exactly as on mobile. It is a
+ * reasonable answer to "what is your gender" and an unusable one to "who would
+ * you like to meet", because there is nothing to match on.
+ */
+export const seekingOptions: readonly { value: Gender; label: string }[] = [
+  { value: "woman", label: "Women" },
+  { value: "man", label: "Men" },
+  { value: "non_binary", label: "Non-binary people" },
+];
+
+export const seekingStep = {
+  title: "Who would you like to meet?",
+  lede:
+    "Choose as many as apply. You can change this later, and it works both ways — " +
+    "you only appear to people you would also like to meet.",
+  cta: "Continue",
+  error: "Choose at least one.",
+} as const;
+
 export const cityStep = {
   title: "Where are you based?",
   lede: "Eraya is welcoming members across India as we build our community, city by city.",
@@ -153,8 +188,20 @@ export const cityStep = {
   searchLabel: "Search for your city",
   searchPlaceholder: "Start typing your city",
   searching: "Searching…",
-  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
+  noMatches: "No matching city. Check the spelling, or use what you typed.",
   changeCta: "Change",
+
+  /*
+   * The way out of a miss, and it has to exist.
+   *
+   * India has a great many more places people live than a list of cities has
+   * rows. Without this, somebody from a smaller town is told to pick a nearby
+   * larger city -- which is to say, to answer a question about where they live
+   * with somewhere they do not. The app has always offered it; the website told
+   * those people to choose somewhere else.
+   */
+  useTyped: (typed: string) => `Use “${typed}”`,
+  typedSubtitle: "The town you entered",
 
   /**
    * The hint under the field. It exists to answer the question someone from a
@@ -164,7 +211,7 @@ export const cityStep = {
    */
   hint: "Every city in India is open. Type a few letters to find yours.",
 
-  error: "Search for your city and choose it to continue.",
+  error: "Search for your city, or use the town you typed, to continue.",
   cta: "Continue",
 } as const;
 
@@ -249,6 +296,35 @@ export const languageOptions = [
   "Odia",
   "Assamese",
 ] as const;
+
+/**
+ * A photograph, if they want one.
+ *
+ * The last question, and the only optional one. Everything before it is needed
+ * to introduce somebody sensibly; this is needed by nobody. A member with no
+ * photograph has a complete profile and appears as a monogram everywhere in
+ * Eraya, which is why the button says "Not just now" rather than offering a skip
+ * link -- skipping is just continuing, and a link beside a button implies the
+ * button is the answer that counts.
+ *
+ * Asked last for the same reason it is optional. Eraya's members are people who
+ * have had a hard few years, and some will not want a face on a screen for a
+ * long time. Putting this in front of the questions that actually make an
+ * introduction possible would lose them at the door.
+ */
+export const photoStep = {
+  title: "Add a photo, if you like.",
+  lede: "It is genuinely optional. A profile without one is complete, and you can add or change photos whenever you want.",
+
+  addCta: "Choose a photo",
+  addMoreCta: "Add another",
+  removeCta: "Remove",
+  continueCta: "Continue",
+  skipCta: "Not just now",
+
+  /* Said plainly, because a limit discovered by being refused is a bad limit. */
+  limitNote: "Up to three for now. You can add more from your account later.",
+} as const;
 
 export const completeStep = {
   /**

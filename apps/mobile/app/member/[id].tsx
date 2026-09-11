@@ -14,6 +14,7 @@ import {
 } from "@/features/members/data";
 import { PhotoGallery } from "@/features/members/PhotoGallery";
 import { useMyDetails } from "@/features/members/me";
+import { supabase } from "@/lib/supabase/client";
 import type { Member } from "@/features/members/types";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button, IconButton, TextButton } from "@/ui/Button";
@@ -75,6 +76,19 @@ export default function MemberProfile() {
       setMember(found);
       setPhotos(gallery);
       setLoading(false);
+
+      /*
+       * Recorded on this screen rather than inside `getMember`, which is also
+       * how a connection and a conversation header get their member -- counting
+       * there would report a profile view every time somebody opened their own
+       * messages. Only after the profile actually resolved, and only if this
+       * effect was not cancelled, so a back-press mid-load counts as nothing.
+       *
+       * The event records that a profile was viewed, never which one.
+       */
+      if (found) {
+        void supabase.rpc("record_profile_view").then(undefined, () => {});
+      }
     })();
 
     return () => {

@@ -30,6 +30,19 @@ import type { OnboardingProfile } from "@/features/auth/types";
  * Used for both the picker's `max` and the check below, so the two can never
  * disagree about where the line is.
  */
+/*
+ * The same limits the app enforces, so a profile started in a browser and
+ * finished on a phone is not rejected by rules it was never shown.
+ *
+ * The floor on the date exists because the database only has a ceiling: the
+ * `profiles_date_of_birth_adult` constraint checks that somebody is over 18 and
+ * says nothing about how far over. Without a floor the picker accepted 1850,
+ * and the resulting profile advertised an age no one would read as real.
+ */
+const NAME_MIN = 2;
+const NAME_MAX = 40;
+const EARLIEST_BIRTH_DATE = "1930-01-01";
+
 function latestAdultBirthDate(): string {
   const today = new Date();
   const boundary = new Date(
@@ -96,11 +109,17 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
      * retrying forever.
      */
     const next: typeof errors = {};
-    if (!firstName.trim()) next.firstName = basicsStep.firstName.error;
+    if (!firstName.trim()) {
+      next.firstName = basicsStep.firstName.error;
+    } else if (firstName.trim().length < NAME_MIN) {
+      next.firstName = basicsStep.firstName.tooShort;
+    }
     if (!dateOfBirth) {
       next.dateOfBirth = basicsStep.dateOfBirth.error;
     } else if (dateOfBirth > latestAdultBirthDate()) {
       next.dateOfBirth = basicsStep.dateOfBirth.tooYoung;
+    } else if (dateOfBirth < EARLIEST_BIRTH_DATE) {
+      next.dateOfBirth = basicsStep.dateOfBirth.error;
     }
     if (!gender) next.gender = basicsStep.gender.error;
 
@@ -154,6 +173,8 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               {...props}
               type="text"
               autoComplete="given-name"
+              minLength={NAME_MIN}
+              maxLength={NAME_MAX}
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               placeholder={basicsStep.firstName.placeholder}
@@ -177,6 +198,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               // this it happily defaults to the current month, which is how a
               // birth date three weeks in the past gets submitted.
               max={latestAdultBirthDate()}
+              min={EARLIEST_BIRTH_DATE}
               value={dateOfBirth}
               onChange={(event) => setDateOfBirth(event.target.value)}
               className={inputClasses}

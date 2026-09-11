@@ -241,6 +241,20 @@ Entitlements are read by name from the `entitlements` table, never inferred from
 database decides what actually happens. `subscriptions` has no insert, update or
 delete policy for anyone.
 
+## Android permissions
+
+`android.permissions` is `[]` and `RECORD_AUDIO` is in `blockedPermissions`.
+
+The microphone was declared and used by nothing. On a product where people
+decide whether to meet a stranger, an install screen asking for the microphone
+costs trust and buys nothing, and "a library probably wanted it" is not a reason
+a member ever hears. `blockedPermissions` keeps it out even if a future plugin
+adds it back without anyone noticing.
+
+Photo access stays: `expo-image-picker` carries its own usage string and profile
+photos need it. Camera is deliberately absent -- the app picks from the library
+and never captures directly.
+
 ## Photos
 
 Optional, and a profile without one is complete — the monogram is a first-class
