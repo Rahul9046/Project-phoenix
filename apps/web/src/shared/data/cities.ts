@@ -22,6 +22,24 @@ export type CityResult = {
   isFocusCity: boolean;
 };
 
+/**
+ * What somebody answered when asked where they live.
+ *
+ * Either one of the cities in the table, or a name they typed because theirs is
+ * not in it. The same two shapes the app uses, and the same two columns behind
+ * them: `city_id` for a listed city, `other_city` for anything else.
+ *
+ * India has rather more than 493 places people live. A search that can only
+ * return a miss turns a nationwide product into a list of cities you are allowed
+ * to be from, and tells somebody from a smaller town to pick somewhere they do
+ * not live in order to continue.
+ */
+export type CityChoice = CityResult | { name: string };
+
+export function isListedCity(choice: CityChoice): choice is CityResult {
+  return "id" in choice;
+}
+
 export const CITY_RESULT_LIMIT = 8;
 
 export async function searchCities(

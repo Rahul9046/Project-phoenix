@@ -188,8 +188,20 @@ export const cityStep = {
   searchLabel: "Search for your city",
   searchPlaceholder: "Start typing your city",
   searching: "Searching…",
-  noMatches: "No matching city. Check the spelling, or try a nearby larger city.",
+  noMatches: "No matching city. Check the spelling, or use what you typed.",
   changeCta: "Change",
+
+  /*
+   * The way out of a miss, and it has to exist.
+   *
+   * India has a great many more places people live than a list of cities has
+   * rows. Without this, somebody from a smaller town is told to pick a nearby
+   * larger city -- which is to say, to answer a question about where they live
+   * with somewhere they do not. The app has always offered it; the website told
+   * those people to choose somewhere else.
+   */
+  useTyped: (typed: string) => `Use “${typed}”`,
+  typedSubtitle: "The town you entered",
 
   /**
    * The hint under the field. It exists to answer the question someone from a
@@ -199,7 +211,7 @@ export const cityStep = {
    */
   hint: "Every city in India is open. Type a few letters to find yours.",
 
-  error: "Search for your city and choose it to continue.",
+  error: "Search for your city, or use the town you typed, to continue.",
   cta: "Continue",
 } as const;
 
