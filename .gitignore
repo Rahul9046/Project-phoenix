@@ -70,3 +70,8 @@ scripts/demo-photos/*
 
 # Wrangler local state.
 .wrangler/
+
+# Build review packages. Generated on demand by `npm run review:package`;
+# regenerate rather than commit, so a stale package cannot be mistaken for
+# the current build. The generator and its docs ARE tracked.
+artifacts/
