@@ -21,6 +21,7 @@ export const authRoutes = {
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
   languages: "/onboarding/languages",
+  photo: "/onboarding/photo",
   complete: "/onboarding/complete",
 } as const;
 
@@ -33,6 +34,7 @@ export const onboardingSteps = [
   { route: authRoutes.city, label: "City" },
   { route: authRoutes.relationship, label: "Chapter" },
   { route: authRoutes.languages, label: "Languages" },
+  { route: authRoutes.photo, label: "Photo" },
 ] as const;
 
 export function onboardingStepIndex(route: string): number {
@@ -59,6 +61,15 @@ function hasCity(session: AuthSession): boolean {
 
 function hasRelationship(session: AuthSession): boolean {
   return Boolean(session.profile.relationshipStatus);
+}
+
+/*
+ * Declining to answer is an answer. An empty list on its own only means the
+ * question has not been reached -- the flag is what separates the two, exactly
+ * as it does in the app's own routing.
+ */
+function hasLanguages(session: AuthSession): boolean {
+  return session.profile.languages.length > 0 || session.profile.languagesUndisclosed;
 }
 
 /**
@@ -122,8 +133,20 @@ export function resolveRedirect(
     if (!hasCity(session)) return authRoutes.city;
     return hasRelationship(session) ? null : authRoutes.relationship;
   }
-  if (route === authRoutes.complete) {
-    return session.stage === "onboardingCompleted" ? null : nextRoute(session);
+  /*
+   * The photo step, and the screen after it.
+   *
+   * Both need every question answered and neither needs the stage to say so,
+   * because the stage is written on arrival at `complete` -- gating `complete`
+   * on `onboardingCompleted` would mean bouncing away from the screen that sets
+   * it, forever.
+   */
+  if (route === authRoutes.photo || route === authRoutes.complete) {
+    if (!hasBasics(session)) return authRoutes.basics;
+    if (!hasSeeking(session)) return authRoutes.seeking;
+    if (!hasCity(session)) return authRoutes.city;
+    if (!hasRelationship(session)) return authRoutes.relationship;
+    return hasLanguages(session) ? null : authRoutes.languages;
   }
 
   return null;
@@ -138,7 +161,22 @@ export function nextRoute(session: AuthSession): AuthRoute {
   if (!hasSeeking(session)) return authRoutes.seeking;
   if (!hasCity(session)) return authRoutes.city;
   if (!hasRelationship(session)) return authRoutes.relationship;
-  return authRoutes.languages;
+  if (!hasLanguages(session)) return authRoutes.languages;
+
+  /*
+   * The photo step is deliberately absent from here.
+   *
+   * Every other step is derived from what is missing, which works because each
+   * one is required. A photograph is not: a profile without one is complete, so
+   * "has no photo" can never mean "unfinished" -- deciding otherwise would be an
+   * onboarding that nobody declining a photo could ever leave.
+   *
+   * It is reached by the languages step navigating to it, once, and it hands
+   * back here afterwards. Somebody who closes the tab on that screen and returns
+   * lands past it, which is the right outcome for an optional question that has
+   * already been asked. The app routes it the same way.
+   */
+  return authRoutes.complete;
 }
 
 /** Used by the mocked provider callbacks to advance the stage sensibly. */

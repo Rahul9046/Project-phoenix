@@ -114,6 +114,7 @@ export async function loadAuthSession(
       otherCity: profile.other_city,
       relationshipStatus: profile.relationship_status,
       languages: profile.languages_undisclosed ? [] : languages,
+      languagesUndisclosed: profile.languages_undisclosed ?? false,
     },
   };
 }

@@ -509,12 +509,21 @@ export function analyticsEvents() {
  * those members were shown to everyone and their own answer was never applied.
  */
 export function onboardingParity() {
+  /*
+   * Both lists include the app's own photo module, because in both clients the
+   * photo step calls into `features/account/photos` rather than writing the row
+   * itself. Reading only the onboarding folders would report photos as absent on
+   * whichever side happened to be checked that way -- a difference in where the
+   * code lives, reported as a difference in what the product asks.
+   */
   const webFiles = [
     ...walk("apps/web/src/features/auth", (f) => f.endsWith(".ts") || f.endsWith(".tsx")),
+    ...walk("apps/web/src/features/account", (f) => f === "photos.ts"),
   ];
   const mobileFiles = [
     ...walk("apps/mobile/src/features/onboarding", (f) => f.endsWith(".ts")),
     ...walk("apps/mobile/app/onboarding", (f) => f.endsWith(".tsx")),
+    ...walk("apps/mobile/src/features/account", (f) => f === "photos.ts"),
   ];
 
   /*
@@ -541,10 +550,7 @@ export function onboardingParity() {
   };
 
   const web = columnsIn(webFiles);
-  const mobile = columnsIn([
-    ...mobileFiles,
-    ...walk("apps/mobile/src/features/account", (f) => f === "photos.ts"),
-  ]);
+  const mobile = columnsIn(mobileFiles);
 
   const every = [...new Set([...web, ...mobile])].sort();
 

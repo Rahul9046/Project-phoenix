@@ -74,7 +74,7 @@ const narrative = {
     ["New user registration", "Email address → six-digit code → onboarding. No password exists anywhere in the product.", "Nothing verifies identity beyond control of the mailbox."],
     ["Email authentication", "Supabase OTP; the email carries a code, never a link, because a PKCE link cannot be opened on a different device from the one that requested it.", "Deliverability depends on Resend; sender is no-reply@eraya.app."],
     ["Phone verification", "Six digits collected and stored against the profile.", "MOCKED — any six digits pass while OTP_DEV_CODE is set. Real DLT-registered SMS is a launch blocker."],
-    ["Onboarding", "Nine steps on mobile, five on web. Photo is optional; a profile without one is complete.", "Web and mobile ask for different things — see the screen inventory."],
+    ["Onboarding", "Twelve screens on mobile, seven routes on the web, asking the same questions. Photo is optional on both; a profile without one is complete.", "Both clients now write the same fields — see the parity table in section C."],
     ["Discovery", "A considered few rather than an endless feed. Filters are free-tier.", "Empty, loading and error states exist on both clients."],
     ["Expressing interest / connection", "Interest is one-way until reciprocated; a connection opens messaging.", "Who has expressed interest in you is a premium capability."],
     ["Messaging", "Only between connected members.", "No moderation, no reporting inside a thread."],
@@ -90,7 +90,7 @@ const narrative = {
     ["trust", "Phone verification accepts any six digits. Anything in the product that implies a verified number is currently untrue.", "supabase/functions/phone-otp-*"],
     ["product", "The funnel is instrumented end to end and proved by `npm run analytics:probe`. Events are recorded by the database on the write itself, so the clients cannot drift or double-count and no event can carry anything personal.", "supabase/migrations/*funnel*"],
     ["safety", "Reports are read at /admin/reports, guarded by an allowlist of addresses held in `ops_config` and checked inside every admin function as well as on the page. The queue is manual and unstaffed outside founder hours — trust copy must still not imply a review SLA.", "apps/web/src/features/admin"],
-    ["UX", "Web onboarding has no photo step, so a profile created in a browser is always photoless; and `other_city` is written by the web's save action but hard-coded to null by its city screen, so somebody whose town is unlisted can finish on the app and not in a browser. `seeking` and the name/date rules are now the same on both.", "apps/web/src/features/auth"],
+    ["UX", "Web and mobile onboarding now collect the same fields with the same validation, including `seeking`, an unlisted town and an optional photo. What still differs is display, not collection: the web renders monograms everywhere, so a photo added in a browser is visible to app users and not to web ones.", "apps/web/src/features/members/MemberPresentation.tsx"],
     ["technical debt", "There is no test suite in any workspace. Every check is a type check, a linter or a probe script.", "package.json"],
     ["product", "International cards are refused. NRIs are a plausible part of this audience and currently cannot pay at all.", "Razorpay account setting"],
     ["UX", "Mobile copy is inline in screens; the web keeps all copy in content.ts. Revising wording on mobile means touching layout files.", "apps/mobile/app/**"],
@@ -300,9 +300,11 @@ if (parity.onlyMobile.length || parity.onlyWeb.length) {
   w("\nBoth clients now write the same set of fields.");
 }
 w(
-  `\n_Screens are not the measure: the web asks across ${parity.webSteps} routes and the app across ${parity.mobileSteps}. ` +
-    "A field present in this table can still be unreachable in one client's UI — `other_city` is written by the web's save action " +
-    "but the city screen hard-codes it to null, so somebody whose town is unlisted can finish on the app and not in a browser._",
+  `
+_Screens are not the measure: the web asks across ${parity.webSteps} routes and the app across ${parity.mobileSteps}. ` +
+    "A field can still be written by one client's save layer and unreachable in its own UI, which is what this table cannot see. " +
+    "Both clients now reach every field above from a screen: the web routes include `/onboarding/seeking` and `/onboarding/photo`, " +
+    "and its city step offers the typed town the app has always offered._",
 );
 
 /* --- D ------------------------------------------------------------------ */

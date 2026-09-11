@@ -85,6 +85,12 @@ export type OnboardingProfile = {
   otherCity: string | null;
   relationshipStatus: RelationshipStatus | null;
   languages: string[];
+  /**
+   * "I would rather not say" is an answer, and an empty list is not. Without
+   * this flag the two are identical on the client, so the flow cannot tell a
+   * member who declined from one who has not reached the question yet.
+   */
+  languagesUndisclosed: boolean;
 };
 
 export type AuthSession = {
@@ -107,6 +113,7 @@ export const emptyProfile: OnboardingProfile = {
   otherCity: null,
   relationshipStatus: null,
   languages: [],
+  languagesUndisclosed: false,
 };
 
 export const anonymousSession: AuthSession = {

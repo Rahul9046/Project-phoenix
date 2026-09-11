@@ -297,6 +297,35 @@ export const languageOptions = [
   "Assamese",
 ] as const;
 
+/**
+ * A photograph, if they want one.
+ *
+ * The last question, and the only optional one. Everything before it is needed
+ * to introduce somebody sensibly; this is needed by nobody. A member with no
+ * photograph has a complete profile and appears as a monogram everywhere in
+ * Eraya, which is why the button says "Not just now" rather than offering a skip
+ * link -- skipping is just continuing, and a link beside a button implies the
+ * button is the answer that counts.
+ *
+ * Asked last for the same reason it is optional. Eraya's members are people who
+ * have had a hard few years, and some will not want a face on a screen for a
+ * long time. Putting this in front of the questions that actually make an
+ * introduction possible would lose them at the door.
+ */
+export const photoStep = {
+  title: "Add a photo, if you like.",
+  lede: "It is genuinely optional. A profile without one is complete, and you can add or change photos whenever you want.",
+
+  addCta: "Choose a photo",
+  addMoreCta: "Add another",
+  removeCta: "Remove",
+  continueCta: "Continue",
+  skipCta: "Not just now",
+
+  /* Said plainly, because a limit discovered by being refused is a bad limit. */
+  limitNote: "Up to three for now. You can add more from your account later.",
+} as const;
+
 export const completeStep = {
   /**
    * The end of signup, treated as a beginning.
