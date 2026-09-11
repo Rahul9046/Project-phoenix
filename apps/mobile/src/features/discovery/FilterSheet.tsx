@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { relationshipOptions } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 import {
   listLanguages,
   searchCities,
@@ -52,6 +53,7 @@ export function FilterSheet({
    * cancelled edit is discarded by unmounting rather than by an effect that
    * copies props into state a render late.
    */
+  const t = useT();
   const [draft, setDraft] = useState<DiscoveryFilters>(filters);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [cityQuery, setCityQuery] = useState("");
@@ -158,7 +160,7 @@ export function FilterSheet({
           {relationshipOptions.map((option) => (
             <Chip
               key={option.value}
-              label={option.label}
+              label={t(option.labelKey)}
               selected={draft.relationshipStatuses.includes(option.value)}
               onPress={() => toggleRelationship(option.value)}
             />

@@ -5,6 +5,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { saveBirthday } from "@/features/onboarding/data";
 import { Step } from "@/features/onboarding/Step";
@@ -56,6 +57,7 @@ function formatForReading(date: Date): string {
 
 export default function BirthdayStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const maximum = latestAdultBirthday();
 
   const [value, setValue] = useState<Date | null>(
@@ -86,8 +88,8 @@ export default function BirthdayStep() {
   return (
     <Step
       step="birthday"
-      title="When were you born?"
-      lede="Other members see your age, never your date of birth. Eraya is for people aged 18 and over."
+      title={t("onboarding.birthday.title")}
+      lede={t("onboarding.birthday.hint")}
       onContinue={() => void submit()}
       canContinue={value !== null}
       pending={pending}
@@ -103,8 +105,8 @@ export default function BirthdayStep() {
           accessibilityRole="button"
           accessibilityLabel={
             value
-              ? `Date of birth, ${formatForReading(value)}. Tap to change.`
-              : "Choose your date of birth"
+              ? `${t("onboarding.birthday.label")}, ${formatForReading(value)}`
+              : t("onboarding.birthday.chooseCta")
           }
           onPress={() => setPicking(true)}
           style={({ pressed }) => ({
@@ -120,7 +122,9 @@ export default function BirthdayStep() {
           })}
         >
           <Text variant="body" tone={value ? "default" : "subtle"}>
-            {value ? formatForReading(value) : "Choose your date of birth"}
+            {value
+              ? formatForReading(value)
+              : t("onboarding.birthday.chooseCta")}
           </Text>
           <Ionicons
             name="calendar-outline"

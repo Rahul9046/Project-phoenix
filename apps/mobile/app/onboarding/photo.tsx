@@ -5,6 +5,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { addPhotos, removePhoto } from "@/features/account/photos";
 import { photoUrlFor } from "@/features/members/data";
@@ -38,6 +39,7 @@ const MAX_DURING_ONBOARDING = 3;
 
 export default function PhotoStep() {
   const { profile } = useSession();
+  const t = useT();
 
   const [paths, setPaths] = useState<string[]>([]);
   const [urls, setUrls] = useState<Record<string, string | null>>({});
@@ -84,7 +86,7 @@ export default function PhotoStep() {
     const ok = await removePhoto(path);
 
     if (!ok) {
-      setError("That photo could not be removed. Please try again in a moment.");
+      setError(t("onboarding.photo.removeFailed"));
       setPending(false);
       return;
     }
@@ -96,9 +98,11 @@ export default function PhotoStep() {
   return (
     <Step
       step="photo"
-      title="Add a photo, if you like."
-      lede="It is genuinely optional. A profile without one is complete, and you can add or change photos whenever you want."
-      continueLabel={paths.length > 0 ? "Continue" : "Not just now"}
+      title={t("onboarding.photo.title")}
+      lede={t("onboarding.photo.lede")}
+      continueLabel={
+        paths.length > 0 ? t("common.continue") : t("onboarding.photo.skipCta")
+      }
       onContinue={() => router.push(nextRouteFor(profile))}
       canContinue
       pending={false}
@@ -127,7 +131,7 @@ export default function PhotoStep() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Remove this photo"
+              accessibilityLabel={t("common.remove")}
               onPress={() => void remove(path)}
               style={{
                 marginTop: space.xs,
@@ -144,7 +148,7 @@ export default function PhotoStep() {
                 color={colors.inkSubtle}
               />
               <Text variant="caption" tone="subtle">
-                Remove
+                {t("common.remove")}
               </Text>
             </Pressable>
           </View>
@@ -153,7 +157,7 @@ export default function PhotoStep() {
         {paths.length < MAX_DURING_ONBOARDING ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add a photo"
+            accessibilityLabel={t("onboarding.photo.addCta")}
             accessibilityState={{ disabled: pending }}
             disabled={pending}
             onPress={() => void add()}
@@ -177,7 +181,11 @@ export default function PhotoStep() {
               color={colors.inkMuted}
             />
             <Text variant="caption" tone="muted">
-              {pending ? "Adding…" : paths.length === 0 ? "Add a photo" : "Add another"}
+              {pending
+                ? t("onboarding.photo.adding")
+                : paths.length === 0
+                  ? t("onboarding.photo.addCta")
+                  : t("onboarding.photo.addMoreCta")}
             </Text>
           </Pressable>
         ) : null}
@@ -190,9 +198,7 @@ export default function PhotoStep() {
         through short-lived signed URLs.
       */}
       <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxl }}>
-        Photos are only shown inside Eraya, to members you are introduced to.
-        Location information is removed from every picture before it leaves your
-        phone.
+        {t("onboarding.photo.privacyNote")}
       </Text>
     </Step>
   );

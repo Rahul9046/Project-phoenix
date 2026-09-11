@@ -10,6 +10,8 @@ import { Avatar } from "@/ui/Person";
 import { Card } from "@/ui/Surface";
 import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { Text } from "@/ui/Text";
+import { ScreenTitle } from "@/ui/ScreenTitle";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The inbox.
@@ -27,6 +29,7 @@ import { Text } from "@/ui/Text";
 type Loaded = Conversation & { photoUrl: string | null };
 
 export default function Messages() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +81,7 @@ export default function Messages() {
           paddingBottom: space.md,
         }}
       >
-        <Text variant="title">Messages</Text>
+        <ScreenTitle title={t("shell.navMessages")} />
       </View>
 
       <FlatList

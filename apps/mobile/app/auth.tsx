@@ -4,6 +4,7 @@ import { Redirect } from "expo-router";
 
 import { ErayaMark } from "@/brand/ErayaMark";
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { colors, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
@@ -40,6 +41,7 @@ const GRACE_MS = 8000;
 
 export default function AuthReturn() {
   const { loading, session, profile } = useSession();
+  const t = useT();
   const [waited, setWaited] = useState(false);
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function AuthReturn() {
     >
       <ErayaMark size={72} />
       <Text variant="body" tone="muted" center style={{ marginTop: space.xxl }}>
-        Signing you in…
+        {t("auth.entry.signingIn")}
       </Text>
     </View>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccountMenu } from "@/features/app-shell/AccountMenu";
 import { AppNavLink } from "@/features/app-shell/AppNavLink";
 import { appRoutes, primaryNav } from "@/features/app-shell/nav";
+import { LanguageSwitch } from "@/features/i18n/LanguageSwitch";
 import { Logo } from "@/shared/brand/Logo";
 
 /**
@@ -43,7 +44,17 @@ export function AppHeader({
           </nav>
         </div>
 
-        <AccountMenu name={name} email={email} />
+        <div className="flex items-center gap-2">
+          {/*
+            Beside the account control on every signed-in page, not filed inside
+            it. A member who has ended up in a language they cannot read cannot
+            navigate to the setting that fixes it -- every step of that journey,
+            including the menu item itself, is written in the language that is
+            the problem.
+          */}
+          <LanguageSwitch />
+          <AccountMenu name={name} email={email} />
+        </div>
       </div>
     </header>
   );

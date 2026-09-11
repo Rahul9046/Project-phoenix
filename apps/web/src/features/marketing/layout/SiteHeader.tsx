@@ -7,6 +7,8 @@ import { Logo } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { navLinks } from "@/features/marketing/content";
+import { LanguageSwitch } from "@/features/i18n/LanguageSwitch";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The public header, which now knows whether it is talking to a member.
@@ -26,6 +28,7 @@ export function SiteHeader({
   /** The signed-in member's first name, or null for a visitor. */
   memberName?: string | null;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const signedIn = Boolean(memberName);
 
@@ -55,22 +58,32 @@ export function SiteHeader({
           <Logo size="sm" />
         </Link>
 
-        <nav aria-label="Primary" className="hidden lg:block">
-          <ul className="flex items-center gap-9">
+        <nav aria-label="Primary" className="hidden xl:block">
+          <ul className="flex items-center gap-6">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+                  className="whitespace-nowrap text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </a>
               </li>
             ))}
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-6 lg:flex">
+        <div className="hidden items-center gap-4 xl:flex">
+          {/*
+            On the public site too, and first in the row.
+
+            Someone deciding whether Eraya is for them reads this page before
+            they have an account to hold a preference. Putting the control
+            anywhere else would mean the only way to read the site in your own
+            language is to sign up for something you cannot yet read.
+          */}
+          <LanguageSwitch />
+
           {signedIn ? (
             /*
               Names the person, so the answer to "am I still logged in?" is on
@@ -78,19 +91,19 @@ export function SiteHeader({
             */
             <>
               <span className="text-[0.95rem] text-ink-muted">
-                Signed in as {memberName}
+                {t("marketing.nav.signedInAs", { name: memberName ?? "" })}
               </span>
-              <Button href="/home">My Eraya</Button>
+              <Button href="/home">{t("home.eyebrow")}</Button>
             </>
           ) : (
             <>
               <Link
                 href="/login"
-                className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+                className="whitespace-nowrap text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
               >
-                Log in
+                {t("marketing.nav.login")}
               </Link>
-              <Button href="#begin">Begin your journey</Button>
+              <Button href="#begin">{t("marketing.nav.begin")}</Button>
             </>
           )}
         </div>
@@ -100,9 +113,11 @@ export function SiteHeader({
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-controls="mobile-menu"
-          className="flex h-11 w-11 items-center justify-center rounded-md border border-line text-ink lg:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-md border border-line text-ink xl:hidden"
         >
-          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+          <span className="sr-only">
+            {open ? t("marketing.nav.closeMenu") : t("marketing.nav.openMenu")}
+          </span>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -124,9 +139,13 @@ export function SiteHeader({
       {open ? (
         <div
           id="mobile-menu"
-          className="border-t border-line bg-canvas lg:hidden"
+          className="border-t border-line bg-canvas xl:hidden"
         >
           <Container className="py-6">
+            <div className="mb-5 flex justify-end">
+              <LanguageSwitch />
+            </div>
+
             <nav aria-label="Primary">
               <ul className="flex flex-col">
                 {navLinks.map((link) => (
@@ -136,7 +155,7 @@ export function SiteHeader({
                       onClick={() => setOpen(false)}
                       className="block border-b border-line py-4 text-lg text-ink"
                     >
-                      {link.label}
+                      {t(link.labelKey)}
                     </a>
                   </li>
                 ))}
@@ -146,7 +165,9 @@ export function SiteHeader({
                     onClick={() => setOpen(false)}
                     className="block border-b border-line py-4 text-lg text-ink"
                   >
-                    {signedIn ? "Your account" : "Log in"}
+                    {signedIn
+                      ? t("account.title")
+                      : t("marketing.nav.login")}
                   </Link>
                 </li>
               </ul>
@@ -157,7 +178,7 @@ export function SiteHeader({
               className="mt-6 w-full"
               onClick={() => setOpen(false)}
             >
-              {signedIn ? "My Eraya" : "Begin your journey"}
+              {signedIn ? t("home.eyebrow") : t("marketing.nav.begin")}
             </Button>
           </Container>
         </div>

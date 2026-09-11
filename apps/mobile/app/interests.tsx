@@ -19,6 +19,7 @@ import { Screen } from "@/ui/Screen";
 import { Card } from "@/ui/Surface";
 import { EmptyState, ErrorState, SkeletonRow } from "@/ui/States";
 import { Text } from "@/ui/Text";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * Who expressed interest in you.
@@ -98,6 +99,7 @@ export default function Interests() {
           headerStyle: { backgroundColor: colors.canvas },
           headerShadowVisible: false,
           headerTintColor: colors.ink,
+          headerRight: () => <LanguageSwitcher />,
         }}
       />
 

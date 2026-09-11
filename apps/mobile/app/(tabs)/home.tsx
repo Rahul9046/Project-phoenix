@@ -1,10 +1,14 @@
-import { useCallback, useState } from "react";
-import { View } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { View, type ScrollView } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { ErayaMark } from "@/brand/ErayaMark";
+import { greetingKey } from "@eraya/i18n";
+
+import { HomeMark } from "@/brand/HomeMark";
 import { useSession } from "@/features/auth/SessionProvider";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { routes } from "@/features/auth/routing";
 import {
   getConversations,
@@ -38,10 +42,14 @@ import { Text } from "@/ui/Text";
 export default function Home() {
   const { profile } = useSession();
   const { entitlements } = useEntitlements();
+  const t = useT();
 
   const [summary, setSummary] = useState<HomeSummary | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Held so the mark can send this screen back to the top; see HomeMark.
+  const scroller = useRef<ScrollView | null>(null);
 
   const load = useCallback(async () => {
     const [nextSummary, nextConversations] = await Promise.all([
@@ -75,7 +83,16 @@ export default function Home() {
     setRefreshing(false);
   }
 
-  const name = profile?.firstName ?? "there";
+  /*
+   * No stand-in for a missing name.
+   *
+   * This used to fall back to "there", which was a sixth language appearing
+   * under a Bengali greeting. The name is collected in onboarding and nobody
+   * reaches this tab without it, so the fallback was for a case that does not
+   * happen -- and the honest version of that case is the greeting alone rather
+   * than a translated guess at what to call somebody.
+   */
+  const name = profile?.firstName ?? null;
   const recent = conversations
     .filter((conversation) => conversation.lastMessageAt)
     .slice(0, 3);
@@ -83,8 +100,32 @@ export default function Home() {
     (conversation) => !conversation.lastMessageAt && !conversation.endedAt,
   );
 
+  /*
+   * The headline and the line under it, worked out once so the card and its
+   * accessibility label cannot drift apart -- they used to be two separate
+   * ladders of conditionals saying the same thing in different words.
+   */
+  const introductions = summary?.introductions ?? 0;
+
+  const introductionsHeadline =
+    introductions === 0
+      ? t("home.introductionsNone")
+      : introductions === 1
+        ? t("home.introductionsOne")
+        : t("home.introductionsMany", { count: introductions });
+
+  const introductionsBody =
+    introductions === 0
+      ? t("home.introductionsNoneBody")
+      : t("home.introductionsSomeBody");
+
   return (
-    <Screen topInset onRefresh={() => void refresh()} refreshing={refreshing}>
+    <Screen
+      topInset
+      scrollRef={scroller}
+      onRefresh={() => void refresh()}
+      refreshing={refreshing}
+    >
       <View
         style={{
           flexDirection: "row",
@@ -94,13 +135,35 @@ export default function Home() {
       >
         <View style={{ flex: 1 }}>
           <Text variant="eyebrow" tone="accent">
-            {greeting()}
+            {t(greetingKey(new Date().getHours()))}
           </Text>
-          <Text variant="display" style={{ marginTop: space.sm }}>
-            {name}.
-          </Text>
+          {name ? (
+            <Text variant="display" style={{ marginTop: space.sm }}>
+              {name}.
+            </Text>
+          ) : null}
         </View>
-        <ErayaMark size={40} />
+        <View style={{ alignItems: "flex-end", gap: space.sm }}>
+          <HomeMark
+            size={40}
+            /*
+              The mark is a link to My Eraya, and this is My Eraya -- so there
+              is nowhere for the tap to go, and it has to answer some other way.
+              
+              It scrolled to the top and refreshed, and all of that was
+              invisible: a new member's home is shorter than the screen so there
+              is nothing to scroll, and the refresh finishes faster than the
+              spinner registers. A control that responds in ways nobody can see
+              is a control that does not work, which is exactly how it was
+              reported.
+            */
+            onAtHome={() => {
+              scroller.current?.scrollTo({ y: 0, animated: true });
+              void refresh();
+            }}
+          />
+          <LanguageSwitcher />
+        </View>
       </View>
 
       {/* Today's introductions. */}
@@ -109,10 +172,8 @@ export default function Home() {
         onPress={() => router.push(routes.discover)}
         accessibilityLabel={
           summary === null
-            ? "Introductions, loading"
-            : summary.introductions > 0
-              ? `${summary.introductions} introductions waiting. Opens Discover.`
-              : "No introductions today. Opens Discover."
+            ? t("home.introductionsLoading")
+            : `${introductionsHeadline}. ${introductionsBody}`
         }
         style={{ marginTop: space.section }}
       >
@@ -126,23 +187,17 @@ export default function Home() {
         >
           <View style={{ flex: 1 }}>
             <Text variant="eyebrow" tone="accent">
-              Today
+              {t("home.today")}
             </Text>
             {summary === null ? (
               <Skeleton height={22} width="70%" style={{ marginTop: space.md }} />
             ) : (
               <Text variant="headline" style={{ marginTop: space.sm }}>
-                {summary.introductions === 0
-                  ? "No new introductions today"
-                  : summary.introductions === 1
-                    ? "One person to meet"
-                    : `${summary.introductions} people to meet`}
+                {introductionsHeadline}
               </Text>
             )}
             <Text variant="bodySm" tone="muted" style={{ marginTop: space.xs }}>
-              {summary?.introductions === 0
-                ? "More arrive as the community grows around you."
-                : "A few at a time, chosen without a ranking."}
+              {introductionsBody}
             </Text>
           </View>
           <Ionicons
@@ -157,11 +212,11 @@ export default function Home() {
       {waiting.length > 0 ? (
         <View style={{ marginTop: space.section }}>
           <SectionHeader
-            title="Waiting for a first word"
+            title={t("home.waitingTitle")}
             lede={
               waiting.length === 1
-                ? "You chose each other. Neither of you has said anything yet."
-                : "You chose each other. Nothing has been said yet."
+                ? t("home.waitingLedeOne")
+                : t("home.waitingLedeMany")
             }
           />
           <View style={{ marginTop: space.lg, gap: space.md }}>
@@ -171,7 +226,9 @@ export default function Home() {
                 onPress={() =>
                   router.push(`/messages/${conversation.connectionId}`)
                 }
-                accessibilityLabel={`Start a conversation with ${conversation.member.firstName}`}
+                accessibilityLabel={t("home.startConversation", {
+                  name: conversation.member.firstName,
+                })}
                 padded={false}
                 style={{ padding: space.lg }}
               >
@@ -188,7 +245,7 @@ export default function Home() {
                       {conversation.member.firstName}
                     </Text>
                     <Text variant="bodySm" tone="muted">
-                      Say hello when you are ready.
+                      {t("home.sayHello")}
                     </Text>
                   </View>
                   <Ionicons
@@ -207,10 +264,10 @@ export default function Home() {
       {recent.length > 0 ? (
         <View style={{ marginTop: space.section }}>
           <SectionHeader
-            title="Recent"
+            title={t("home.recentTitle")}
             action={
               <TextButton
-                label="All messages"
+                label={t("home.allMessages")}
                 onPress={() => router.push(routes.messages)}
               />
             }
@@ -224,7 +281,9 @@ export default function Home() {
                   onPress={() =>
                     router.push(`/messages/${conversation.connectionId}`)
                   }
-                  accessibilityLabel={`Conversation with ${conversation.member.firstName}`}
+                  accessibilityLabel={t("home.conversationWith", {
+                    name: conversation.member.firstName,
+                  })}
                   style={{
                     borderWidth: 0,
                     borderRadius: 0,
@@ -249,13 +308,15 @@ export default function Home() {
                         tone={conversation.unread ? "default" : "muted"}
                         numberOfLines={1}
                       >
-                        {conversation.lastMessageFromMe ? "You: " : ""}
+                        {conversation.lastMessageFromMe
+                          ? `${t("home.fromYou")} `
+                          : ""}
                         {conversation.lastMessage}
                       </Text>
                     </View>
                     {conversation.unread ? (
                       <View
-                        accessibilityLabel="Unread"
+                        accessibilityLabel={t("home.unread")}
                         style={{
                           width: 8,
                           height: 8,
@@ -283,11 +344,15 @@ export default function Home() {
                 : "/you/membership",
             )
           }
-          accessibilityLabel={
+          accessibilityLabel={`${
+            summary.interestsReceived === 1
+              ? t("home.interestOne")
+              : t("home.interestMany", { count: summary.interestsReceived })
+          }. ${
             entitlements.canSeeInteresters
-              ? `${summary.interestsReceived} people have expressed interest. See who.`
-              : `${summary.interestsReceived} people have expressed interest. Seeing who is part of premium.`
-          }
+              ? t("home.interestSeeWho")
+              : t("home.interestPremium")
+          }`}
           style={{ marginTop: space.section }}
         >
           <View
@@ -305,13 +370,15 @@ export default function Home() {
             <View style={{ flex: 1 }}>
               <Text variant="headline">
                 {summary.interestsReceived === 1
-                  ? "Someone is interested in you"
-                  : `${summary.interestsReceived} people are interested in you`}
+                  ? t("home.interestOne")
+                  : t("home.interestMany", {
+                      count: summary.interestsReceived,
+                    })}
               </Text>
               <Text variant="bodySm" tone="muted" style={{ marginTop: space.xs }}>
                 {entitlements.canSeeInteresters
-                  ? "See who they are."
-                  : "Seeing who they are is part of Eraya Premium."}
+                  ? t("home.interestSeeWho")
+                  : t("home.interestPremium")}
               </Text>
             </View>
             <Ionicons
@@ -328,13 +395,6 @@ export default function Home() {
   );
 }
 
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 /**
  * A single nudge, shown only when there is something genuinely worth adding.
  *
@@ -345,6 +405,7 @@ function greeting(): string {
  */
 function ProfilePrompt() {
   const { profile } = useSession();
+  const t = useT();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed || !profile) return null;
@@ -358,10 +419,9 @@ function ProfilePrompt() {
           color={colors.inkMuted}
         />
         <View style={{ flex: 1 }}>
-          <Text variant="label">Say a little more about yourself</Text>
+          <Text variant="label">{t("home.promptTitle")}</Text>
           <Text variant="bodySm" tone="muted" style={{ marginTop: space.xs }}>
-            A few lines in your own words is the difference between a profile and
-            a person. It takes a minute, and you can change it whenever you like.
+            {t("home.promptBody")}
           </Text>
           <View
             style={{
@@ -372,11 +432,11 @@ function ProfilePrompt() {
             }}
           >
             <TextButton
-              label="Add it now"
+              label={t("home.promptCta")}
               onPress={() => router.push("/you/edit")}
             />
             <TextButton
-              label="Later"
+              label={t("home.promptLater")}
               tone="muted"
               onPress={() => setDismissed(true)}
             />

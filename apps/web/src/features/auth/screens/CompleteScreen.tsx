@@ -10,11 +10,12 @@ import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { secondaryButtonClasses } from "@/shared/ui/SecondaryButton";
 import { completeOnboarding } from "@/features/auth/actions";
-import { completeStep } from "@/features/auth/content";
+
 import { appRoutes } from "@/features/app-shell/nav";
 import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { ErayaMark } from "@/shared/brand/Logo";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The end of signup.
@@ -36,6 +37,7 @@ export function CompleteScreen() {
 }
 
 function Complete({ firstName }: { firstName: string | null }) {
+  const t = useT();
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -76,17 +78,17 @@ function Complete({ firstName }: { firstName: string | null }) {
         </div>
 
         <p className="mt-8 text-xs font-medium uppercase tracking-[0.22em] text-ember-text">
-          {completeStep.eyebrow}
+          {t("onboarding.complete.eyebrow")}
         </p>
 
         <h1 className="mt-5 text-heading text-ink">
           {firstName
             ? `You're ready, ${firstName}.`
-            : completeStep.title}
+            : t("onboarding.complete.title")}
         </h1>
 
         <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-ink-muted">
-          {completeStep.lede}
+          {t("onboarding.complete.lede")}
         </p>
       </div>
 
@@ -102,11 +104,11 @@ function Complete({ firstName }: { firstName: string | null }) {
           loadingLabel="Just a moment…"
           onClick={() => void enter()}
         >
-          {completeStep.cta}
+          {t("onboarding.complete.cta")}
         </PrimaryButton>
 
         <Link href="/" className={`${secondaryButtonClasses} w-full`}>
-          {completeStep.secondaryCta}
+          {t("onboarding.complete.secondaryCta")}
         </Link>
       </div>
 

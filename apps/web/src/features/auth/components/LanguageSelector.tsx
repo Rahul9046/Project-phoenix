@@ -1,9 +1,21 @@
 "use client";
 
-import { languagesStep } from "@/features/auth/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import type { LanguageOption } from "@/shared/data/reference";
 
-export const PREFER_NOT_TO_SAY = languagesStep.preferNotToSay;
+/**
+ * The opt-out, as an identity rather than as its own label.
+ *
+ * It used to be the English sentence itself, which worked only while there was
+ * one language. Now a member can change language with the chips already on
+ * screen -- and if the sentinel were the displayed words, the selection made a
+ * moment ago would stop matching the option it was made on, so "prefer not to
+ * say" would silently become an unrecognised language name on submit.
+ *
+ * The leading underscores keep it from ever colliding with a real language name
+ * from the reference table.
+ */
+export const PREFER_NOT_TO_SAY = "__prefer_not_to_say__";
 
 /**
  * Languages as chips, because the list is long and the answers are short.
@@ -23,6 +35,7 @@ export function LanguageSelector({
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
+  const t = useT();
   function toggle(language: string) {
     if (language === PREFER_NOT_TO_SAY) {
       onChange(selected.includes(PREFER_NOT_TO_SAY) ? [] : [PREFER_NOT_TO_SAY]);
@@ -46,7 +59,7 @@ export function LanguageSelector({
     <div
       className="flex flex-wrap gap-2.5"
       role="group"
-      aria-label={languagesStep.title}
+      aria-label={t("onboarding.languages.title")}
     >
       {chips.map((language) => {
         const checked = selected.includes(language);
@@ -79,7 +92,9 @@ export function LanguageSelector({
                 <path d="m5 10.4 3.2 3.2L15 6.8" />
               </svg>
             ) : null}
-            {language}
+            {language === PREFER_NOT_TO_SAY
+              ? t("onboarding.languages.preferNotToSay")
+              : language}
           </label>
         );
       })}

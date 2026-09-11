@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { conversation } from "@/features/app-shell/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { sendMessage } from "@/features/members/actions";
 import type { Message } from "@/features/members/data";
@@ -31,6 +31,7 @@ export function Conversation({
   otherName: string;
   ended: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [body, setBody] = useState("");
   const [pending, setPending] = useState(false);
@@ -67,10 +68,10 @@ export function Conversation({
         {messages.length === 0 ? (
           <div className="rounded-2xl border border-line bg-surface p-8 text-center">
             <p className="text-name text-ink">
-              {conversation.emptyTitle}
+              {t("messages.emptyTitle")}
             </p>
             <p className="mt-2 leading-relaxed text-ink-muted">
-              {conversation.emptyBody}
+              {t("messages.emptyBody")}
             </p>
           </div>
         ) : (
@@ -113,9 +114,9 @@ export function Conversation({
 
       {ended ? (
         <div className="mt-8 rounded-2xl border border-line bg-sand/50 p-5 text-center">
-          <p className="font-medium text-ink">{conversation.endedTitle}</p>
+          <p className="font-medium text-ink">{t("messages.endedTitle")}</p>
           <p className="mt-1.5 text-[0.95rem] leading-relaxed text-ink-muted">
-            {conversation.endedBody}
+            {t("messages.endedBody")}
           </p>
         </div>
       ) : (
@@ -127,7 +128,7 @@ export function Conversation({
             id="message"
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder={conversation.placeholder}
+            placeholder={t("messages.placeholder")}
             rows={3}
             maxLength={4000}
             disabled={pending}
@@ -142,7 +143,7 @@ export function Conversation({
               disabled={pending || !body.trim()}
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-ember px-7 text-[0.95rem] font-medium text-canvas transition-colors hover:bg-ember-strong disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Sending…" : conversation.send}
+              {pending ? t("common.sending") : t("messages.send")}
             </button>
           </div>
         </form>

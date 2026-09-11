@@ -1,3 +1,5 @@
+import type { TranslationKey } from "@eraya/i18n";
+
 import type { Database } from "@/lib/supabase/database.types";
 
 /**
@@ -57,12 +59,18 @@ export function stageAtLeast(
   return stageOrder.indexOf(stage) >= stageOrder.indexOf(target);
 }
 
-/** The label another member would read, for each stored value. */
-export const genderLabels: Record<Gender, string> = {
-  woman: "Woman",
-  man: "Man",
-  non_binary: "Non-binary",
-  prefer_not_to_say: "Prefer not to say",
+/**
+ * The label another member would read, for each stored value.
+ *
+ * Keys rather than sentences. These tables are read by member cards, profiles
+ * and conversations as well as by onboarding, so a string here is a word that
+ * stays English on the screen of somebody who chose Tamil.
+ */
+export const genderLabelKeys: Record<Gender, TranslationKey> = {
+  woman: "onboarding.gender.woman",
+  man: "onboarding.gender.man",
+  non_binary: "onboarding.gender.nonBinary",
+  prefer_not_to_say: "onboarding.gender.preferNotToSay",
 };
 
 /**
@@ -74,31 +82,34 @@ export const genderLabels: Record<Gender, string> = {
  */
 export const relationshipOptions: readonly {
   value: RelationshipStatus;
-  label: string;
-  description: string;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
 }[] = [
   {
     value: "divorced",
-    label: "Divorced",
-    description: "My marriage has legally ended.",
+    labelKey: "onboarding.relationship.divorced",
+    descriptionKey: "onboarding.relationship.divorcedBody",
   },
   {
     value: "separated",
-    label: "Separated",
-    description: "I am living apart from my spouse.",
+    labelKey: "onboarding.relationship.separated",
+    descriptionKey: "onboarding.relationship.separatedBody",
   },
   {
     value: "widowed",
-    label: "Widowed",
-    description: "I lost my spouse.",
+    labelKey: "onboarding.relationship.widowed",
+    descriptionKey: "onboarding.relationship.widowedBody",
   },
 ];
 
-export const genderOptions: readonly { value: Gender; label: string }[] = [
-  { value: "woman", label: "Woman" },
-  { value: "man", label: "Man" },
-  { value: "non_binary", label: "Non-binary" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
+export const genderOptions: readonly {
+  value: Gender;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "woman", labelKey: "onboarding.gender.woman" },
+  { value: "man", labelKey: "onboarding.gender.man" },
+  { value: "non_binary", labelKey: "onboarding.gender.nonBinary" },
+  { value: "prefer_not_to_say", labelKey: "onboarding.gender.preferNotToSay" },
 ];
 
 /**
@@ -110,14 +121,18 @@ export const genderOptions: readonly { value: Gender; label: string }[] = [
  * permissive rule in `genders_are_compatible` instead, so they are never made
  * invisible by anyone else's preference.
  */
-export const seekingOptions: readonly { value: Gender; label: string }[] = [
-  { value: "woman", label: "Women" },
-  { value: "man", label: "Men" },
-  { value: "non_binary", label: "Non-binary people" },
+export const seekingOptions: readonly {
+  value: Gender;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "woman", labelKey: "onboarding.seeking.women" },
+  { value: "man", labelKey: "onboarding.seeking.men" },
+  { value: "non_binary", labelKey: "onboarding.seeking.nonBinaryPeople" },
 ];
 
-export const relationshipLabels: Record<RelationshipStatus, string> = {
-  divorced: "Divorced",
-  separated: "Separated",
-  widowed: "Widowed",
-};
+export const relationshipLabelKeys: Record<RelationshipStatus, TranslationKey> =
+  {
+    divorced: "onboarding.relationship.divorced",
+    separated: "onboarding.relationship.separated",
+    widowed: "onboarding.relationship.widowed",
+  };

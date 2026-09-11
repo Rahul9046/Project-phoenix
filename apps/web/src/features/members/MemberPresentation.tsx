@@ -1,6 +1,11 @@
+"use client";
+
 import type { ReactNode } from "react";
 
+import type { TFunction } from "@eraya/i18n";
+
 import { relationshipOptions } from "@/features/auth/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import type { MemberCard } from "@/features/members/data";
 
 /**
@@ -113,11 +118,15 @@ export function TrustMarks({ member }: { member: MemberCard }) {
   );
 }
 
-export function chapterLabel(member: MemberCard): string | null {
-  return (
-    relationshipOptions.find((o) => o.value === member.relationshipStatus)
-      ?.label ?? null
-  );
+export function chapterLabel(
+  member: MemberCard,
+  t: TFunction,
+): string | null {
+  const key = relationshipOptions.find(
+    (o) => o.value === member.relationshipStatus,
+  )?.labelKey;
+
+  return key ? t(key) : null;
 }
 
 export function placeLabel(member: MemberCard): string | null {
@@ -133,10 +142,12 @@ export function placeLabel(member: MemberCard): string | null {
  * a product listing.
  */
 export function MemberSummary({ member }: { member: MemberCard }) {
+  const t = useT();
+
   const parts = [
     member.age ? `${member.age}` : null,
     placeLabel(member),
-    chapterLabel(member),
+    chapterLabel(member, t),
   ].filter(Boolean);
 
   return (

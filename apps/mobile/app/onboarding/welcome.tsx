@@ -4,6 +4,7 @@ import { router } from "expo-router";
 
 import { ErayaMark } from "@/brand/ErayaMark";
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { routes } from "@/features/auth/routing";
 import { completeOnboarding } from "@/features/onboarding/data";
 import { colors, motion, space } from "@/theme/tokens";
@@ -25,6 +26,7 @@ import { Text } from "@/ui/Text";
  */
 export default function Welcome() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const [pending, setPending] = useState(false);
 
   const [opacity] = useState(() => new Animated.Value(0));
@@ -102,7 +104,9 @@ export default function Welcome() {
         <ErayaMark size={76} />
 
         <Text variant="display" center style={{ marginTop: space.section }}>
-          Your Eraya begins.
+          {name
+            ? t("onboarding.complete.titleNamed", { name })
+            : t("onboarding.complete.title")}
         </Text>
 
         <Text
@@ -111,14 +115,12 @@ export default function Welcome() {
           center
           style={{ marginTop: space.lg, maxWidth: 320 }}
         >
-          {name ? `Thank you, ${name}. ` : ""}
-          You will be introduced to a few people at a time, and nobody can reach
-          you until you have both said yes.
+          {t("onboarding.complete.lede")}
         </Text>
       </Animated.View>
 
       <Button
-        label="Take a look"
+        label={t("onboarding.complete.cta")}
         onPress={() => void enter()}
         loading={pending}
         style={{ marginTop: space.region, alignSelf: "stretch" }}

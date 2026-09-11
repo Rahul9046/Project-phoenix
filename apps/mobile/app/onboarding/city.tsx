@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { CityPicker } from "@/features/onboarding/CityPicker";
 import { saveCity } from "@/features/onboarding/data";
@@ -16,6 +17,7 @@ import { Step } from "@/features/onboarding/Step";
  */
 export default function CityStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
 
   const [selected, setSelected] = useState<
     { id: string; label: string } | { name: string } | null
@@ -47,8 +49,8 @@ export default function CityStep() {
   return (
     <Step
       step="city"
-      title="Where do you live?"
-      lede="Every city and town in India is here. It shapes who you are likely to meet nearby, never whether you can join."
+      title={t("onboarding.city.title")}
+      lede={t("onboarding.city.lede")}
       onContinue={() => void submit()}
       canContinue={selected !== null}
       pending={pending}

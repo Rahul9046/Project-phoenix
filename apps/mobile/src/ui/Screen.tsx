@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -39,6 +39,12 @@ type ScreenProps = {
   tone?: "canvas" | "sand" | "surface" | "night";
   onRefresh?: () => void;
   refreshing?: boolean;
+  /**
+   * The scroll view, for the few screens that need to drive it -- sending the
+   * home tab back to the top when its mark is tapped, today. Ignored when
+   * `scroll` is off, since there is nothing to scroll.
+   */
+  scrollRef?: RefObject<ScrollView | null>;
   contentStyle?: ViewStyle;
   style?: ViewStyle;
 };
@@ -59,6 +65,7 @@ export function Screen({
   tone = "canvas",
   onRefresh,
   refreshing = false,
+  scrollRef,
   contentStyle,
   style,
 }: ScreenProps) {
@@ -75,6 +82,7 @@ export function Screen({
 
   const body = scroll ? (
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1 }}
       contentContainerStyle={[
         padding,

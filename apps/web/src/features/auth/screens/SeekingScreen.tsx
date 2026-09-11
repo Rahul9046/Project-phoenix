@@ -11,10 +11,11 @@ import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator"
 import { SelectableOption } from "@/features/auth/components/SelectableOption";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { saveSeeking } from "@/features/auth/actions";
-import { seekingOptions, seekingStep } from "@/features/auth/content";
+import { seekingOptions } from "@/features/auth/content";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { Gender } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Who you would like to meet.
@@ -36,6 +37,7 @@ export function SeekingScreen() {
 }
 
 function SeekingForm({ stored }: { stored: Gender[] }) {
+  const t = useT();
   const router = useRouter();
 
   const [chosen, setChosen] = useState<Gender[]>(stored);
@@ -56,7 +58,7 @@ function SeekingForm({ stored }: { stored: Gender[] }) {
     if (pending) return;
 
     if (chosen.length === 0) {
-      setError(seekingStep.error);
+      setError(t("onboarding.seeking.error"));
       return;
     }
 
@@ -83,20 +85,20 @@ function SeekingForm({ stored }: { stored: Gender[] }) {
       }
     >
       <AuthHeader
-        title={seekingStep.title}
-        lede={seekingStep.lede}
+        title={t("onboarding.seeking.title")}
+        lede={t("onboarding.seeking.lede")}
         showLogo={false}
       />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
-        <div className="grid gap-2.5" role="group" aria-label={seekingStep.title}>
+        <div className="grid gap-2.5" role="group" aria-label={t("onboarding.seeking.title")}>
           {seekingOptions.map((option) => (
             <SelectableOption
               key={option.value}
               type="checkbox"
               name="seeking"
               value={option.value}
-              label={option.label}
+              label={t(option.labelKey)}
               checked={chosen.includes(option.value)}
               onChange={(value) => toggle(value as Gender)}
             />
@@ -111,7 +113,7 @@ function SeekingForm({ stored }: { stored: Gender[] }) {
           loadingLabel="Saving…"
           className="mt-8"
         >
-          {seekingStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
     </AuthLayout>

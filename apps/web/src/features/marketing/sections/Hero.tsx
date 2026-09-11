@@ -2,35 +2,41 @@ import { ErayaMark } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { Eyebrow } from "@/shared/ui/SectionHeading";
-import { hero } from "@/features/marketing/content";
+import { getT } from "@/features/i18n/server";
 
-export function Hero() {
+export async function Hero() {
+  const t = await getT();
+
   return (
     <section className="relative overflow-hidden border-b border-line bg-canvas">
       <Container className="grid items-center gap-14 py-16 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:py-28">
         <div className="animate-rise">
-          <Eyebrow>{hero.eyebrow}</Eyebrow>
+          <Eyebrow>{t("marketing.hero.eyebrow")}</Eyebrow>
 
           <h1 className="mt-6 text-display text-ink">
-            {hero.headline[0]}
+            {t("marketing.hero.headlineOne")}
             <br className="hidden sm:block" />{" "}
-            <span className="text-ember-text">{hero.headline[1]}</span>
+            <span className="text-ember-text">
+              {t("marketing.hero.headlineTwo")}
+            </span>
           </h1>
 
           <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-muted sm:text-xl">
-            {hero.lede}
+            {t("marketing.hero.lede")}
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <Button href={hero.primaryCta.href} size="lg">
-              {hero.primaryCta.label}
+            <Button href="/signup" size="lg">
+              {t("marketing.hero.primaryCta")}
             </Button>
-            <Button href={hero.secondaryCta.href} variant="secondary" size="lg">
-              {hero.secondaryCta.label}
+            <Button href="#how-it-works" variant="secondary" size="lg">
+              {t("marketing.hero.secondaryCta")}
             </Button>
           </div>
 
-          <p className="mt-8 text-sm text-ink-subtle">{hero.note}</p>
+          <p className="mt-8 text-sm text-ink-subtle">
+            {t("marketing.hero.note")}
+          </p>
         </div>
 
         {/*

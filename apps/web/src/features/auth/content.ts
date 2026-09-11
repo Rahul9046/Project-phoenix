@@ -1,139 +1,19 @@
+import type { TranslationKey } from "@eraya/i18n";
+
 import type { Gender, RelationshipStatus } from "@/features/auth/types";
 
 /**
- * Every word the sign-in and sign-up screens say.
+ * What the auth flow needs that is not a translated sentence.
  *
- * Kept apart from `site.ts` because this is product copy rather than marketing
- * copy, and because it is the file to hand someone when the tone needs
- * reviewing. Nothing here promises a feature that does not exist, and no screen
- * tells anyone they are too early or in the wrong place.
+ * The screens' words used to live here. They now live in `@eraya/i18n`, in six
+ * languages, and the screens read them with `t()` -- so what is left is the
+ * things a translation cannot be: the database's own enum values, the routes the
+ * legal links point at, and the error text keyed on what a provider reports.
+ *
+ * The option tables carry a `labelKey` rather than a label, so the value stored
+ * in Postgres and the words shown for it stay separate. That separation is the
+ * point: the value is `non_binary` in every language.
  */
-
-export const login = {
-  title: "Welcome back.",
-  lede: "Your next chapter is waiting.",
-  dividerLabel: "or",
-  emailCta: "Continue with email",
-  switchPrompt: "New to Eraya?",
-  switchCta: "Create an account",
-} as const;
-
-export const signup = {
-  title: "Welcome to Eraya.",
-  lede: "A trusted space for people beginning a new chapter.",
-  dividerLabel: "or",
-  emailCta: "Continue with email",
-  switchPrompt: "Already have an account?",
-  switchCta: "Log in",
-} as const;
-
-export const emailStep = {
-  title: "Continue with email",
-  lede: "Enter the email address associated with your Eraya account.",
-  label: "Email address",
-  placeholder: "you@example.com",
-  cta: "Continue",
-  pending: "Sending code…",
-  emptyError: "Enter your email address to continue.",
-  formatError: "That doesn't look like an email address yet.",
-  /*
-   * The second half of this screen: the code, not a link.
-   *
-   * A link has to leave this tab, come back through a redirect, and survive
-   * being opened on whichever device the mail was read on. When it fails it
-   * fails as a blank page. Six digits are typed where the person already is,
-   * which is why the journey now finishes here rather than in an inbox.
-   */
-  sentTitle: "Check your email.",
-  sentBody: "We've sent a six-digit code to",
-  sentHint: "It works once, and expires in an hour.",
-  codeLabel: "Six-digit code",
-  codePlaceholder: "000000",
-  codeCta: "Sign in",
-  codePending: "Signing you in…",
-  codeEmptyError: "Enter the code from your email.",
-  codeFormatError: "That should be the six digits from the email.",
-  resend: "Send another code",
-  resendPending: "Sending…",
-  resent: "Sent. Use the newest email.",
-  sentRetry: "Use a different email address",
-} as const;
-
-/*
- * The phone step, worded for a check that does not happen yet.
- *
- * This said "Let's verify your phone", offered to "Send code", and the next
- * screen said "We sent a 6-digit code to ...". None of that was true: no SMS
- * provider is connected, nothing is sent, and any six digits are accepted. A
- * real person would sit waiting for a message that was never going to arrive.
- *
- * The step is kept -- the number is worth collecting now, and the stage machine
- * already depends on it -- but the copy claims only what happens. When an SMS
- * provider is connected (see features/auth/phone-verification.ts) this wording
- * goes back to talking about verification.
- */
-export const phoneStep = {
-  title: "Add your phone number.",
-  lede: "We keep it for account recovery, and for verification once that is switched on. It is never shown on your profile.",
-  countryLabel: "Country code",
-  label: "Phone number",
-  placeholder: "98765 43210",
-  cta: "Continue",
-  pending: "Saving…",
-  emptyError: "Enter your phone number to continue.",
-  formatError: "That does not look like a phone number. Check the digits.",
-  reassurance:
-    "Only you can see it. Another member never sees your number, and neither does anyone you connect with.",
-} as const;
-
-export const otpStep = {
-  title: "Confirm your number.",
-  // No SMS is sent, so this cannot say one was. It names the number back so the
-  // person can still catch a typo, which is most of what the step is for today.
-  ledePrefix: "Checking codes by SMS is not switched on yet, so any six digits will do for now. Your number is",
-  label: "6-digit code",
-  cta: "Continue",
-  pending: "Saving…",
-  incompleteError: "Enter all six digits to continue.",
-  invalidError: "That needs to be six digits. Check and try again.",
-  changeCta: "Change phone number",
-  /*
-   * Not "Phone verified." No SMS is sent and any six digits are accepted, so
-   * the step is complete rather than verified. The wording says the smaller,
-   * true thing until an SMS provider is connected.
-   */
-  success: "Phone number saved.",
-} as const;
-
-export const basicsStep = {
-  title: "Let's start with your name.",
-  lede: "This is how other members will know you. Nothing here is final — you can change any of it later.",
-  firstName: {
-    label: "First name",
-    hint: "This is the name shown on your profile.",
-    placeholder: "Your first name",
-    error: "Enter your first name to continue.",
-    /*
-     * The app has always required two characters and capped the field at forty;
-     * the website required one and capped nothing. So a name accepted here could
-     * be rejected by the app's own rules on the very next screen the member saw,
-     * and the two clients disagreed about what a valid profile was.
-     */
-    tooShort: "That looks a little short. Enter at least two characters.",
-  },
-  dateOfBirth: {
-    label: "Date of birth",
-    hint: "Used to confirm you're over 18. Only your age is ever shown.",
-    error: "Enter your date of birth to continue.",
-    /* Names the actual problem. "Try again in a moment" cannot fix a birth date. */
-    tooYoung: "Eraya is for people aged 18 and over. Please check the year.",
-  },
-  gender: {
-    label: "Gender",
-    error: "Choose an option to continue.",
-  },
-  cta: "Continue",
-} as const;
 
 /**
  * The values here are the database's enum values, not display slugs.
@@ -146,11 +26,14 @@ export const basicsStep = {
  * The `Gender` annotation is the guard: this list can no longer drift from the
  * database without failing the build.
  */
-export const genderOptions: readonly { value: Gender; label: string }[] = [
-  { value: "woman", label: "Woman" },
-  { value: "man", label: "Man" },
-  { value: "non_binary", label: "Non-binary" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
+export const genderOptions: readonly {
+  value: Gender;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "woman", labelKey: "onboarding.gender.woman" },
+  { value: "man", labelKey: "onboarding.gender.man" },
+  { value: "non_binary", labelKey: "onboarding.gender.nonBinary" },
+  { value: "prefer_not_to_say", labelKey: "onboarding.gender.preferNotToSay" },
 ];
 
 /**
@@ -166,54 +49,14 @@ export const genderOptions: readonly { value: Gender; label: string }[] = [
  * reasonable answer to "what is your gender" and an unusable one to "who would
  * you like to meet", because there is nothing to match on.
  */
-export const seekingOptions: readonly { value: Gender; label: string }[] = [
-  { value: "woman", label: "Women" },
-  { value: "man", label: "Men" },
-  { value: "non_binary", label: "Non-binary people" },
+export const seekingOptions: readonly {
+  value: Gender;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "woman", labelKey: "onboarding.seeking.women" },
+  { value: "man", labelKey: "onboarding.seeking.men" },
+  { value: "non_binary", labelKey: "onboarding.seeking.nonBinaryPeople" },
 ];
-
-export const seekingStep = {
-  title: "Who would you like to meet?",
-  lede:
-    "Choose as many as apply. You can change this later, and it works both ways — " +
-    "you only appear to people you would also like to meet.",
-  cta: "Continue",
-  error: "Choose at least one.",
-} as const;
-
-export const cityStep = {
-  title: "Where are you based?",
-  lede: "Eraya is welcoming members across India as we build our community, city by city.",
-
-  searchLabel: "Search for your city",
-  searchPlaceholder: "Start typing your city",
-  searching: "Searching…",
-  noMatches: "No matching city. Check the spelling, or use what you typed.",
-  changeCta: "Change",
-
-  /*
-   * The way out of a miss, and it has to exist.
-   *
-   * India has a great many more places people live than a list of cities has
-   * rows. Without this, somebody from a smaller town is told to pick a nearby
-   * larger city -- which is to say, to answer a question about where they live
-   * with somewhere they do not. The app has always offered it; the website told
-   * those people to choose somewhere else.
-   */
-  useTyped: (typed: string) => `Use “${typed}”`,
-  typedSubtitle: "The town you entered",
-
-  /**
-   * The hint under the field. It exists to answer the question someone from a
-   * smaller city is actually asking — "is this for me?" — before they have to
-   * wonder. Everywhere in India is registerable, so there is nothing to soften
-   * and nothing to apologise for.
-   */
-  hint: "Every city in India is open. Type a few letters to find yours.",
-
-  error: "Search for your city, or use the town you typed, to continue.",
-  cta: "Continue",
-} as const;
 
 /**
  * What to say when someone arrives back at sign-in after something failed.
@@ -243,42 +86,27 @@ export const signInProblems: Record<string, string> = {
 export const signInProblemFallback =
   "That sign-in did not complete. Please try again, or continue with email.";
 
-export const relationshipStep = {
-  title: "Where are you in your journey?",
-  lede: "However you arrived here, someone else did too. This is only so we introduce you to people who understand.",
-  error: "Choose the option that fits you best.",
-  cta: "Continue",
-} as const;
-
 export const relationshipOptions: readonly {
   value: RelationshipStatus;
-  label: string;
-  description: string;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
 }[] = [
   {
     value: "divorced",
-    label: "Divorced",
-    description: "My marriage has legally ended.",
+    labelKey: "onboarding.relationship.divorced",
+    descriptionKey: "onboarding.relationship.divorcedBody",
   },
   {
     value: "separated",
-    label: "Separated",
-    description: "I am living apart from my spouse.",
+    labelKey: "onboarding.relationship.separated",
+    descriptionKey: "onboarding.relationship.separatedBody",
   },
   {
     value: "widowed",
-    label: "Widowed",
-    description: "I lost my spouse.",
+    labelKey: "onboarding.relationship.widowed",
+    descriptionKey: "onboarding.relationship.widowedBody",
   },
 ];
-
-export const languagesStep = {
-  title: "What languages do you speak?",
-  lede: "Choose as many as you like. Conversations are easier in a language you're comfortable in.",
-  error: "Choose at least one language, or select “Prefer not to say”.",
-  cta: "Continue",
-  preferNotToSay: "Prefer not to say",
-} as const;
 
 export const languageOptions = [
   "English",
@@ -297,70 +125,11 @@ export const languageOptions = [
   "Assamese",
 ] as const;
 
-/**
- * A photograph, if they want one.
- *
- * The last question, and the only optional one. Everything before it is needed
- * to introduce somebody sensibly; this is needed by nobody. A member with no
- * photograph has a complete profile and appears as a monogram everywhere in
- * Eraya, which is why the button says "Not just now" rather than offering a skip
- * link -- skipping is just continuing, and a link beside a button implies the
- * button is the answer that counts.
- *
- * Asked last for the same reason it is optional. Eraya's members are people who
- * have had a hard few years, and some will not want a face on a screen for a
- * long time. Putting this in front of the questions that actually make an
- * introduction possible would lose them at the door.
- */
-export const photoStep = {
-  title: "Add a photo, if you like.",
-  lede: "It is genuinely optional. A profile without one is complete, and you can add or change photos whenever you want.",
-
-  addCta: "Choose a photo",
-  addMoreCta: "Add another",
-  removeCta: "Remove",
-  continueCta: "Continue",
-  skipCta: "Not just now",
-
-  /* Said plainly, because a limit discovered by being refused is a bad limit. */
-  limitNote: "Up to three for now. You can add more from your account later.",
-} as const;
-
-export const completeStep = {
-  /**
-   * The end of signup, treated as a beginning.
-   *
-   * Not "Welcome to Eraya" -- that is a greeting from a company to a customer.
-   * This is about the person: what they have just done is start again, and the
-   * screen should be quiet enough for that to land.
-   */
-  eyebrow: "Your Eraya begins",
-  title: "You're ready for your next chapter.",
-  lede: "Take it at whatever pace suits you. Nothing here expects anything of you today, and nobody can reach you until you both choose it.",
-  cta: "See who's here",
-  secondaryCta: "Not just yet",
-} as const;
-
-/**
- * The honest position on web vs. app: the account is real and can be created
- * anywhere; the full product arrives on mobile. Never framed as a blocker.
- */
-export const webVsApp = {
-  title: "Join Eraya from anywhere.",
-  body: "Create your account on the web today. The full Eraya experience will be available through our mobile app.",
-} as const;
-
 export const legal = {
   prefix: "By continuing you agree to our",
   terms: { label: "Terms of Service", href: "/terms" },
   and: "and",
   privacy: { label: "Privacy Policy", href: "/privacy" },
-} as const;
-
-export const providerLabels = {
-  google: "Continue with Google",
-  apple: "Continue with Apple",
-  facebook: "Continue with Facebook",
 } as const;
 
 export const authErrors = {
@@ -371,11 +140,17 @@ export const authErrors = {
   // promising "a moment" would send someone back to press the button again.
   rate_limited:
     "We've sent a few links to this address already. Please check your inbox, including spam — a new link can only be sent a little later.",
-  invalid_code: otpStep.invalidError,
+  /*
+   * The same sentence as `auth.otp.invalidError` in the translations, written
+   * out rather than imported from them. These strings are the one part of the
+   * flow still English-only: they are keyed on what Supabase reports, and
+   * turning a provider's code into a translated sentence is an error-taxonomy
+   * change rather than a copy change. When that happens this whole table goes.
+   */
+  invalid_code: "That needs to be six digits. Check and try again.",
   // Says what to do next instead of describing our configuration to someone
   // who cannot act on it.
   provider_unavailable:
     "That sign-in option isn't available yet. Please continue with email — it takes a moment.",
 } as const;
 
-export const connecting = "Connecting…";
