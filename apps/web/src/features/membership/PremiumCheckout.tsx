@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { ProductEvent } from "@/features/membership/analytics";
 import { createClient } from "@/lib/supabase/client";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
@@ -89,7 +90,7 @@ export function PremiumCheckout({ premium }: { premium: boolean }) {
 
   const record = useCallback(
     (
-      event: string,
+      event: ProductEvent,
       properties: {
         planCode?: string;
         amountPaise?: number;

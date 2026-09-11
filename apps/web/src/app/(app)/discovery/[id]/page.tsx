@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { appRoutes } from "@/features/app-shell/nav";
 import { IntroductionCard } from "@/features/members/IntroductionCard";
 import { getMember } from "@/features/members/data";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Profile" };
 
@@ -21,6 +22,17 @@ export default async function MemberPage({
   const member = await getMember(id);
 
   if (!member) notFound();
+
+  /*
+   * Recorded on the route, not inside `getMember`. That function is also how a
+   * connection row and a conversation header get their member, so counting
+   * there would report a profile view every time somebody opened their own
+   * messages. Opening this page is the thing that actually happened.
+   *
+   * The event records that a profile was viewed, never which one -- there is no
+   * parameter for a member id, so who looked at whom cannot be reconstructed.
+   */
+  void (await createClient()).rpc("record_profile_view").then(undefined, () => {});
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">

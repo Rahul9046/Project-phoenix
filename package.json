@@ -24,6 +24,7 @@
     "config:push": "node scripts/supabase-config.mjs",
     "review:package": "node scripts/review-package.mjs",
     "review:package:fast": "node scripts/review-package.mjs --skip-checks",
-    "moderation:probe": "node scripts/moderation-probe.mjs"
+    "moderation:probe": "node scripts/moderation-probe.mjs",
+    "analytics:probe": "node scripts/analytics-probe.mjs"
   }
 }

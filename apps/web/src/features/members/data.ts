@@ -70,6 +70,15 @@ export async function getIntroductions(count = 3): Promise<MemberCard[]> {
   const { data } = await supabase.rpc("discover_members", {
     max_results: count,
   });
+
+  /*
+   * Counted here rather than in the page, so a fetch is the unit and a re-render
+   * is not. `discover_members` is STABLE and cannot write, hence the separate
+   * call. Never awaited: a funnel measurement must not delay the screen, and if
+   * it fails the member should never know.
+   */
+  void supabase.rpc("record_discovery_view").then(undefined, () => {});
+
   return ((data ?? []) as RawCard[]).map(toCard);
 }
 

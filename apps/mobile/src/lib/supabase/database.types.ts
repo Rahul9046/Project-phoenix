@@ -736,6 +736,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_discovery_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      record_profile_view: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       discover_members: {
         Args: {
           city_ids?: string[]
