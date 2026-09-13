@@ -813,6 +813,97 @@ export function schema() {
 }
 
 // ---------------------------------------------------------------------------
+// N2. Age eligibility
+// ---------------------------------------------------------------------------
+
+/**
+ * Where Eraya's 18+ rule is actually enforced.
+ *
+ * Derived, like everything else here. The minimum is read from the shared
+ * package rather than written down again, and each of the three enforcement
+ * points is confirmed by looking for the thing that does the enforcing -- a
+ * claim that the app checks somebody's age should not survive the check being
+ * deleted.
+ *
+ * No profile is read. The question is what the code does, not who signed up.
+ */
+export function ageEligibility() {
+  const shared = read("packages/eligibility/src/index.ts");
+  const webScreen = read("apps/web/src/features/auth/screens/BasicsScreen.tsx");
+  const mobileScreen = read("apps/mobile/app/onboarding/birthday.tsx");
+
+  const minimum = Number(
+    shared.match(/export const MINIMUM_AGE = (\d+)/)?.[1] ?? NaN,
+  );
+
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+
+  // The last migration to mention the constraint is the one in force.
+  let constraintIn = null;
+  let constraintExpression = null;
+  for (const f of migrations) {
+    const body = read(`supabase/migrations/${f}`);
+
+    /*
+     * The declaration, not the `comment on constraint` that follows it and not
+     * the `drop ... if exists` that precedes it. Matching the last mention of
+     * the name found the comment, whose text contains no `check (` at all, so
+     * the newest migration was skipped and the package reported the constraint
+     * that the newest migration had just replaced.
+     */
+    const at = body.indexOf("constraint profiles_date_of_birth_adult");
+    if (at === -1) continue;
+    const open = body.indexOf("(", body.indexOf("check", at));
+    if (open <= 0) continue;
+
+    // Balanced, because the expression contains parentheses of its own.
+    let depth = 0;
+    let end = -1;
+    for (let i = open; i < body.length; i++) {
+      if (body[i] === "(") depth += 1;
+      else if (body[i] === ")") {
+        depth -= 1;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    if (end === -1) continue;
+
+    constraintIn = `supabase/migrations/${f}`;
+    constraintExpression = body.slice(open + 1, end).replace(/\s+/g, " ").trim();
+  }
+
+  const usesSharedRule = (s) => s.includes("@eraya/eligibility");
+
+  return {
+    minimumAge: Number.isFinite(minimum) ? minimum : null,
+    sharedRule: shared ? "packages/eligibility/src/index.ts" : null,
+    sameRuleBothGenders: !/gender/i.test(shared),
+    web: {
+      file: "apps/web/src/features/auth/screens/BasicsScreen.tsx",
+      sharedRule: usesSharedRule(webScreen),
+      blocksSubmit: webScreen.includes("isOldEnough"),
+      picker: webScreen.includes("max={latestEligibleBirthDate()}"),
+      localisedMessage: webScreen.includes("onboarding.birthday.tooYoung"),
+    },
+    mobile: {
+      file: "apps/mobile/app/onboarding/birthday.tsx",
+      sharedRule: usesSharedRule(mobileScreen),
+      blocksSubmit: mobileScreen.includes("isOldEnough"),
+      picker: mobileScreen.includes("maximumDate={maximum}"),
+      localisedMessage: mobileScreen.includes("onboarding.birthday.tooYoung"),
+    },
+    database: {
+      constraint: "profiles_date_of_birth_adult",
+      file: constraintIn,
+      expression: constraintExpression,
+      wholeDate: Boolean(constraintExpression?.includes("interval '18 years'")),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // M / T / W. Env names, debt, checks
 // ---------------------------------------------------------------------------
 

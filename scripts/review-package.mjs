@@ -139,6 +139,7 @@ const states = collect.stateHandling();
 const parity = collect.onboardingParity();
 const i18n = collect.localization();
 const db = collect.schema();
+const age = collect.ageEligibility();
 const envNames = collect.environmentVariableNames();
 const debt = collect.technicalDebt();
 
@@ -649,6 +650,56 @@ if (!mod.unguardedPages.length && !mod.functionsNotSelfChecking.length && mod.ad
 w(
   "\n**This is still the section most likely to contradict marketing copy.** " +
     "The queue is read by a founder by hand, with no staffing and no SLA — trust language must not imply review that is faster or more certain than that.",
+);
+
+/* --- N2 ----------------------------------------------------------------- */
+h2("N2. Age eligibility");
+w(
+  `**Minimum account age: ${age.minimumAge ?? "unknown"}.** ` +
+    "The same age for everyone — Eraya applies no different minimum by gender. " +
+    "A member must already have reached that birthday: the rule is a whole-date comparison, never `currentYear - birthYear`, " +
+    "which would treat a seventeen-year-old as an adult for most of the year.",
+);
+w(
+  `\nThe rule is defined once, in \`${age.sharedRule ?? "— missing —"}\`, and imported by both clients. ` +
+    "Three enforcement points, so bypassing the interface does not bypass the rule:",
+);
+table(
+  ["Enforced at", "Where", "Blocks before write", "Input cannot offer it", "Message is localised"],
+  [
+    [
+      "Web",
+      `\`${age.web.file}\``,
+      age.web.blocksSubmit ? "yes" : "**no**",
+      age.web.picker ? "yes (`max`)" : "**no**",
+      age.web.localisedMessage ? "yes" : "**no**",
+    ],
+    [
+      "Mobile",
+      `\`${age.mobile.file}\``,
+      age.mobile.blocksSubmit ? "yes" : "**no**",
+      age.mobile.picker ? "yes (`maximumDate`)" : "**no**",
+      age.mobile.localisedMessage ? "yes" : "**no**",
+    ],
+    [
+      "Database",
+      `\`${age.database.file ?? "— none —"}\``,
+      age.database.expression ? "yes (check constraint)" : "**no**",
+      "n/a",
+      "n/a",
+    ],
+  ],
+);
+w(
+  `\nThe database is the boundary that holds when the others are skipped — a direct API call never reaches a client check. ` +
+    `\`${age.database.constraint}\` is:\n`,
+);
+w("```sql");
+w(age.database.expression ?? "-- constraint not found in migrations");
+w("```");
+w(
+  "\nRead against the Indian calendar date rather than UTC, so the constraint and the two pickers draw the line on the same day. " +
+    "Under `current_date` they disagreed for the five and a half hours after local midnight, which refused people on the morning of their eighteenth birthday.",
 );
 
 /* --- O ------------------------------------------------------------------ */

@@ -236,7 +236,7 @@ export const en = {
       hint: "Used to confirm you're over 18. Only your age is ever shown.",
       error: "Enter your date of birth to continue.",
       /* Names the actual problem. "Try again in a moment" cannot fix a birth date. */
-      tooYoung: "Eraya is for people aged 18 and over. Please check the year.",
+      tooYoung: "You must be at least 18 years old to use Eraya.",
       title: "When were you born?",
       chooseCta: "Choose your date of birth",
     },
