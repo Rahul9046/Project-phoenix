@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@eraya/eligibility": "*",
     "@eraya/i18n": "*",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/metro-runtime": "~57.0.14",

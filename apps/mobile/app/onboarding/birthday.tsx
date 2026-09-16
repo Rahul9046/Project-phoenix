@@ -11,11 +11,16 @@ import { saveBirthday } from "@/features/onboarding/data";
 import { Step } from "@/features/onboarding/Step";
 import { colors, hit, iconSize, radius, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
+import {
+  EARLIEST_BIRTH_DATE,
+  isOldEnough,
+  latestEligibleBirthDate,
+} from "@eraya/eligibility";
 
 /**
  * Date of birth.
  *
- * Two things this screen is careful about.
+ * Three things this screen is careful about.
  *
  * The date it produces is built from local calendar parts, never from
  * `toISOString()`. In India that would shift the date back by five and a half
@@ -24,20 +29,15 @@ import { Text } from "@/ui/Text";
  * The web app shipped that bug; this is the same fix.
  *
  * The picker's maximum is the day someone turns 18, so the invalid range simply
- * cannot be reached. The database enforces it too, with a check constraint, and
- * the message below is what a person sees if they somehow get past the picker --
- * but the point of the maximum is that nobody should ever read it.
+ * cannot be reached by tapping. The database enforces it too, with a check
+ * constraint.
+ *
+ * Between those two sits the check in `submit`. The maximum is not the whole
+ * story: a date already on the profile -- written before this rule existed, or
+ * by something that was not this screen -- seeds the picker without ever passing
+ * through it, and would otherwise be submitted unexamined. The website checks on
+ * submit for the same reason, and now says the same thing when it does.
  */
-
-/** The most recent date of birth that is still 18 years old today. */
-function latestAdultBirthday(): Date {
-  const today = new Date();
-  return new Date(
-    today.getFullYear() - 18,
-    today.getMonth(),
-    today.getDate(),
-  );
-}
 
 /** Local calendar parts, deliberately -- see the note above. */
 function toIsoDate(date: Date): string {
@@ -58,7 +58,14 @@ function formatForReading(date: Date): string {
 export default function BirthdayStep() {
   const { profile, refresh } = useSession();
   const t = useT();
-  const maximum = latestAdultBirthday();
+
+  /*
+   * `T00:00:00` with no zone is parsed as local time; a bare `yyyy-mm-dd` is
+   * parsed as UTC and would land on the previous evening in India, moving the
+   * picker's maximum a day earlier than the rule it is meant to express.
+   */
+  const maximum = new Date(`${latestEligibleBirthDate()}T00:00:00`);
+  const minimum = new Date(`${EARLIEST_BIRTH_DATE}T00:00:00`);
 
   const [value, setValue] = useState<Date | null>(
     profile?.dateOfBirth ? new Date(`${profile.dateOfBirth}T00:00:00`) : null,
@@ -69,10 +76,24 @@ export default function BirthdayStep() {
 
   async function submit() {
     if (!value) return;
+
+    const chosen = toIsoDate(value);
+
+    /*
+     * Checked before the write, not after it. The constraint would refuse this
+     * anyway, but a rejected constraint arrives as a generic save failure --
+     * telling somebody to check their connection when the problem is their age
+     * is advice that cannot work.
+     */
+    if (!isOldEnough(chosen)) {
+      setError(t("onboarding.birthday.tooYoung"));
+      return;
+    }
+
     setPending(true);
     setError(null);
 
-    const result = await saveBirthday(toIsoDate(value));
+    const result = await saveBirthday(chosen);
 
     if (!result.ok) {
       setError(result.message);
@@ -141,7 +162,7 @@ export default function BirthdayStep() {
             mode="date"
             display={Platform.OS === "ios" ? "spinner" : "default"}
             maximumDate={maximum}
-            minimumDate={new Date(1930, 0, 1)}
+            minimumDate={minimum}
             onChange={(event, selected) => {
               if (Platform.OS === "android") setPicking(false);
               if (event.type === "dismissed") return;
