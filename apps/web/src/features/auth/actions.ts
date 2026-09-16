@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { LEGAL_VERSION } from "@eraya/legal";
+
 import { createClient } from "@/lib/supabase/server";
 import { stageToDatabase } from "@/features/auth/types";
 import type { Database } from "@/lib/supabase/database.types";
@@ -205,9 +207,26 @@ export async function completeOnboarding(): Promise<ActionResult> {
 
   const supabase = await createClient();
 
+  /*
+   * Which documents they agreed to, recorded with the stage.
+   *
+   * Agreement itself happened at sign-in, under the form, where the notice and
+   * both links are. This is the first point afterwards at which somebody has
+   * definitely gone on to make an account, so it is where the version is
+   * written down -- recording it at the notice would also record the people who
+   * read it and left.
+   *
+   * Written unconditionally rather than only when null. Someone returning to
+   * finish an abandoned signup after the wording changed agreed to the wording
+   * they were shown this time, not the one they saw in a previous attempt.
+   */
   const { error } = await supabase
     .from("profiles")
-    .update({ onboarding_stage: stageToDatabase("onboardingCompleted") })
+    .update({
+      onboarding_stage: stageToDatabase("onboardingCompleted"),
+      legal_version_accepted: LEGAL_VERSION,
+      legal_accepted_at: new Date().toISOString(),
+    })
     .eq("id", userId);
 
   if (error) {

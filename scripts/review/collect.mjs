@@ -904,6 +904,122 @@ export function ageEligibility() {
 }
 
 // ---------------------------------------------------------------------------
+// N3. Legal documents
+// ---------------------------------------------------------------------------
+
+/**
+ * The legal experience, read from the repository rather than asserted.
+ *
+ * Each document is counted rather than described: a policy that has been
+ * emptied out still has a route, and "Privacy Policy: implemented" next to a
+ * file with no sections is precisely the claim a review package exists to stop
+ * anybody making.
+ *
+ * Nothing here reads production data, and the documents themselves carry no
+ * secrets -- they are published pages.
+ */
+export function legalSurface() {
+  const index = read("packages/legal/src/index.ts");
+
+  const version =
+    index.match(/export const LEGAL_VERSION = "([^"]+)"/)?.[1] ?? null;
+  const effective =
+    index.match(/export const LEGAL_EFFECTIVE_DATE = "([^"]+)"/)?.[1] ?? null;
+
+  const documents = [
+    ["Privacy Policy", "privacy", "packages/legal/src/privacy.ts"],
+    ["Terms of Service", "terms", "packages/legal/src/terms.ts"],
+    ["Community and Safety Guidelines", "safety", "packages/legal/src/safety.ts"],
+  ].map(([name, id, source]) => {
+    const body = read(source);
+    /*
+     * Counted, not described. A policy that has been emptied out still has a
+     * route and a title, and "Privacy Policy: implemented" beside a file with
+     * no sections is exactly the claim this package exists to prevent.
+     *
+     * Six spaces: the document's own `id` sits at four, each section's at six,
+     * so this counts sections and not the document itself.
+     */
+    const sections = (body.match(/\n {6}id: "/g) ?? []).length;
+    return {
+      name,
+      id,
+      source: body ? source : null,
+      sections,
+      webRoute: existsSync(join(ROOT, `apps/web/src/app/(marketing)/${id}/page.tsx`))
+        ? `/${id}`
+        : null,
+      mobileScreen: existsSync(join(ROOT, `apps/mobile/app/legal/${id}.tsx`))
+        ? `app/legal/${id}.tsx`
+        : null,
+    };
+  });
+
+  // Where a member can actually reach them.
+  const surfaces = [
+    [
+      "Website footer",
+      "apps/web/src/features/marketing/content.ts",
+      read("apps/web/src/features/marketing/content.ts").includes('href: "/safety"'),
+    ],
+    [
+      "Website sign-in",
+      "apps/web/src/features/auth/components/AuthLayout.tsx",
+      read("apps/web/src/features/auth/components/AuthLayout.tsx").includes("auth.legal.prefix"),
+    ],
+    [
+      "Website account",
+      "apps/web/src/app/(app)/account/page.tsx",
+      read("apps/web/src/app/(app)/account/page.tsx").includes("legalRoutes"),
+    ],
+    [
+      "App sign-in",
+      "apps/mobile/app/sign-in.tsx",
+      read("apps/mobile/app/sign-in.tsx").includes("auth.legal.prefix"),
+    ],
+    [
+      "App account",
+      "apps/mobile/app/(tabs)/you.tsx",
+      read("apps/mobile/app/(tabs)/you.tsx").includes("/legal/"),
+    ],
+  ].map(([where, file, present]) => ({ where, file, present }));
+
+  // Acceptance: recorded at the end of onboarding, by both clients.
+  const webAction = read("apps/web/src/features/auth/actions.ts");
+  const mobileData = read("apps/mobile/src/features/onboarding/data.ts");
+
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const acceptanceMigration =
+    migrations.find((f) => read(`supabase/migrations/${f}`).includes("legal_version_accepted")) ??
+    null;
+
+  return {
+    version,
+    effective,
+    documents,
+    surfaces,
+    acceptance: {
+      /* No checkbox anywhere, deliberately -- continuing is the act. */
+      mechanism: "notice at sign-in, recorded when onboarding completes",
+      web: webAction.includes("legal_version_accepted"),
+      mobile: mobileData.includes("legal_version_accepted"),
+      migration: acceptanceMigration
+        ? `supabase/migrations/${acceptanceMigration}`
+        : null,
+      backfilled: false,
+    },
+    /*
+     * English only, on purpose. A machine translation of a privacy policy is
+     * indistinguishable from a reviewed one to the person relying on it.
+     */
+    englishOnly: true,
+    signedInAreaNoindex: read("apps/web/src/app/(app)/layout.tsx").includes("robots"),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // M / T / W. Env names, debt, checks
 // ---------------------------------------------------------------------------
 

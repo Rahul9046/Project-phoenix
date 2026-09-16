@@ -52,6 +52,7 @@ export const footer: {
       links: [
         { labelKey: "marketing.footer.privacy", href: "/privacy" },
         { labelKey: "marketing.footer.terms", href: "/terms" },
+        { labelKey: "common.legalGuidelines", href: "/safety" },
         { labelKey: "marketing.footer.contact", href: "/contact" },
       ],
     },

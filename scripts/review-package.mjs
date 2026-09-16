@@ -53,12 +53,13 @@ const narrative = {
     ["Entitlements read by named capability from the database", "apps/web/src/features/membership/entitlements.ts"],
     ["Account deletion", "apps/mobile/src/features/account/delete.ts"],
     ["Blocking", "apps/mobile/app/you/blocked.tsx, supabase/migrations/*connection_tables*"],
+    ["Privacy Policy, Terms and Community & Safety Guidelines, shared by both clients, with acceptance recorded per member against a version", "packages/legal, supabase/migrations/*legal_acceptance*"],
   ],
 
   mockedOrIncomplete: [
     ["Phone verification is a stub — any six digits pass while OTP_DEV_CODE is set; no SMS is sent. Deferred deliberately: real SMS needs DLT registration", "apps/web/.env.example, supabase/functions/phone-otp-*", "mocked"],
     ["Razorpay is in TEST mode — no real money moves", "mode is read from the key prefix, supabase/functions/_shared/razorpay.ts", "test-only"],
-    ["Privacy policy and terms are placeholders; DPDP Act applies", "apps/web/src/app/(marketing)/privacy, terms", "launch blocker"],
+    ["Privacy Policy, Terms and Community & Safety Guidelines are written and published, but no lawyer has read them and they are English-only while the product speaks six languages", "packages/legal, docs/07-open-questions.md", "needs legal review"],
     ["No profile review, photo review or automated moderation exists. Reports are read and acted on by a founder, by hand", "apps/web/src/app/admin/reports", "manual only"],
     ["International cards are refused by the Razorpay account (international_transaction_not_allowed)", "commercial setting, not code", "blocked"],
     ["Product is deployed but noindex — invisible to search until launch", "apps/web/next.config.ts, apps/web/src/app/layout.tsx", "deliberate"],
@@ -86,7 +87,7 @@ const narrative = {
   ],
 
   observations: [
-    ["launch blocker", "Privacy policy and terms are placeholders. India's DPDP Act applies and both app stores require them.", "apps/web/src/app/(marketing)/{privacy,terms}"],
+    ["launch blocker", "The three legal documents are written and published (section N3), but none has been reviewed by a lawyer and no postal address is disclosed anywhere. Indian consumer and payment rules require an address before live payments, and a home address is not an option — so this is a business decision rather than a code one.", "packages/legal, docs/07-open-questions.md"],
     ["trust", "Phone verification accepts any six digits. Anything in the product that implies a verified number is currently untrue.", "supabase/functions/phone-otp-*"],
     ["product", "The funnel is instrumented end to end and proved by `npm run analytics:probe`. Events are recorded by the database on the write itself, so the clients cannot drift or double-count and no event can carry anything personal.", "supabase/migrations/*funnel*"],
     ["safety", "Reports are read at /admin/reports, guarded by an allowlist of addresses held in `ops_config` and checked inside every admin function as well as on the page. The queue is manual and unstaffed outside founder hours — trust copy must still not imply a review SLA.", "apps/web/src/features/admin"],
@@ -140,6 +141,7 @@ const parity = collect.onboardingParity();
 const i18n = collect.localization();
 const db = collect.schema();
 const age = collect.ageEligibility();
+const legal = collect.legalSurface();
 const envNames = collect.environmentVariableNames();
 const debt = collect.technicalDebt();
 
@@ -700,6 +702,58 @@ w("```");
 w(
   "\nRead against the Indian calendar date rather than UTC, so the constraint and the two pickers draw the line on the same day. " +
     "Under `current_date` they disagreed for the five and a half hours after local midnight, which refused people on the morning of their eighteenth birthday.",
+);
+
+/* --- N3 ----------------------------------------------------------------- */
+h2("N3. Legal documents");
+w(
+  `Three documents, written as data in \`packages/legal\` and rendered by both clients, so the website and the app cannot describe the same clause differently. ` +
+    `Version \`${legal.version ?? "— none —"}\`, in effect from ${legal.effective ?? "— unset —"}.`,
+);
+table(
+  ["Document", "Sections", "Web route", "App screen"],
+  legal.documents.map((d) => [
+    d.name,
+    d.sections > 0 ? `${d.sections}` : "**0 — empty**",
+    d.webRoute ? `\`${d.webRoute}\`` : "**missing**",
+    d.mobileScreen ? `\`${d.mobileScreen}\`` : "**missing**",
+  ]),
+);
+
+h3("Where they are surfaced");
+table(
+  ["Place", "Present", "File"],
+  legal.surfaces.map((s) => [s.where, s.present ? "yes" : "**no**", `\`${s.file}\``]),
+);
+
+h3("Acceptance");
+w(
+  "There is no consent checkbox anywhere, and no pre-ticked control. Continuing from the sign-in screen is the act of agreement, and the notice there links both documents so they can be read before an account exists.",
+);
+bullet(
+  `Recorded on \`profiles.legal_version_accepted\` and \`legal_accepted_at\`, written when onboarding completes — website ${legal.acceptance.web ? "yes" : "**no**"}, app ${legal.acceptance.mobile ? "yes" : "**no**"}.`,
+);
+bullet(
+  legal.acceptance.migration
+    ? `Migration: \`${legal.acceptance.migration}\`.`
+    : "**No migration found for acceptance.**",
+);
+bullet(
+  "Existing accounts are left null rather than backfilled. A backfilled version would manufacture the very evidence the column exists to record.",
+);
+
+h3("Languages");
+w(
+  "The three documents are **English only**, and every screen that shows one says so in the reader's own language. " +
+    "The rest of the product speaks six. A machine translation of a privacy policy is indistinguishable from a reviewed one to the person relying on it, so the canonical English governs until a translation has been read by somebody qualified. " +
+    "This is why the documents are not in `@eraya/i18n`: key parity there would demand six copies, five of them invented.",
+);
+
+h3("Indexing");
+w(
+  legal.signedInAreaNoindex
+    ? "The signed-in area declares `noindex` in its own layout rather than inheriting the site-wide switch, so member profiles at `/discovery/[id]` stay out of search engines on the day `NEXT_PUBLIC_ALLOW_INDEXING` is turned on for the marketing pages."
+    : "**The signed-in area does not declare `noindex` of its own**, so enabling site-wide indexing would expose member profiles.",
 );
 
 /* --- O ------------------------------------------------------------------ */

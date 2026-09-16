@@ -14,6 +14,7 @@
   "dependencies": {
     "@eraya/eligibility": "*",
     "@eraya/i18n": "*",
+    "@eraya/legal": "*",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "next": "16.3.4",

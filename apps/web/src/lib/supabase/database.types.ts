@@ -744,6 +744,8 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender"] | null
           id: string
           languages_undisclosed: boolean
+          legal_accepted_at: string | null
+          legal_version_accepted: string | null
           ui_locale: string
           looking_for: string | null
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
@@ -769,6 +771,8 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           languages_undisclosed?: boolean
+          legal_accepted_at?: string | null
+          legal_version_accepted?: string | null
           ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
@@ -794,6 +798,8 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           languages_undisclosed?: boolean
+          legal_accepted_at?: string | null
+          legal_version_accepted?: string | null
           ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]

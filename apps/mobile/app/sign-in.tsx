@@ -179,6 +179,40 @@ export default function SignIn() {
           {t("auth.signIn.reassurance")}
         </Text>
       </View>
+
+      {/*
+        The same sentence the website shows below its sign-in form, which the
+        app did not have. Continuing is the act of agreement -- there is no
+        checkbox, because a checkbox on the screen that also creates the account
+        is a second thing to tap for no additional consent.
+
+        What matters is that both documents are readable first, without an
+        account, which is why `legal/` sits at the root and not inside `you/`.
+      */}
+      <Text
+        variant="caption"
+        tone="subtle"
+        center
+        style={{ marginTop: space.xl }}
+      >
+        {t("auth.legal.prefix")}{" "}
+        <Text
+          variant="caption"
+          tone="accent"
+          onPress={() => router.push("/legal/terms")}
+        >
+          {t("auth.legal.terms")}
+        </Text>{" "}
+        {t("auth.legal.and")}{" "}
+        <Text
+          variant="caption"
+          tone="accent"
+          onPress={() => router.push("/legal/privacy")}
+        >
+          {t("auth.legal.privacy")}
+        </Text>
+        .
+      </Text>
     </Screen>
   );
 }
