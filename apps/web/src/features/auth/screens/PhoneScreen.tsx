@@ -18,6 +18,7 @@ import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { PhoneNumber } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
+import { CAPTCHA_CONTAINER_ID } from "@/features/auth/msg91-widget";
 
 /** Short enough to catch a slip, loose enough to accept any real number. */
 const MIN_DIGITS = 6;
@@ -97,6 +98,20 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
             />
           )}
         </FormField>
+
+        {/*
+          Where MSG91 draws its captcha, if it draws one at all.
+
+          Always rendered, and never hidden. Both matter. It has to exist before
+          the widget is asked to send, so it cannot wait on state that only
+          changes once sending has begun -- and it cannot be `display: none`
+          while empty, because a captcha cannot measure or draw itself inside a
+          hidden element and fails rather than saying so.
+
+          An empty div occupies no height, so leaving it visible costs nothing
+          when the captcha is silent or switched off.
+        */}
+        <div id={CAPTCHA_CONTAINER_ID} />
 
         {formError ? (
           <ErrorMessage className="mt-4">{formError}</ErrorMessage>

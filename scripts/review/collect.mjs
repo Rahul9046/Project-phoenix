@@ -316,9 +316,27 @@ export function authConfig() {
     smtpSender: toml.match(/admin_email\s*=\s*"([^"]+)"/)?.[1],
     emailTemplates: [...toml.matchAll(/\[auth\.email\.template\.([a-z_]+)\]/g)].map((m) => m[1]),
     phoneAuthEnabled: /\[auth\.sms\][\s\S]*?enable_signup\s*=\s*true/.test(toml),
-    /* The stub that makes phone "verification" accept any code. Detected, not
-       assumed, because it is the single most consequential mock in the app. */
+    /*
+     * The fixed development code, and -- what actually matters -- whether a
+     * deployed project could ever honour it.
+     *
+     * Reporting only that the variable is documented was the wrong question. It
+     * said "MOCKED" whether the hole was reachable or not, which is alarming
+     * when it is shut and useless when it is open. The property worth deriving
+     * is the gate: the OTP functions refuse the code unless SUPABASE_URL is a
+     * local stack, so no combination of secrets on the hosted project opens it.
+     */
     otpDevCodeDocumented: /OTP_DEV_CODE/.test(read("apps/web/.env.example")),
+    otpDevCodeLocalOnly: /function isLocalStack\(/.test(
+      read("supabase/functions/_shared/msg91.ts"),
+    ),
+    /* Which MSG91 product each client uses. */
+    phoneWidgetOnWeb: /phone-widget-verify/.test(
+      read("apps/web/src/features/auth/phone-verification.ts"),
+    ),
+    phoneOtpApiOnMobile: /phone-otp-verify/.test(
+      read("apps/mobile/src/features/onboarding/phone.ts"),
+    ),
   };
 }
 

@@ -1,19 +1,31 @@
 import { createClient } from "@/lib/supabase/client";
 import { AuthError, type PhoneNumber } from "@/features/auth/types";
+import {
+  widgetConfig,
+  widgetRetryOtp,
+  widgetSendOtp,
+  widgetVerifyOtp,
+} from "@/features/auth/msg91-widget";
 
 /**
- * Phone verification, for real.
+ * Phone verification, through the MSG91 widget.
  *
- * This module accepted any six-digit code until now. It calls the same two
- * Supabase edge functions the mobile app does, which call MSG91, which sends an
- * actual SMS — and the code is checked by the provider, never here.
+ * The browser talks to MSG91 directly here, which is new and is worth being
+ * precise about. The widget sends the message and checks the code, then hands
+ * back an access token. Eraya's edge function asks MSG91 whether that token is
+ * real, using a key the browser has never held, and only that answer verifies
+ * anybody. A client that lies about having succeeded gets nowhere.
  *
- * One implementation for both clients on purpose. A rule that exists in two
- * places is a rule that will eventually be enforced in one of them, and these
- * particular rules are what stand between a beta and somebody else's SMS bill.
+ * The two clients now take different routes to the same place, and the reason
+ * is not preference. MSG91's widget is a browser SDK; the app would need
+ * MSG91's native SDKs and a config plugin that does not exist, so the app still
+ * uses the OTP API through `phone-otp-request` and `phone-otp-verify`. Both
+ * routes end at the same SQL -- the same cooldown, the same daily caps, the same
+ * unique verified number -- because those rules never lived in the provider.
  *
- * Nothing about the provider is known to the browser. The MSG91 key is a server
- * secret, `phone_verified_at` is written only by the verify function holding the
+ * What the browser is trusted with is the widget id and the token auth, which
+ * are public configuration and cannot verify anybody. The auth key is a server
+ * secret. `phone_verified_at` is written only by an edge function holding the
  * service role, and a trigger on `profiles` refuses that column to every client
  * — so `markPhoneVerified` is gone and cannot come back by accident.
  */
@@ -46,6 +58,13 @@ const SEND_MESSAGES: Record<string, string> = {
 
 const VERIFY_MESSAGES: Record<string, string> = {
   invalid_code: "That code does not look right. Check it and try again.",
+  /*
+   * A token the server would not accept. From a member's side this is
+   * indistinguishable from a wrong code, and "check the digits" is the only
+   * advice they can act on, so it is worded the same way rather than exposing
+   * that a token was involved at all.
+   */
+  invalid_token: "That code does not look right. Check it and try again.",
   expired: "That code has expired. Ask for a new one.",
   too_many_attempts:
     "That is too many tries for one code. Ask for a new one and take it slowly.",
@@ -61,7 +80,11 @@ const VERIFY_FALLBACK =
 type FunctionReply = { status?: string; retryAfter?: number };
 
 async function callFunction(
-  name: "phone-otp-request" | "phone-otp-verify",
+  name:
+    | "phone-otp-request"
+    | "phone-otp-verify"
+    | "phone-widget-begin"
+    | "phone-widget-verify",
   body: Record<string, unknown>,
 ): Promise<FunctionReply | null> {
   try {
@@ -76,11 +99,31 @@ async function callFunction(
   }
 }
 
+/**
+ * Asking for a code.
+ *
+ * Two steps, in this order, and the order is the cost control.
+ *
+ * Eraya is asked first. `phone-widget-begin` runs every limit the OTP API path
+ * ran -- cooldown, per-user and per-number daily caps, account capacity, and
+ * whether the number already belongs to somebody -- and opens the request row
+ * that verification will later be matched against. A refusal here means the
+ * widget is never opened and no message is sent.
+ *
+ * MSG91 is asked second, from the browser, because that is what the widget is.
+ * Reversing these would mean paying for the message before finding out the
+ * member was over their limit.
+ */
 export async function sendPhoneCode(
   phone: PhoneNumber,
   options: { resend?: boolean } = {},
 ): Promise<void> {
-  const reply = await callFunction("phone-otp-request", {
+  const config = widgetConfig();
+  if (!config) {
+    throw new AuthError("generic", SEND_FALLBACK);
+  }
+
+  const reply = await callFunction("phone-widget-begin", {
     dialCode: phone.countryCode,
     national: phone.nationalNumber,
     resend: options.resend === true,
@@ -93,12 +136,24 @@ export async function sendPhoneCode(
     );
   }
 
-  if (reply.status === "sent") return;
+  if (reply.status !== "allowed") {
+    throw new AuthError(
+      reply.status === "cooldown" ? "rate_limited" : "generic",
+      SEND_MESSAGES[reply.status ?? ""] ?? SEND_FALLBACK,
+    );
+  }
 
-  throw new AuthError(
-    reply.status === "cooldown" ? "rate_limited" : "generic",
-    SEND_MESSAGES[reply.status ?? ""] ?? SEND_FALLBACK,
-  );
+  try {
+    if (options.resend === true) {
+      await widgetRetryOtp(config);
+    } else {
+      await widgetSendOtp(config, toE164(phone));
+    }
+  } catch {
+    // MSG91's own wording is written for whoever reads its dashboard. What a
+    // member reads is decided here, as it is for every other outcome.
+    throw new AuthError("generic", SEND_FALLBACK);
+  }
 }
 
 export async function verifyPhoneCode(
@@ -109,9 +164,31 @@ export async function verifyPhoneCode(
     throw new AuthError("invalid_code", "Enter the six-digit code.");
   }
 
-  // The number is not sent. The server takes it from the request it opened, so
-  // that answering a code sent to one phone cannot verify a different number.
-  const reply = await callFunction("phone-otp-verify", { code });
+  const config = widgetConfig();
+  if (!config) {
+    throw new AuthError("generic", VERIFY_FALLBACK);
+  }
+
+  /*
+   * MSG91 checks the code and answers with an access token. That token is not
+   * proof of anything yet -- it arrived in a browser, which is the thing this
+   * system does not trust -- so it is handed straight to the server, which asks
+   * MSG91 about it with a key this page has never held.
+   */
+  let accessToken: string;
+  try {
+    accessToken = await widgetVerifyOtp(config, code);
+  } catch {
+    throw new AuthError(
+      "invalid_code",
+      VERIFY_MESSAGES.invalid_code ?? VERIFY_FALLBACK,
+    );
+  }
+
+  // The number is still not sent. The server takes it from the request it
+  // opened and from MSG91's own answer, so answering a code sent to one phone
+  // cannot verify a different number.
+  const reply = await callFunction("phone-widget-verify", { accessToken });
 
   if (!reply) {
     throw new AuthError(

@@ -57,11 +57,37 @@ function config(): { key: string; template: string } | null {
  *   It cannot switch itself on. Absent the secret this returns null and the real
  *   provider is used; there is no default value and no fallback to it on error.
  *
- * Every call is logged as `provider=stub` so a production deployment running on
- * it is loud rather than quiet. Unset the secret and the same code path calls
- * MSG91 -- no release, no edit.
+ * Every call is logged as `provider=stub` so a deployment running on it is loud
+ * rather than quiet.
+ *
+ * It is also now impossible to reach on a deployed project, and that is the
+ * part worth explaining.
+ *
+ * "Only set the secret in development" was the whole protection, and it is a
+ * protection made of somebody remembering. Setting `OTP_DEV_CODE` on the hosted
+ * project -- by habit, by copying an env file, by a script that pushes every
+ * secret it finds -- would have turned a fixed code into a working password for
+ * any account, silently, with the feature still appearing to work.
+ *
+ * So the environment decides, not the operator. Edge functions are given
+ * `SUPABASE_URL`, and a local stack's is a loopback or Docker host address while
+ * a hosted project's is `https://<ref>.supabase.co`. A deployed function
+ * therefore cannot honour this code no matter which secrets are set on it, and
+ * there is no variable that turns that off.
  */
+function isLocalStack(): boolean {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  return (
+    url.startsWith("http://localhost") ||
+    url.startsWith("http://127.0.0.1") ||
+    url.startsWith("http://kong:") ||
+    url.startsWith("http://host.docker.internal")
+  );
+}
+
 function developmentCode(): string | null {
+  if (!isLocalStack()) return null;
+
   const code = Deno.env.get("OTP_DEV_CODE");
   if (!code || !/^\d{6}$/.test(code)) return null;
   return code;
