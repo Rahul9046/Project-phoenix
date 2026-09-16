@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { legalRoutes } from "@eraya/legal";
+
 import { getT } from "@/features/i18n/server";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
 import { accountNav, appRoutes } from "@/features/app-shell/nav";
@@ -151,6 +153,31 @@ export default async function AccountPage() {
                   </Link>
                 </li>
               ))}
+          </ul>
+        </Panel>
+
+        {/*
+          The documents themselves, kept apart from the account sections above.
+          Those are places to change something; these are things to read, and
+          they open the public pages rather than a signed-in copy so the link a
+          member follows is the same one they can send to somebody else.
+        */}
+        <Panel>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2">
+            {[
+              { href: legalRoutes.privacy, label: t("common.legalPrivacy") },
+              { href: legalRoutes.terms, label: t("common.legalTerms") },
+              { href: legalRoutes.safety, label: t("common.legalGuidelines") },
+            ].map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="text-[0.95rem] text-ink-muted underline underline-offset-4 transition-colors hover:text-ember-text"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </Panel>
 

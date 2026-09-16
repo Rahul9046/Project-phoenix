@@ -140,6 +140,27 @@ export default function You() {
           label={t("account.navHelp")}
           onPress={() => router.push("/you/help")}
         />
+        {/*
+          The documents, below the two screens that explain the product in
+          plainer words. Somebody looking for "what can people see about me"
+          should reach that screen first; somebody looking for the policy they
+          agreed to should not have to leave the app to find it.
+        */}
+        <Row
+          icon="shield-checkmark-outline"
+          label={t("common.legalGuidelines")}
+          onPress={() => router.push("/legal/safety")}
+        />
+        <Row
+          icon="document-text-outline"
+          label={t("common.legalPrivacy")}
+          onPress={() => router.push("/legal/privacy")}
+        />
+        <Row
+          icon="document-text-outline"
+          label={t("common.legalTerms")}
+          onPress={() => router.push("/legal/terms")}
+        />
       </Group>
 
       <Group title={t("account.navGroupAccount")} last>

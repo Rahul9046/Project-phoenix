@@ -1,3 +1,5 @@
+import { LEGAL_VERSION } from "@eraya/legal";
+
 import { supabase } from "@/lib/supabase/client";
 import type { Gender, RelationshipStatus } from "@/features/auth/types";
 
@@ -192,9 +194,22 @@ export async function saveLanguages(
  * to every client -- so this cannot be reintroduced by accident.
  */
 
-/** Marks onboarding finished, once every question has an answer. */
+/**
+ * Marks onboarding finished, once every question has an answer.
+ *
+ * The legal version goes with it, for the same reason and at the same point as
+ * on the website. Agreement happened on the sign-in screen, under the form,
+ * where the notice and both links are; this is the first moment afterwards at
+ * which somebody has definitely gone on to make an account. Writing it here
+ * rather than at the notice means the record covers people who joined, not
+ * people who read the line and left.
+ */
 export function completeOnboarding(): Promise<SaveResult> {
-  return patch({ onboarding_stage: "onboarding_completed" });
+  return patch({
+    onboarding_stage: "onboarding_completed",
+    legal_version_accepted: LEGAL_VERSION,
+    legal_accepted_at: new Date().toISOString(),
+  });
 }
 
 // ---------------------------------------------------------------------------

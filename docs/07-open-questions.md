@@ -19,9 +19,23 @@ the list defensible under consent rules. Blocked on the delivery question above.
 **Abuse protection.** The form has a honeypot and nothing else. It needs rate
 limiting per IP, and probably a challenge, before it is publicly linked.
 
-**Privacy policy and terms.** Both pages currently state honestly that the
-documents are being prepared. Real ones are required before collecting
-significant personal data, and India's DPDP Act applies.
+**Privacy policy, terms and guidelines — written.** All three now exist as real
+documents in `packages/legal`, shared by both clients and published at
+`/privacy`, `/terms` and `/safety`. Acceptance is recorded per member against a
+version string. What remains is not writing but review: none of it has been read
+by a lawyer, and India's DPDP Act applies.
+
+**A postal address, before live payments.** The documents name the operator --
+Rahul Das, trading as Eraya, in India -- and give `support@eraya.app`, and no
+postal address. Indian consumer and payment rules will require one before real
+money moves, and a home address is not the answer. This is a business decision
+(a registered office, a virtual office, or a change of structure) and nothing in
+the repository can settle it.
+
+**The documents are English only.** Six languages everywhere else. A machine
+translation of a privacy policy reads exactly like a reviewed one to the person
+relying on it, so each screen says in the reader's own language that the English
+governs. Translating them is a cost and a review question, not a code one.
 
 **Contact address — resolved.** `support@eraya.app` is live on Zoho Mail and is
 now the only address the product gives anybody: the website, both clients, and
