@@ -19,6 +19,24 @@ the list defensible under consent rules. Blocked on the delivery question above.
 **Abuse protection.** The form has a honeypot and nothing else. It needs rate
 limiting per IP, and probably a challenge, before it is publicly linked.
 
+**Turn the MSG91 captcha back on, and prove it works on the real domain.** It is
+off right now because its challenge fails on localhost, which made verification
+untestable during development. That is a reasonable place to leave it while
+building and an unreasonable one to launch with.
+
+The widget sends its SMS from the browser, so the widget id and the token auth
+are both readable in the page source. Anyone holding them can call MSG91's send
+endpoint in a loop without ever touching `phone-widget-begin`, which is where
+Eraya's cooldown and daily caps live. They cannot get verified that way --
+`phone-widget-verify` needs a request row only that endpoint creates, and the
+number must match it -- so what they can do is spend Eraya's SMS balance and
+text arbitrary Indian numbers from Eraya's sender. The captcha is the only
+control left once the send happens client-side.
+
+Switching it on is one toggle in Widget Settings. The part that needs doing
+properly is testing it afterwards on the deployed domain, because captcha-on
+fails differently from captcha-off and has never been exercised anywhere.
+
 **Privacy policy, terms and guidelines — written.** All three now exist as real
 documents in `packages/legal`, shared by both clients and published at
 `/privacy`, `/terms` and `/safety`. Acceptance is recorded per member against a

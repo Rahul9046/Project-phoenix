@@ -22,6 +22,36 @@ import { supabase } from "@/lib/supabase/client";
  * A phone number is an attribute of an account that already exists. It is never
  * a way to sign in, which is why every call here carries the caller's session
  * and fails without one.
+ *
+ * Why this app does not use the MSG91 widget
+ * ------------------------------------------
+ *
+ * The website now verifies through MSG91's OTP widget: the browser loads
+ * MSG91's script, MSG91 runs the exchange, and the server exchanges the
+ * resulting access token for a verified number.
+ *
+ * That script is a browser SDK. It needs a DOM, and there is no honest way to
+ * run it here. Two roads were considered and both are worse than this one:
+ *
+ *   A WebView rendering MSG91's page, with the token passed back over a message
+ *   bridge. The bridge is the problem -- anything the page can post, injected
+ *   script can post, so a verification would rest on a channel this app cannot
+ *   authenticate.
+ *
+ *   MSG91's native Android and iOS SDKs. These are the supported answer and
+ *   they need native configuration: a config plugin wrapping both SDKs, and a
+ *   fresh development build, because Expo cannot link native code at runtime.
+ *   MSG91 publishes no Expo plugin, so that plugin is work that does not exist
+ *   yet rather than a dependency to add.
+ *
+ * So the app keeps the OTP API path, which is real verification -- a real SMS,
+ * checked by MSG91, written by an edge function holding the service role. It
+ * needs `MSG91_TEMPLATE_ID` alongside the auth key, and that template must be
+ * DLT-approved before it will deliver in India.
+ *
+ * Both routes end at the same SQL. The cooldown, the daily caps, the attempt
+ * limit and the unique verified number never lived in the provider, so the two
+ * clients cannot drift apart on any rule that matters.
  */
 
 /** No longer a stand-in. Screens read this to word themselves. */
