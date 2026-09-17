@@ -57,7 +57,7 @@ const narrative = {
   ],
 
   mockedOrIncomplete: [
-    ["Phone verification is implemented against MSG91 on both clients but has not been run end to end. The web uses the OTP widget (token verified server-side); the app uses the OTP API and additionally needs a DLT-approved template. Neither is configured with live credentials yet", "supabase/functions/phone-widget-*, phone-otp-*", "awaiting credentials"],
+    ["Phone verification works on the web and is proven in production: a real Indian number was verified on eraya.app through the MSG91 widget with hCaptcha enabled. The app is a separate path — it uses the OTP API and still needs a DLT-approved SMS template before it will send anything, and has not been run end to end", "supabase/functions/phone-otp-* (app), phone-widget-* (web, done)", "app only"],
     ["Razorpay is in TEST mode — no real money moves", "mode is read from the key prefix, supabase/functions/_shared/razorpay.ts", "test-only"],
     ["Privacy Policy, Terms and Community & Safety Guidelines are written and published, but no lawyer has read them and they are English-only while the product speaks six languages", "packages/legal, docs/07-open-questions.md", "needs legal review"],
     ["No profile review, photo review or automated moderation exists. Reports are read and acted on by a founder, by hand", "apps/web/src/app/admin/reports", "manual only"],
@@ -67,14 +67,14 @@ const narrative = {
 
   /* Trust claims are the ones most worth auditing, so they are called out. */
   trustNotes: [
-    "No trust badge is shown for anything Eraya has not actually checked. No member is shown a 'phone verified' mark on another member's card — deliberate, documented in CLAUDE.md. Phone verification is now real in code but unproven in practice, so the mark stays absent until it has been run end to end with live credentials.",
+    "No trust badge is shown for anything Eraya has not actually checked. No member is shown a 'phone verified' mark on another member's card — deliberate, documented in CLAUDE.md. Web verification is now proven in production, but the app cannot verify anybody until its SMS template is approved, so a badge would mean different things depending on which client somebody signed up through. The mark stays absent until both paths work.",
     "Copy is constrained to claims defensible on launch day: no member counts, no testimonials, no '100% verified'.",
   ],
 
   journeys: [
     ["New user registration", "Email address → six-digit code → onboarding. No password exists anywhere in the product.", "Nothing verifies identity beyond control of the mailbox."],
     ["Email authentication", "Supabase OTP; the email carries a code, never a link, because a PKCE link cannot be opened on a different device from the one that requested it.", "Deliverability depends on Resend; sender is no-reply@eraya.app."],
-    ["Phone verification", "Web: MSG91's OTP widget runs in the browser and returns an access token, which `phone-widget-verify` exchanges with MSG91 server-side; the number comes from MSG91's answer and must match the request this account opened. App: the OTP API through `phone-otp-request` / `phone-otp-verify`, because MSG91's widget is a browser SDK and its native SDKs need a config plugin that does not exist.", "Not yet run end to end. No code is ever stored. The fixed development code is now refused unless SUPABASE_URL is a local stack, so a deployed project cannot accept it."],
+    ["Phone verification", "Web: MSG91's OTP widget runs in the browser and returns an access token, which `phone-widget-verify` exchanges with MSG91 server-side; the number comes from MSG91's answer and must match the request this account opened. App: the OTP API through `phone-otp-request` / `phone-otp-verify`, because MSG91's widget is a browser SDK and its native SDKs need a config plugin that does not exist.", "**Web: verified in production** on eraya.app with a real Indian number, MSG91 CAPTCHA Validation on and hCaptcha as the provider. **App: not run end to end** — it needs a DLT-approved SMS template first. No code is ever stored, and the fixed development code is refused unless SUPABASE_URL is a local stack."],
     ["Onboarding", "Twelve screens on mobile, seven routes on the web, asking the same questions. Photo is optional on both; a profile without one is complete.", "Both clients now write the same fields — see the parity table in section C."],
     ["Discovery", "A considered few rather than an endless feed. Filters are free-tier.", "Empty, loading and error states exist on both clients."],
     ["Expressing interest / connection", "Interest is one-way until reciprocated; a connection opens messaging.", "Who has expressed interest in you is a premium capability."],
@@ -88,7 +88,7 @@ const narrative = {
 
   observations: [
     ["launch blocker", "The three legal documents are written and published (section N3), but none has been reviewed by a lawyer and no postal address is disclosed anywhere. Indian consumer and payment rules require an address before live payments, and a home address is not an option — so this is a business decision rather than a code one.", "packages/legal, docs/07-open-questions.md"],
-    ["trust", "Phone verification is real in code on both clients but has never been run against live MSG91 credentials, so nothing in the product should yet imply a checked number. The app additionally needs a DLT-approved template before an SMS will deliver in India.", "supabase/functions/phone-widget-*, phone-otp-*"],
+    ["trust", "Web phone verification is proven in production, with hCaptcha in front of MSG91's send. The app cannot verify anybody until its DLT-approved SMS template exists, so somebody signing up on the app today reaches a step that cannot complete — and no copy or badge may imply a checked number while that is true of either client.", "supabase/functions/phone-otp-* (app)"],
     ["product", "The funnel is instrumented end to end and proved by `npm run analytics:probe`. Events are recorded by the database on the write itself, so the clients cannot drift or double-count and no event can carry anything personal.", "supabase/migrations/*funnel*"],
     ["safety", "Reports are read at /admin/reports, guarded by an allowlist of addresses held in `ops_config` and checked inside every admin function as well as on the page. The queue is manual and unstaffed outside founder hours — trust copy must still not imply a review SLA.", "apps/web/src/features/admin"],
     ["technical debt", "There is no test suite in any workspace. Every check is a type check, a linter or a probe script.", "package.json"],
@@ -356,7 +356,7 @@ for (const [feature, strings] of grouped) {
   if (strings.length > 22) w(`\n_…and ${strings.length - 22} more in \`${feature}/content.ts\`._`);
 }
 h3("Copy worth a second look");
-bullet("Any string implying verification: phone verification has not yet been run against live credentials, so wording must not imply a checked number.");
+bullet("Any string implying verification: the web path is proven but the app cannot verify anybody until its SMS template is approved, so wording must not imply a checked number for every member.");
 bullet("Payment failure copy must not assert 'you have not been charged' unless the server established it.");
 bullet("Mobile strings are inline and therefore drift from the web's wording without anything catching it.");
 
@@ -501,7 +501,7 @@ table(
     [
       "Phone verification",
       `${auth.phoneWidgetOnWeb ? "MSG91 OTP widget on web (access token verified server-side)" : "**not wired on web**"}; ` +
-        `${auth.phoneOtpApiOnMobile ? "MSG91 OTP API in the app" : "**not wired in the app**"} — not yet run end to end`,
+        `${auth.phoneOtpApiOnMobile ? "MSG91 OTP API in the app" : "**not wired in the app**"} — app path not yet run end to end (needs a DLT-approved SMS template)`,
     ],
     [
       "Fixed development code",
@@ -517,7 +517,7 @@ table(
 );
 bullet("`src/proxy.ts` refreshes the session on every rendered request. It is an optimistic check, **not** the authorisation boundary — Row Level Security is.");
 bullet(
-  "**Flag:** phone verification is implemented but unproven — it has never run against live MSG91 credentials. Until it has, no copy or badge may imply a checked number.",
+  "**Flag:** the web path is verified in production (real number on eraya.app, hCaptcha enabled). The app path is not — it needs a DLT-approved SMS template before it can send. Until both work, no copy or badge may imply a checked number.",
 );
 
 /* --- K ------------------------------------------------------------------ */
@@ -599,7 +599,7 @@ table(
     ["Name, birthday, gender, relationship status, city, languages", "`profiles`", "collected during onboarding"],
     ["Photos", "Supabase Storage `profile-photos`", "optional; **not reached by foreign-key cascade — must be swept separately on deletion**"],
     ["Email", "`auth.users`", "identity"],
-    ["Phone number", "`profiles` / phone verification tables", "verified only by an edge function; unproven until run with live credentials"],
+    ["Phone number", "`profiles` / phone verification tables", "written only by an edge function holding the service role; web path proven in production, app path pending its SMS template"],
     ["Payment metadata", "`payments`", "order and payment ids, amount, status — no card data ever"],
     ["Analytics", "`product_events`", "no client-readable rows"],
     ["Audit", "`auth_events`, `payment_events`", "actor set to null on account deletion — history kept, person unlinked"],
