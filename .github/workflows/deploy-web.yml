@@ -9,9 +9,16 @@
 # nowhere to come back from.
 name: Deploy web
 
+# `main` is what ships, as of this change.
+#
+# It used to be `develop`, which meant every merged pull request went to
+# eraya.app immediately and no branch existed that could be looked at before it
+# was already live. Work lands on `develop` and `main` is the release, so
+# promoting one to the other is now a deliberate act rather than a side effect
+# of merging a feature.
 on:
   push:
-    branches: [develop]
+    branches: [main]
     # Only when something that affects the deployed app changes. Docs and the
     # mobile app share this repository and have no business spending a deploy.
     paths:
@@ -55,6 +62,22 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_SITE_URL: https://eraya.app
+
+          # The MSG91 OTP widget, which verifies phone numbers on the web.
+          #
+          # Both are public by design -- they name the widget and neither can
+          # verify anybody; the auth key that does is a Supabase function
+          # secret and is not here. They are still required at build time,
+          # because Next inlines NEXT_PUBLIC_* into the browser bundle, and a
+          # build without them produces a phone screen that refuses every
+          # number. Phone verification gates onboarding, so that is a closed
+          # front door rather than a degraded feature.
+          #
+          # This is exactly what happened on the first automated deploy after
+          # the widget shipped: the build succeeded, the variables were absent,
+          # and the deployed app could not verify anyone.
+          NEXT_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.NEXT_PUBLIC_MSG91_WIDGET_ID }}
+          NEXT_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.NEXT_PUBLIC_MSG91_TOKEN_AUTH }}
 
           # NEXT_PUBLIC_ALLOW_INDEXING is deliberately absent. Its absence is
           # what keeps the pre-launch product out of search results, through
