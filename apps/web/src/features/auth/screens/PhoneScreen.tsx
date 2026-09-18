@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
@@ -18,7 +18,11 @@ import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { PhoneNumber } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
-import { CAPTCHA_CONTAINER_ID } from "@/features/auth/msg91-widget";
+import {
+  CAPTCHA_CONTAINER_ID,
+  ensureWidget,
+  widgetConfig,
+} from "@/features/auth/msg91-widget";
 
 /** Short enough to catch a slip, loose enough to accept any real number. */
 const MIN_DIGITS = 6;
@@ -44,6 +48,31 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  /*
+   * Load the widget when the screen opens, not when somebody presses Continue.
+   *
+   * MSG91 renders its hCaptcha challenge as part of initialising. Doing that
+   * inside the first send meant the challenge appeared and the send was
+   * attempted in the same breath -- so the first attempt always failed, the
+   * captcha appeared underneath the error it had just caused, and the second
+   * attempt worked. The person is told something went wrong on our side,
+   * which was true, and is given no idea that the box that just appeared is
+   * what fixes it.
+   *
+   * Initialising here means the challenge is on screen and can be solved
+   * before Continue is pressed, so the first attempt is the one that works.
+   *
+   * Failure is deliberately silent. If the script cannot load there is nothing
+   * useful to say at this point, and the send path already reports it properly
+   * when it is actually needed -- an error on arrival about a button not yet
+   * pressed is worse than none.
+   */
+  useEffect(() => {
+    const config = widgetConfig();
+    if (!config) return;
+    void ensureWidget(config).catch(() => {});
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
