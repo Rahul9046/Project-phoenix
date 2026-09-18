@@ -14,6 +14,7 @@ import {
 } from "@expo-google-fonts/manrope";
 
 import { SessionProvider } from "@/features/auth/SessionProvider";
+import { LocaleProvider } from "@/features/i18n/LocaleProvider";
 import { completeSignInFromUrl } from "@/features/auth/sign-in";
 import { ToastProvider } from "@/ui/Toast";
 import { colors } from "@/theme/tokens";
@@ -161,24 +162,31 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <ToastProvider>
-          <DeepLinkHandler />
-          <StatusBar style="dark" />
-          <View style={{ flex: 1, backgroundColor: colors.canvas }}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.canvas },
-                animation: "slide_from_right",
-              }}
-            >
-              <Stack.Screen name="index" options={{ animation: "fade" }} />
-              <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
-            </Stack>
-          </View>
-        </ToastProvider>
-      </SessionProvider>
+      {/*
+        Outside the session, because the sign-in screen needs the language
+        before there is a session to read one from -- and that is exactly where
+        somebody who does not read English needs the app to already be theirs.
+      */}
+      <LocaleProvider>
+        <SessionProvider>
+          <ToastProvider>
+              <DeepLinkHandler />
+              <StatusBar style="dark" />
+              <View style={{ flex: 1, backgroundColor: colors.canvas }}>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.canvas },
+                    animation: "slide_from_right",
+                  }}
+                >
+                  <Stack.Screen name="index" options={{ animation: "fade" }} />
+                  <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+                </Stack>
+              </View>
+          </ToastProvider>
+        </SessionProvider>
+      </LocaleProvider>
     </SafeAreaProvider>
   );
 }

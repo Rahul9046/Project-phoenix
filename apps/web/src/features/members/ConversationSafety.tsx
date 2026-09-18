@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { conversation } from "@/features/app-shell/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import {
   blockMember,
@@ -51,6 +51,7 @@ export function ConversationSafety({
   /** An ended connection can still be blocked and reported, just not ended. */
   ended: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
   const [reason, setReason] = useState("");
@@ -98,11 +99,11 @@ export function ConversationSafety({
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           {!ended ? (
             <SafetyButton onClick={() => setMode("end")}>
-              {conversation.endCta}
+              {t("messages.endCta")}
             </SafetyButton>
           ) : null}
           <SafetyButton onClick={() => setMode("report")}>
-            {conversation.reportCta}
+            {t("messages.reportCta")}
           </SafetyButton>
         </div>
       ) : null}
@@ -112,7 +113,7 @@ export function ConversationSafety({
           title={`End your connection with ${otherName}?`}
           body="Neither of you will be able to send anything further. What has already been said stays readable to you both. This cannot be undone."
           cancel="Keep the connection"
-          confirm={conversation.endCta}
+          confirm={t("messages.endCta")}
           pending={pending}
           pendingLabel="Ending…"
           error={error}

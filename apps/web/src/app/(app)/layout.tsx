@@ -22,6 +22,26 @@ import { loadAuthSession } from "@/features/auth/load-session";
  * Data is still protected by RLS regardless; these redirects are about not
  * showing someone a room they cannot use.
  */
+
+/**
+ * Nothing in here is for a search engine, and this does not rely on the
+ * site-wide default to say so.
+ *
+ * That default is a switch: `NEXT_PUBLIC_ALLOW_INDEXING` is off today and gets
+ * turned on for the marketing pages the day Eraya opens. Every signed-in route
+ * sits under this layout -- including member profiles at `/discovery/[id]` --
+ * and if they inherited that switch, the act of publishing the landing page
+ * would also, silently, offer members to Google.
+ *
+ * The auth and onboarding screens already declare this for themselves. This is
+ * the same decision for the rest of the product: a member's profile is private
+ * whatever the marketing site is doing. Sign-in would stop a crawler anyway;
+ * this is the belt to that pair of braces, and it costs one object.
+ */
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default async function AppGroupLayout({
   children,
 }: {

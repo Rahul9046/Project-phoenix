@@ -30,6 +30,7 @@ import { BottomSheet } from "@/ui/Sheet";
 import { Text } from "@/ui/Text";
 import { LoadingState } from "@/ui/States";
 import { useToast } from "@/ui/Toast";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * A conversation.
@@ -84,7 +85,8 @@ export default function ConversationScreen() {
         getMessages(id, myId),
       ]);
 
-      const found = all.find((entry) => entry.connectionId === id) ?? null;
+      const found =
+        all.conversations.find((entry) => entry.connectionId === id) ?? null;
       const url = await photoUrlFor(found?.member.photoPath ?? null);
 
       if (!active) return;
@@ -231,6 +233,8 @@ export default function ConversationScreen() {
             </Text>
           </View>
         </Pressable>
+
+        <LanguageSwitcher />
 
         <IconButton
           accessibilityLabel="Conversation options"

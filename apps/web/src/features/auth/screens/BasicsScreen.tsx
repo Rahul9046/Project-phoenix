@@ -13,46 +13,31 @@ import { SelectableOption } from "@/features/auth/components/SelectableOption";
 import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { saveBasics } from "@/features/auth/actions";
-import { basicsStep, genderOptions } from "@/features/auth/content";
+import { genderOptions } from "@/features/auth/content";
 import type { Gender } from "@/features/auth/types";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { OnboardingProfile } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
+import {
+  EARLIEST_BIRTH_DATE,
+  isOldEnough,
+  latestEligibleBirthDate,
+} from "@eraya/eligibility";
 
 /**
  * The guard runs here and the form is a separate component, so the form only
  * ever mounts once the stored profile is known. Its `useState` can then seed
  * itself directly — no effect copying store state into component state.
  */
-/**
- * The latest date of birth that makes someone 18 today, as yyyy-mm-dd.
- *
- * Used for both the picker's `max` and the check below, so the two can never
- * disagree about where the line is.
+/*
+ * The age limits come from `@eraya/eligibility`, so the picker's maximum, the
+ * check on submit, the app and the database constraint are all answering the
+ * same question. A profile started in a browser and finished on a phone is not
+ * rejected by rules it was never shown.
  */
-function latestAdultBirthDate(): string {
-  const today = new Date();
-  const boundary = new Date(
-    today.getFullYear() - 18,
-    today.getMonth(),
-    today.getDate(),
-  );
-
-  /*
-   * Formatted from local parts, not toISOString().
-   *
-   * toISOString() converts to UTC first, so east of Greenwich midnight local
-   * becomes the previous day — in IST this produced a boundary one day stricter
-   * than the database's, quietly turning away anyone whose eighteenth birthday
-   * is today. The check compares against a date the picker also uses, so both
-   * have to agree with Postgres, not merely with each other.
-   */
-  const year = boundary.getFullYear();
-  const month = String(boundary.getMonth() + 1).padStart(2, "0");
-  const day = String(boundary.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
+const NAME_MIN = 2;
+const NAME_MAX = 40;
 
 export function BasicsScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.basics);
@@ -61,6 +46,7 @@ export function BasicsScreen() {
 }
 
 function BasicsForm({ profile }: { profile: OnboardingProfile }) {
+  const t = useT();
   const router = useRouter();
 
   const nameId = useId();
@@ -96,13 +82,19 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
      * retrying forever.
      */
     const next: typeof errors = {};
-    if (!firstName.trim()) next.firstName = basicsStep.firstName.error;
-    if (!dateOfBirth) {
-      next.dateOfBirth = basicsStep.dateOfBirth.error;
-    } else if (dateOfBirth > latestAdultBirthDate()) {
-      next.dateOfBirth = basicsStep.dateOfBirth.tooYoung;
+    if (!firstName.trim()) {
+      next.firstName = t("onboarding.name.error");
+    } else if (firstName.trim().length < NAME_MIN) {
+      next.firstName = t("onboarding.name.tooShort");
     }
-    if (!gender) next.gender = basicsStep.gender.error;
+    if (!dateOfBirth) {
+      next.dateOfBirth = t("onboarding.birthday.error");
+    } else if (!isOldEnough(dateOfBirth)) {
+      next.dateOfBirth = t("onboarding.birthday.tooYoung");
+    } else if (dateOfBirth < EARLIEST_BIRTH_DATE) {
+      next.dateOfBirth = t("onboarding.birthday.error");
+    }
+    if (!gender) next.gender = t("onboarding.gender.error");
 
     setErrors(next);
     // `|| !gender` is redundant at runtime — the check above already set an
@@ -137,16 +129,16 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
       }
     >
       <AuthHeader
-        title={basicsStep.title}
-        lede={basicsStep.lede}
+        title={t("onboarding.name.title")}
+        lede={t("onboarding.name.lede")}
         showLogo={false}
       />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9 grid gap-7">
         <FormField
           id={nameId}
-          label={basicsStep.firstName.label}
-          hint={basicsStep.firstName.hint}
+          label={t("onboarding.name.label")}
+          hint={t("onboarding.name.hint")}
           error={errors.firstName}
         >
           {(props) => (
@@ -154,9 +146,11 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               {...props}
               type="text"
               autoComplete="given-name"
+              minLength={NAME_MIN}
+              maxLength={NAME_MAX}
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
-              placeholder={basicsStep.firstName.placeholder}
+              placeholder={t("onboarding.name.placeholder")}
               className={inputClasses}
             />
           )}
@@ -164,8 +158,8 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
 
         <FormField
           id={dobId}
-          label={basicsStep.dateOfBirth.label}
-          hint={basicsStep.dateOfBirth.hint}
+          label={t("onboarding.birthday.label")}
+          hint={t("onboarding.birthday.hint")}
           error={errors.dateOfBirth}
         >
           {(props) => (
@@ -176,7 +170,8 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
               // The picker cannot offer a date that would be refused. Without
               // this it happily defaults to the current month, which is how a
               // birth date three weeks in the past gets submitted.
-              max={latestAdultBirthDate()}
+              max={latestEligibleBirthDate()}
+              min={EARLIEST_BIRTH_DATE}
               value={dateOfBirth}
               onChange={(event) => setDateOfBirth(event.target.value)}
               className={inputClasses}
@@ -186,7 +181,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
 
         <fieldset>
           <legend id={genderId} className="text-[0.95rem] font-medium text-ink">
-            {basicsStep.gender.label}
+            {t("onboarding.gender.label")}
           </legend>
           <div
             className="mt-2.5 grid gap-2.5"
@@ -199,7 +194,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
                 type="radio"
                 name="gender"
                 value={option.value}
-                label={option.label}
+                label={t(option.labelKey)}
                 checked={gender === option.value}
                 onChange={(value) => setGender(value as Gender)}
               />
@@ -215,7 +210,7 @@ function BasicsForm({ profile }: { profile: OnboardingProfile }) {
         {formError ? <ErrorMessage>{formError}</ErrorMessage> : null}
 
         <PrimaryButton type="submit" loading={pending} loadingLabel="Saving…">
-          {basicsStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
 

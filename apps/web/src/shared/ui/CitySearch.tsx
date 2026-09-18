@@ -4,7 +4,9 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { inputClasses } from "@/features/auth/components/FormField";
 import {
+  isListedCity,
   searchCities,
+  type CityChoice,
   type CityResult,
 } from "@/shared/data/cities";
 
@@ -36,6 +38,10 @@ export type CitySearchLabels = {
   searching: string;
   noMatches: string;
   changeCta: string;
+  /** Offered when nothing matched: `Use "Kharagpur"`. */
+  useTyped: (typed: string) => string;
+  /** Shown under a typed town, where a listed city shows its state. */
+  typedSubtitle: string;
 };
 export function CitySearch({
   value,
@@ -44,9 +50,9 @@ export function CitySearch({
   disabled = false,
   autoFocus = false,
 }: {
-  /** The currently selected city, or null. */
-  value: CityResult | null;
-  onChange: (city: CityResult | null) => void;
+  /** The currently selected city or typed town, or null. */
+  value: CityChoice | null;
+  onChange: (city: CityChoice | null) => void;
   labels: CitySearchLabels;
   disabled?: boolean;
   autoFocus?: boolean;
@@ -122,7 +128,22 @@ export function CitySearch({
   const items = results.query === trimmedQuery ? results.items : [];
   const searching = trimmedQuery.length > 0 && results.query !== trimmedQuery;
 
-  function select(city: CityResult) {
+  const showList = open && trimmedQuery.length > 0;
+  const noMatches = showList && !searching && items.length === 0;
+
+  /*
+   * When nothing matched, the typed name becomes the single option in the list
+   * rather than a button beside it.
+   *
+   * It has to be an option, for the keyboard: arrowing down and pressing Enter
+   * is how this field is used without a mouse, and an escape hatch that only
+   * answers a click is not an escape hatch for everybody. Making it part of
+   * `options` means the arrow keys, the active-descendant announcement and the
+   * Enter handler all reach it without a second code path.
+   */
+  const options: CityChoice[] = noMatches ? [{ name: trimmedQuery }] : items;
+
+  function select(city: CityChoice) {
     onChange(city);
     setQuery("");
     setOpen(false);
@@ -136,26 +157,23 @@ export function CitySearch({
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((index) => (index + 1) % Math.max(items.length, 1));
+      setActiveIndex((index) => (index + 1) % Math.max(options.length, 1));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setActiveIndex(
-        (index) => (index - 1 + items.length) % Math.max(items.length, 1),
+        (index) => (index - 1 + options.length) % Math.max(options.length, 1),
       );
     } else if (event.key === "Enter") {
       // Only swallow Enter when it is choosing something. Otherwise it must
       // reach the form, or the keyboard path cannot submit.
-      if (open && items[activeIndex]) {
+      if (open && options[activeIndex]) {
         event.preventDefault();
-        select(items[activeIndex]);
+        select(options[activeIndex]);
       }
     } else if (event.key === "Escape") {
       setOpen(false);
     }
   }
-
-  const showList = open && trimmedQuery.length > 0;
-  const noMatches = showList && !searching && items.length === 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -170,8 +188,13 @@ export function CitySearch({
             <span className="block truncate font-medium text-ink">
               {value.name}
             </span>
+            {/*
+              A listed city is told apart from the others by its state; a typed
+              one has no state to show, and leaving the line blank would read as
+              something failing to load. It says what it is instead.
+            */}
             <span className="block truncate text-sm text-ink-subtle">
-              {value.state}
+              {isListedCity(value) ? value.state : labels.typedSubtitle}
             </span>
           </span>
           <button
@@ -203,7 +226,7 @@ export function CitySearch({
             aria-controls={listId}
             aria-autocomplete="list"
             aria-activedescendant={
-              showList && items[activeIndex]
+              showList && options[activeIndex]
                 ? `${listId}-${activeIndex}`
                 : undefined
             }
@@ -230,9 +253,25 @@ export function CitySearch({
               aria-label={labels.searchLabel}
               className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface py-1.5 shadow-[0_12px_32px_-12px_rgba(42,33,28,0.22)]"
             >
-              {items.map((city, index) => (
+              {/*
+                A miss is not a dead end. The line still says nothing matched --
+                a spelling mistake is the likelier explanation and worth
+                mentioning -- but the option below it lets somebody whose town is
+                genuinely absent carry on, rather than being asked to pick
+                somewhere they do not live.
+              */}
+              {noMatches ? (
                 <li
-                  key={city.id}
+                  role="presentation"
+                  className="px-4 pt-3 pb-1 text-[0.95rem] text-ink-subtle"
+                >
+                  {labels.noMatches}
+                </li>
+              ) : null}
+
+              {options.map((city, index) => (
+                <li
+                  key={isListedCity(city) ? city.id : `typed-${city.name}`}
                   id={`${listId}-${index}`}
                   ref={(node) => {
                     optionRefs.current[index] = node;
@@ -251,20 +290,25 @@ export function CitySearch({
                     index === activeIndex ? "bg-sand" : ""
                   }`}
                 >
-                  <span className="text-[0.95rem] text-ink">{city.name}</span>
-                  {/* The state is what separates the several Udaipurs. */}
-                  <span className="text-sm text-ink-subtle">{city.state}</span>
+                  {isListedCity(city) ? (
+                    <>
+                      <span className="text-[0.95rem] text-ink">{city.name}</span>
+                      {/* The state is what separates the several Udaipurs. */}
+                      <span className="text-sm text-ink-subtle">{city.state}</span>
+                    </>
+                  ) : (
+                    <span className="text-[0.95rem] font-medium text-ember-text">
+                      {labels.useTyped(city.name)}
+                    </span>
+                  )}
                 </li>
               ))}
 
-              {noMatches ? (
-                <li className="px-4 py-3 text-[0.95rem] text-ink-subtle">
-                  {labels.noMatches}
-                </li>
-              ) : null}
-
               {searching && items.length === 0 ? (
-                <li className="px-4 py-3 text-[0.95rem] text-ink-subtle">
+                <li
+                  role="presentation"
+                  className="px-4 py-3 text-[0.95rem] text-ink-subtle"
+                >
                   {labels.searching}
                 </li>
               ) : null}
@@ -276,7 +320,9 @@ export function CitySearch({
       {/* Announced politely for screen readers, which cannot see the list grow. */}
       <p role="status" aria-live="polite" className="sr-only">
         {showList && !searching
-          ? `${items.length} ${items.length === 1 ? "city" : "cities"} found`
+          ? noMatches
+            ? labels.useTyped(trimmedQuery)
+            : `${items.length} ${items.length === 1 ? "city" : "cities"} found`
           : ""}
       </p>
     </div>

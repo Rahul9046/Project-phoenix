@@ -7,10 +7,11 @@ import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { FormField, inputClasses } from "@/features/auth/components/FormField";
 import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { emailStep } from "@/features/auth/content";
+
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { authRoutes } from "@/features/auth/flow";
 import { describeAuthError } from "@/features/auth/describeAuthError";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Deliberately forgiving: the only thing checked here is that the address looks
@@ -21,6 +22,7 @@ const looksLikeEmail = (value: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 export function EmailAuthForm() {
+  const t = useT();
   const { signInWithEmail, verifyEmailCode } = useAuth();
   const router = useRouter();
   const fieldId = useId();
@@ -41,11 +43,11 @@ export function EmailAuthForm() {
 
     const trimmed = email.trim();
     if (!trimmed) {
-      setFieldError(emailStep.emptyError);
+      setFieldError(t("auth.email.emptyError"));
       return;
     }
     if (!looksLikeEmail(trimmed)) {
-      setFieldError(emailStep.formatError);
+      setFieldError(t("auth.email.formatError"));
       return;
     }
 
@@ -69,11 +71,11 @@ export function EmailAuthForm() {
 
     const digits = code.trim();
     if (!digits) {
-      setFieldError(emailStep.codeEmptyError);
+      setFieldError(t("auth.email.codeEmptyError"));
       return;
     }
     if (!/^\d{6}$/.test(digits)) {
-      setFieldError(emailStep.codeFormatError);
+      setFieldError(t("auth.email.codeFormatError"));
       return;
     }
 
@@ -114,17 +116,17 @@ export function EmailAuthForm() {
     return (
       <div>
         <SuccessMessage className="justify-start">
-          {emailStep.sentTitle}
+          {t("auth.email.sentTitle")}
         </SuccessMessage>
         <p className="mt-4 text-lg leading-relaxed text-ink-muted">
-          {emailStep.sentBody} <strong className="text-ink">{sentTo}</strong>.
+          {t("auth.email.sentBody")} <strong className="text-ink">{sentTo}</strong>.
         </p>
         <p className="mt-2 text-sm leading-relaxed text-ink-subtle">
-          {emailStep.sentHint}
+          {t("auth.email.sentHint")}
         </p>
 
         <form onSubmit={handleVerify} noValidate className="mt-7">
-          <FormField id={codeId} label={emailStep.codeLabel} error={fieldError}>
+          <FormField id={codeId} label={t("auth.email.codeLabel")} error={fieldError}>
             {(props) => (
               <input
                 {...props}
@@ -138,7 +140,7 @@ export function EmailAuthForm() {
                   if (fieldError) setFieldError(null);
                   if (resent) setResent(false);
                 }}
-                placeholder={emailStep.codePlaceholder}
+                placeholder={t("auth.email.codePlaceholder")}
                 disabled={pending}
                 autoFocus
                 className={`${inputClasses} tracking-[0.4em]`}
@@ -151,16 +153,16 @@ export function EmailAuthForm() {
           ) : null}
 
           {resent ? (
-            <p className="mt-4 text-sm text-ink-subtle">{emailStep.resent}</p>
+            <p className="mt-4 text-sm text-ink-subtle">{t("auth.email.resent")}</p>
           ) : null}
 
           <PrimaryButton
             type="submit"
             loading={pending}
-            loadingLabel={emailStep.codePending}
+            loadingLabel={t("auth.email.codePending")}
             className="mt-7"
           >
-            {emailStep.codeCta}
+            {t("auth.email.codeCta")}
           </PrimaryButton>
         </form>
 
@@ -171,7 +173,7 @@ export function EmailAuthForm() {
             disabled={resending}
             className="rounded-full px-2 py-1 text-[0.95rem] font-medium text-ember-text underline underline-offset-4 hover:text-ember-strong disabled:opacity-60"
           >
-            {resending ? emailStep.resendPending : emailStep.resend}
+            {resending ? t("common.sending") : t("auth.email.resend")}
           </button>
           <button
             type="button"
@@ -184,7 +186,7 @@ export function EmailAuthForm() {
             }}
             className="rounded-full px-2 py-1 text-[0.95rem] font-medium text-ink-subtle underline underline-offset-4 hover:text-ink"
           >
-            {emailStep.sentRetry}
+            {t("auth.email.sentRetry")}
           </button>
         </div>
       </div>
@@ -193,7 +195,7 @@ export function EmailAuthForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <FormField id={fieldId} label={emailStep.label} error={fieldError}>
+      <FormField id={fieldId} label={t("auth.email.label")} error={fieldError}>
         {(props) => (
           <input
             {...props}
@@ -207,7 +209,7 @@ export function EmailAuthForm() {
               setEmail(event.target.value);
               if (fieldError) setFieldError(null);
             }}
-            placeholder={emailStep.placeholder}
+            placeholder={t("auth.email.placeholder")}
             disabled={pending}
             className={inputClasses}
           />
@@ -221,10 +223,10 @@ export function EmailAuthForm() {
       <PrimaryButton
         type="submit"
         loading={pending}
-        loadingLabel={emailStep.pending}
+        loadingLabel={t("auth.email.pending")}
         className="mt-7"
       >
-        {emailStep.cta}
+        {t("auth.email.cta")}
       </PrimaryButton>
     </form>
   );

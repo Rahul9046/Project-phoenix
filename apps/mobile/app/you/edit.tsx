@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { relationshipOptions, seekingOptions, type Gender } from "@/features/auth/types";
 import { CityPicker } from "@/features/onboarding/CityPicker";
 import {
@@ -71,6 +72,7 @@ function EditForm({
   details: MyDetails;
 }) {
   const { refresh } = useSession();
+  const t = useT();
   const { reload } = useMyDetails();
   const toast = useToast();
 
@@ -206,7 +208,7 @@ function EditForm({
         {seekingOptions.map((option) => (
           <SelectionCard
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={seeking.includes(option.value)}
             onPress={() =>
               setSeeking((current) =>
@@ -226,7 +228,7 @@ function EditForm({
         {relationshipOptions.map((option) => (
           <SelectionCard
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={relationship === option.value}
             onPress={() => setRelationship(option.value)}
           />

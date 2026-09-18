@@ -29,6 +29,19 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    /*
+     * The Cloudflare Worker bundle, written by `@opennextjs/cloudflare`. It is
+     * generated code from a dependency, not ours to style: linting it reports
+     * `require()` imports and unused catch bindings we cannot fix and would not
+     * want to, and one of them is an error rather than a warning, so a clean
+     * tree fails `npm run lint` purely for having been built.
+     */
+    ".open-next/**",
+    /*
+     * Wrangler's own scratch bundles, written while previewing or deploying.
+     * Same reasoning: generated, transient, and not ours.
+     */
+    ".wrangler/**",
   ]),
 ]);
 

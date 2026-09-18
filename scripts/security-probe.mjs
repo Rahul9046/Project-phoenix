@@ -496,6 +496,115 @@ for (const fn of [
   );
 }
 
+// ---------------------------------------------------------------------------
+console.log("\nPayments");
+// ---------------------------------------------------------------------------
+//
+// Money is the part where a client being wrong costs something. A member may
+// read their own payments and nothing else; everything that decides a price,
+// settles an order or grants a term belongs to the service role.
+
+{
+  const { status, body } = await request(meera.token, "payments?select=*");
+  check(
+    "a member reads only their own payments",
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+
+  const written = await request(meera.token, "payments", {
+    method: "POST",
+    body: JSON.stringify({
+      profile_id: meera.id,
+      plan_id: "00000000-0000-0000-0000-000000000000",
+      amount_paise: 100,
+      status: "paid",
+    }),
+  });
+  check(
+    "a member cannot write a paid payment",
+    written.status >= 400,
+    `status ${written.status}`,
+  );
+}
+
+for (const table of ["payment_events", "product_events"]) {
+  const { status, body } = await request(meera.token, `${table}?select=*`);
+  check(
+    `a member reads nothing from ${table}`,
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+}
+
+// The functions that decide money. None of them may be reachable with a
+// member's token, whatever arguments are supplied.
+for (const fn of [
+  "begin_payment",
+  "attach_provider_order",
+  "settle_payment",
+  "claim_payment_event",
+  "my_membership_for",
+  "intro_offer_used",
+]) {
+  const { status } = await request(meera.token, `rpc/${fn}`, {
+    method: "POST",
+    body: "{}",
+  });
+  check(`a member cannot call ${fn}`, status >= 400, `status ${status}`);
+}
+
+// And the ones they must be able to reach, or the membership screen is blank.
+for (const fn of ["membership_catalogue", "my_membership", "my_payments"]) {
+  const { status } = await request(meera.token, `rpc/${fn}`, {
+    method: "POST",
+    body: "{}",
+  });
+  check(`a member can call ${fn}`, status === 200, `status ${status}`);
+}
+
+// The whole point: a member cannot give themselves a term.
+{
+  const { status } = await request(meera.token, "subscriptions", {
+    method: "POST",
+    body: JSON.stringify({
+      profile_id: meera.id,
+      plan_id: "00000000-0000-0000-0000-000000000000",
+      status: "active",
+    }),
+  });
+  check(
+    "a member cannot create their own subscription",
+    status >= 400,
+    `status ${status}`,
+  );
+}
+
+{
+  /*
+   * An update refused by RLS is not an error.
+   *
+   * With no update policy the rows are invisible to the write rather than
+   * rejected, so PostgREST matches nothing and answers 200 with an empty array.
+   * A status check would read that as a failure to refuse; what has to be
+   * asserted is that nothing changed.
+   */
+  const { status, body } = await request(
+    meera.token,
+    `subscriptions?profile_id=eq.${meera.id}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ current_period_end: "2099-01-01T00:00:00Z" }),
+    },
+  );
+  check(
+    "a member cannot extend their own membership",
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+}
+
 const failed = results.filter((r) => !r.passed);
 console.log(
   `\n${results.length - failed.length} of ${results.length} checks passed.`,

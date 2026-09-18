@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { MemberMonogram } from "@/features/members/MemberPresentation";
+import { MemberAvatar } from "@/features/members/MemberAvatar";
 import { RowPending } from "@/shared/ui/LinkPending";
 
 /**
@@ -22,11 +22,14 @@ import { RowPending } from "@/shared/ui/LinkPending";
 export function MemberRowLink({
   href,
   name,
+  photoUrl,
   children,
   muted = false,
 }: {
   href: string;
   name: string;
+  /** A short-lived signed URL, or null when they have no photo. */
+  photoUrl: string | null;
   /** The line beneath the name. */
   children: ReactNode;
   /** For ended connections, which stay reachable but are not current. */
@@ -40,7 +43,7 @@ export function MemberRowLink({
       }`}
     >
       <RowPending>
-        <MemberMonogram name={name} />
+        <MemberAvatar name={name} photoUrl={photoUrl} />
         <span className="min-w-0 flex-1">
           <span
             className={`block text-name ${

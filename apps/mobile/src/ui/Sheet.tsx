@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, elevation, iconSize, radius, space } from "@/theme/tokens";
 import { Button, IconButton } from "@/ui/Button";
 import { Text } from "@/ui/Text";
@@ -45,6 +46,7 @@ export function BottomSheet({
   maxHeightRatio?: number;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
 
   /*
    * Mounted only while it is needed.
@@ -92,7 +94,7 @@ export function BottomSheet({
       <View style={{ flex: 1, justifyContent: "flex-end" }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t("common.close")}
           onPress={onClose}
           style={{ flex: 1, backgroundColor: colors.scrim }}
         />
@@ -137,7 +139,7 @@ export function BottomSheet({
                 {title}
               </Text>
               <IconButton
-                accessibilityLabel="Close"
+                accessibilityLabel={t("common.close")}
                 onPress={onClose}
                 icon={
                   <Ionicons

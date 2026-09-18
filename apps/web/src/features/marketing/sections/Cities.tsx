@@ -2,7 +2,7 @@ import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { Section } from "@/shared/ui/Section";
 import { SectionHeading } from "@/shared/ui/SectionHeading";
-import { cities } from "@/features/marketing/content";
+import { getT } from "@/features/i18n/server";
 import { getCityCoverage } from "@/shared/data/reference";
 
 /**
@@ -15,22 +15,22 @@ import { getCityCoverage } from "@/shared/data/reference";
  * cannot drift away from what the search field will actually accept.
  */
 export async function Cities() {
-  const coverage = await getCityCoverage();
+  const [coverage, t] = await Promise.all([getCityCoverage(), getT()]);
 
   return (
     <Section id="cities" tone="sand">
       <Container className="grid gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-20">
         <div>
           <SectionHeading
-            eyebrow={cities.eyebrow}
-            title={cities.title}
-            lede={cities.body[0]}
+            eyebrow={t("marketing.cities.eyebrow")}
+            title={t("marketing.cities.title")}
+            lede={t("marketing.cities.body")}
           />
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted">
-            {cities.elsewhere}
+            {t("marketing.cities.elsewhere")}
           </p>
-          <Button href={cities.cta.href} size="lg" className="mt-9">
-            {cities.cta.label}
+          <Button href="/signup" size="lg" className="mt-9">
+            {t("marketing.cities.cta")}
           </Button>
         </div>
 
@@ -39,12 +39,12 @@ export async function Cities() {
             {coverage.cities}
           </p>
           <p className="mt-4 text-lg leading-relaxed text-ink-muted">
-            cities and towns to choose from, across all {coverage.states} states
-            and union territories.
+            {t("marketing.cities.coverageBody", {
+              states: coverage.states,
+            })}
           </p>
           <p className="mt-6 border-t border-line pt-6 text-sm leading-relaxed text-ink-subtle">
-            Your city is on the list. It decides who you are likely to meet
-            nearby — never whether you can join.
+            {t("marketing.cities.coverageNote")}
           </p>
         </div>
       </Container>

@@ -11,12 +11,14 @@ import { FormField } from "@/features/auth/components/FormField";
 import { PhoneInput, defaultCountryCode } from "@/features/auth/components/PhoneInput";
 import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { phoneStep } from "@/features/auth/content";
+
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describeAuthError } from "@/features/auth/describeAuthError";
 import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { PhoneNumber } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
+import { CAPTCHA_CONTAINER_ID } from "@/features/auth/msg91-widget";
 
 /** Short enough to catch a slip, loose enough to accept any real number. */
 const MIN_DIGITS = 6;
@@ -28,6 +30,7 @@ export function PhoneScreen() {
 }
 
 function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
+  const t = useT();
   const router = useRouter();
   const { sendVerificationCode } = useAuth();
   const fieldId = useId();
@@ -47,11 +50,11 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
     if (pending) return;
 
     if (!nationalNumber) {
-      setFieldError(phoneStep.emptyError);
+      setFieldError(t("auth.phone.emptyError"));
       return;
     }
     if (nationalNumber.length < MIN_DIGITS) {
-      setFieldError(phoneStep.formatError);
+      setFieldError(t("auth.phone.formatError"));
       return;
     }
 
@@ -70,13 +73,13 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
 
   return (
     <AuthLayout showLegal>
-      <AuthHeader title={phoneStep.title} lede={phoneStep.lede} />
+      <AuthHeader title={t("auth.phone.title")} lede={t("auth.phone.lede")} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
         <FormField
           id={fieldId}
-          label={phoneStep.label}
-          hint={phoneStep.reassurance}
+          label={t("auth.phone.label")}
+          hint={t("auth.phone.reassurance")}
           error={fieldError}
         >
           {(props) => (
@@ -96,6 +99,20 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
           )}
         </FormField>
 
+        {/*
+          Where MSG91 draws its captcha, if it draws one at all.
+
+          Always rendered, and never hidden. Both matter. It has to exist before
+          the widget is asked to send, so it cannot wait on state that only
+          changes once sending has begun -- and it cannot be `display: none`
+          while empty, because a captcha cannot measure or draw itself inside a
+          hidden element and fails rather than saying so.
+
+          An empty div occupies no height, so leaving it visible costs nothing
+          when the captcha is silent or switched off.
+        */}
+        <div id={CAPTCHA_CONTAINER_ID} />
+
         {formError ? (
           <ErrorMessage className="mt-4">{formError}</ErrorMessage>
         ) : null}
@@ -103,10 +120,10 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
         <PrimaryButton
           type="submit"
           loading={pending}
-          loadingLabel={phoneStep.pending}
+          loadingLabel={t("common.saving")}
           className="mt-7"
         >
-          {phoneStep.cta}
+          {t("auth.phone.cta")}
         </PrimaryButton>
       </form>
 

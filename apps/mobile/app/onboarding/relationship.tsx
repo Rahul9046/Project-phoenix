@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import {
   relationshipOptions,
@@ -28,6 +29,7 @@ import { Text } from "@/ui/Text";
  */
 export default function RelationshipStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const [value, setValue] = useState<RelationshipStatus | null>(
     profile?.relationshipStatus ?? null,
   );
@@ -55,8 +57,8 @@ export default function RelationshipStep() {
   return (
     <Step
       step="relationship"
-      title="Where are you in your story?"
-      lede="Everyone on Eraya has been through one of these. It is shown on your profile."
+      title={t("onboarding.relationship.title")}
+      lede={t("onboarding.relationship.lede")}
       onContinue={() => void submit()}
       canContinue={value !== null}
       pending={pending}
@@ -64,14 +66,14 @@ export default function RelationshipStep() {
     >
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel="Where are you in your story?"
+        accessibilityLabel={t("onboarding.relationship.title")}
         style={{ gap: space.md }}
       >
         {relationshipOptions.map((option) => (
           <SelectionCard
             key={option.value}
-            label={option.label}
-            description={option.description}
+            label={t(option.labelKey)}
+            description={t(option.descriptionKey)}
             selected={value === option.value}
             onPress={() => {
               setValue(option.value);
@@ -82,8 +84,7 @@ export default function RelationshipStep() {
       </View>
 
       <Text variant="caption" tone="subtle" style={{ marginTop: space.xl }}>
-        Eraya does not check this. It is taken on trust, the same way you are
-        trusting everyone else here.
+        {t("onboarding.relationship.trustNote")}
       </Text>
     </Step>
   );

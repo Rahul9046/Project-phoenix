@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
 import { ConnectionMoment } from "@/features/connections/ConnectionMoment";
 import { SafetyActions } from "@/features/connections/SafetyActions";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/features/members/data";
 import { PhotoGallery } from "@/features/members/PhotoGallery";
 import { useMyDetails } from "@/features/members/me";
+import { supabase } from "@/lib/supabase/client";
 import type { Member } from "@/features/members/types";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button, IconButton, TextButton } from "@/ui/Button";
@@ -24,6 +26,7 @@ import { Card, Divider } from "@/ui/Surface";
 import { ErrorState, Skeleton } from "@/ui/States";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * A person, in full.
@@ -45,6 +48,7 @@ import { useToast } from "@/ui/Toast";
 export default function MemberProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const toast = useToast();
   const { details } = useMyDetails();
 
@@ -75,6 +79,19 @@ export default function MemberProfile() {
       setMember(found);
       setPhotos(gallery);
       setLoading(false);
+
+      /*
+       * Recorded on this screen rather than inside `getMember`, which is also
+       * how a connection and a conversation header get their member -- counting
+       * there would report a profile view every time somebody opened their own
+       * messages. Only after the profile actually resolved, and only if this
+       * effect was not cancelled, so a back-press mid-load counts as nothing.
+       *
+       * The event records that a profile was viewed, never which one.
+       */
+      if (found) {
+        void supabase.rpc("record_profile_view").then(undefined, () => {});
+      }
     })();
 
     return () => {
@@ -228,7 +245,7 @@ export default function MemberProfile() {
             {member.relationshipStatus ? (
               <Detail
                 label="Chapter"
-                value={relationshipLabels[member.relationshipStatus]}
+                value={t(relationshipLabelKeys[member.relationshipStatus])}
               />
             ) : null}
 
@@ -320,15 +337,27 @@ export default function MemberProfile() {
 }
 
 function BackRow() {
+  const t = useT();
+
   return (
-    <IconButton
-      accessibilityLabel="Go back"
-      onPress={() => router.back()}
-      icon={
-        <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
-      }
-      style={{ marginLeft: -space.md }}
-    />
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <IconButton
+        accessibilityLabel={t("common.back")}
+        onPress={() => router.back()}
+        icon={
+          <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
+        }
+        style={{ marginLeft: -space.md }}
+      />
+
+      <LanguageSwitcher />
+    </View>
   );
 }
 

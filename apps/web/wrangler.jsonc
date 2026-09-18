@@ -1,0 +1,59 @@
+/**
+ * Cloudflare Workers configuration for the Eraya web app.
+ *
+ * The app is deployed as a Worker rather than as static files, because it is
+ * dynamic on nearly every route and ships middleware -- there is nothing to
+ * export. `@opennextjs/cloudflare` compiles the Next build into the Worker
+ * entry point named below.
+ *
+ * Why Cloudflare and not Netlify: Netlify's free plan meters *builds* at about
+ * 4.5 credits each against 300 a month, and this project exhausted them in ten
+ * days of ordinary development -- after which production deploys were skipped
+ * silently while merges appeared to succeed. Cloudflare's free plan meters
+ * requests (100,000 a day, against the 391 a month this serves today), and the
+ * build happens in GitHub Actions, which is free and unmetered for a public
+ * repository. The failure mode that stopped us is structurally absent rather
+ * than further away.
+ *
+ * Nothing secret belongs in this file. It is committed. `SUPABASE_SECRET_KEY`
+ * is set with `wrangler secret put`, which stores it encrypted on Cloudflare
+ * and never writes it to disk.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "eraya-web",
+  "main": ".open-next/worker.js",
+
+  /*
+   * Both flags are required by the adapter, not optional tuning.
+   *
+   * `nodejs_compat` gives the Worker the Node APIs Next and the Supabase SDK
+   * expect. `global_fetch_strictly_public` makes `fetch` inside the Worker
+   * behave like a browser's -- requests to our own hostname go back out to the
+   * public internet rather than short-circuiting internally, which is what
+   * Next's own data fetching assumes.
+   */
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  /* Static output -- the build's assets, served from Cloudflare's edge. */
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  /*
+   * The Worker needs to be able to call itself: Next composes some responses
+   * by making a second request to its own route handlers.
+   */
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "eraya-web"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}

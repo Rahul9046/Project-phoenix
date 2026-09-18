@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/features/app-shell/Avatar";
 import { accountNav, appRoutes } from "@/features/app-shell/nav";
-import { shell } from "@/features/app-shell/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The account dropdown — the thing that makes "I am logged in" obvious.
@@ -22,6 +22,7 @@ export function AccountMenu({
   name: string | null;
   email: string | null;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -65,7 +66,7 @@ export function AccountMenu({
         <span className="hidden text-[0.95rem] font-medium sm:inline">
           {name ?? "Account"}
         </span>
-        <span className="sr-only">{shell.accountMenuLabel}</span>
+        <span className="sr-only">{t("shell.accountMenuLabel")}</span>
       </button>
 
       {open ? (
@@ -101,7 +102,7 @@ export function AccountMenu({
               onClick={() => setOpen(false)}
               className="flex min-h-11 items-center px-4 text-[0.95rem] font-medium text-ember-text transition-colors hover:bg-sand"
             >
-              {shell.signOut}
+              {t("shell.signOut")}
             </Link>
           </div>
         </div>

@@ -5,7 +5,15 @@ import { useState } from "react";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { ProviderIcon } from "@/features/auth/components/ProviderIcon";
 import { SecondaryButton } from "@/shared/ui/SecondaryButton";
-import { connecting, providerLabels } from "@/features/auth/content";
+import type { TranslationKey } from "@eraya/i18n";
+
+import { useT } from "@/features/i18n/LocaleProvider";
+
+const providerLabelKeys: Record<string, TranslationKey> = {
+  google: "auth.providers.google",
+  apple: "auth.providers.apple",
+  facebook: "auth.providers.facebook",
+};
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describeAuthError } from "@/features/auth/describeAuthError";
 import type { SocialProviderId } from "@/features/auth/types";
@@ -26,6 +34,7 @@ export function SocialLoginButtons({
 }: {
   providers: readonly SocialProviderId[];
 }) {
+  const t = useT();
   const { signInWithSocial } = useAuth();
   const [pending, setPending] = useState<SocialProviderId | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +62,12 @@ export function SocialLoginButtons({
             key={provider}
             onClick={() => handle(provider)}
             loading={pending === provider}
-            loadingLabel={connecting}
+            loadingLabel={t("auth.providers.connecting")}
             // Pressing one provider should not let you start another.
             disabled={pending !== null && pending !== provider}
           >
             <ProviderIcon provider={provider} />
-            {providerLabels[provider]}
+            {t(providerLabelKeys[provider])}
           </SecondaryButton>
         ))}
       </div>

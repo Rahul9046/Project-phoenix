@@ -16,10 +16,17 @@
     "mobile:ios": "npm run ios --workspace @eraya/mobile",
     "mobile:lint": "npm run lint --workspace @eraya/mobile",
     "typecheck": "npm run typecheck --workspace @eraya/mobile && tsc --noEmit -p apps/web",
+    "i18n:check": "node packages/i18n/scripts/check-locales.mjs",
     "demo:seed": "node scripts/demo-seed.mjs",
     "demo:remove": "node scripts/demo-seed.mjs --remove",
     "security": "node scripts/security-probe.mjs",
     "auth:capacity": "node scripts/auth-capacity.mjs",
-    "config:push": "node scripts/supabase-config.mjs"
+    "payments:probe": "node scripts/payments-probe.mjs",
+    "config:push": "node scripts/supabase-config.mjs",
+    "review:package": "node scripts/review-package.mjs",
+    "review:package:fast": "node scripts/review-package.mjs --skip-checks",
+    "moderation:probe": "node scripts/moderation-probe.mjs",
+    "analytics:probe": "node scripts/analytics-probe.mjs",
+    "age:check": "node --no-warnings scripts/age-eligibility-check.mjs"
   }
 }

@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { routes } from "@/features/auth/routing";
 import {
   listLanguages,
@@ -30,6 +31,7 @@ import { Text } from "@/ui/Text";
  */
 export default function LanguagesStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
 
   const [options, setOptions] = useState<LanguageOption[] | null>(null);
   const [selected, setSelected] = useState<string[]>(profile?.languageIds ?? []);
@@ -78,15 +80,15 @@ export default function LanguagesStep() {
   return (
     <Step
       step="languages"
-      title="What do you speak?"
-      lede="Choose as many as you like. Sharing a language is often what makes a first conversation easy."
+      title={t("onboarding.languages.title")}
+      lede={t("onboarding.languages.lede")}
       onContinue={() => void submit(false)}
       canContinue={selected.length > 0}
       pending={pending}
       error={error}
       secondary={
         <TextButton
-          label="I would rather not say"
+          label={t("onboarding.languages.ratherNotSay")}
           tone="muted"
           disabled={pending}
           onPress={() => void submit(true)}
@@ -94,7 +96,7 @@ export default function LanguagesStep() {
       }
     >
       {options === null ? (
-        <LoadingState label="Loading languages" />
+        <LoadingState label={t("common.loading")} />
       ) : (
         <View>
           <ChipGroup>
@@ -110,9 +112,9 @@ export default function LanguagesStep() {
 
           {selected.length > 0 ? (
             <Text variant="caption" tone="subtle" style={{ marginTop: space.xl }}>
-              {selected.length === 1
-                ? "1 language selected"
-                : `${selected.length} languages selected`}
+              {t("onboarding.languages.selected", {
+                count: selected.length,
+              })}
             </Text>
           ) : null}
         </View>

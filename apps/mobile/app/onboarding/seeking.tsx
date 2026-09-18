@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { seekingOptions, type Gender } from "@/features/auth/types";
 import { saveSeeking } from "@/features/onboarding/data";
@@ -35,6 +36,7 @@ import { Text } from "@/ui/Text";
  */
 export default function SeekingStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const [selected, setSelected] = useState<Gender[]>(profile?.seeking ?? []);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +73,8 @@ export default function SeekingStep() {
   return (
     <Step
       step="seeking"
-      title="Who would you like to meet?"
-      lede="Choose as many as apply. You can change this later, and it works both ways — you only appear to people you would also like to meet."
+      title={t("onboarding.seeking.title")}
+      lede={t("onboarding.seeking.lede")}
       onContinue={() => void submit()}
       canContinue={selected.length > 0}
       pending={pending}
@@ -80,13 +82,13 @@ export default function SeekingStep() {
     >
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel="Who would you like to meet?"
+        accessibilityLabel={t("onboarding.seeking.title")}
         style={{ gap: space.md }}
       >
         {seekingOptions.map((option) => (
           <SelectionCard
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={selected.includes(option.value)}
             onPress={() => toggle(option.value)}
           />
@@ -95,7 +97,7 @@ export default function SeekingStep() {
 
       {everyone ? (
         <Text variant="caption" tone="subtle" style={{ marginTop: space.xl }}>
-          You will be introduced to anyone who would also like to meet you.
+          {t("onboarding.seeking.everyoneNote")}
         </Text>
       ) : null}
     </Step>

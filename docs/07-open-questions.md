@@ -19,12 +19,102 @@ the list defensible under consent rules. Blocked on the delivery question above.
 **Abuse protection.** The form has a honeypot and nothing else. It needs rate
 limiting per IP, and probably a challenge, before it is publicly linked.
 
-**Privacy policy and terms.** Both pages currently state honestly that the
-documents are being prepared. Real ones are required before collecting
-significant personal data, and India's DPDP Act applies.
+**Web phone verification and its captcha — resolved.** A real Indian number was
+verified on `https://eraya.app` through the MSG91 widget, with MSG91's CAPTCHA
+Validation enabled and hCaptcha as the provider. The captcha had been switched
+off during development because its challenge fails on localhost; it is on in
+production and has been exercised there, which is the only place the question
+could be settled.
 
-**Contact address.** `hello@eraya.app` is used throughout, from `apps/web/src/features/marketing/content.ts`.
-It must exist and be monitored, or be changed in that one place.
+Worth keeping the reason written down, because it is the argument for never
+switching it off again. The widget sends its SMS from the browser, so the widget
+id and the token auth are both readable in the page source. Anyone holding them
+can call MSG91's send endpoint in a loop without ever touching
+`phone-widget-begin`, which is where Eraya's cooldown and daily caps live. They
+cannot become verified that way -- `phone-widget-verify` needs a request row
+only that endpoint creates, and the number must match it -- so what they can do
+is spend Eraya's SMS balance and text arbitrary Indian numbers from Eraya's
+sender. The captcha is the only control left once the send happens client-side.
+
+**The app still cannot verify a phone number.** It uses MSG91's OTP API rather
+than the widget, which is a browser SDK; that path needs a DLT-approved SMS
+template before MSG91 will deliver anything in India, and it has not been run
+end to end. Until the template exists, somebody signing up in the app reaches
+the phone step and cannot get past it -- phone verification gates onboarding on
+both clients. `MSG91_TEMPLATE_ID` is the only configuration missing; no code
+changes when it arrives.
+
+**Privacy policy, terms and guidelines — written.** All three now exist as real
+documents in `packages/legal`, shared by both clients and published at
+`/privacy`, `/terms` and `/safety`. Acceptance is recorded per member against a
+version string. What remains is not writing but review: none of it has been read
+by a lawyer, and India's DPDP Act applies.
+
+**A postal address, before live payments.** The documents name the operator --
+Rahul Das, trading as Eraya, in India -- and give `support@eraya.app`, and no
+postal address. Indian consumer and payment rules will require one before real
+money moves, and a home address is not the answer. This is a business decision
+(a registered office, a virtual office, or a change of structure) and nothing in
+the repository can settle it.
+
+**The documents are English only.** Six languages everywhere else. A machine
+translation of a privacy policy reads exactly like a reviewed one to the person
+relying on it, so each screen says in the reader's own language that the English
+governs. Translating them is a cost and a review question, not a code one.
+
+**Contact address — resolved.** `support@eraya.app` is live on Zoho Mail and is
+now the only address the product gives anybody: the website, both clients, and
+the auth email. It comes from `apps/web/src/features/marketing/content.ts` on the
+web side, so changing it again is one edit there plus the mobile strings.
+
+It replaced `hello@eraya.app`, which was written into six places and never
+created. Mail to it bounced, and it was the only address the public holding page
+offered — so the single action that page asked for failed silently for everyone
+who took it. Worth remembering as a shape: an address in copy is a promise, and
+nothing in a build or a test suite checks that the mailbox exists.
+
+Still to confirm: **DKIM for Zoho**. `zoho._domainkey.eraya.app` returns nothing,
+though Zoho may use another selector. Check Zoho Mail → Domains, because DMARC is
+published at `p=quarantine` and mail that satisfies neither SPF nor DKIM is
+quarantined rather than rejected — invisible to the sender.
+
+**One SPF record, two senders.** `eraya.app` publishes
+`v=spf1 include:zoho.in ~all`, which authorises Zoho and not Resend — and Resend
+is what sends every sign-in code, as `no-reply@eraya.app`. Those emails currently
+pass DMARC on Resend's DKIM alone (`resend._domainkey` is published), so delivery
+works, but the margin is one broken key wide: if DKIM ever fails, SPF will not
+catch it and sign-in codes go to spam with no error anywhere.
+
+Resend's `include:` belongs in the **existing** record, never a second one — two
+SPF records is a hard failure for both senders.
+
+**Somewhere to deploy the web app — resolved.** Live at `https://eraya.app` as a
+Cloudflare Worker, built by GitHub Actions on pushes to `develop`.
+`EXPO_PUBLIC_SITE_URL` is set in the EAS `preview` and `production`
+environments, which closes the silent payment failure: the mobile app opens
+`/checkout` on the web app, and without that variable no sheet appeared, nothing
+was logged, and the order sat at `created` looking exactly like somebody
+changing their mind.
+
+Two hosts were rejected on the way, both for reasons worth remembering. Vercel's
+free tier forbids commercial use and names taking payments as the example.
+Netlify's free tier meters builds rather than traffic, and ten days of ordinary
+development exhausted a month's allowance — after which production deploys were
+skipped silently while merges kept reporting success. See
+[06-technical.md](06-technical.md).
+
+**International cards cannot pay.** Razorpay refuses them with
+`international_transaction_not_allowed` and `error_source: business` — the
+account's own configuration, the default for Indian merchants, and true in live
+mode as much as in test. Anyone whose only card is foreign reaches the payment
+screen and cannot get past it; "use a different method" is no help to them.
+
+This is a commercial decision, not an engineering one. Eraya is India-only by
+design, but Indians living abroad are a plausible part of an audience of
+divorced, separated and widowed people, and they are exactly the segment most
+likely to be paying with a foreign card. Enabling international payments is an
+application to Razorpay carrying higher fees and additional compliance.
+Answering it "no" is legitimate; answering it by accident is not.
 
 ## Brand — defects in the supplied logo pack
 

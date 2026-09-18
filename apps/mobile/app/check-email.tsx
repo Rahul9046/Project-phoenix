@@ -4,6 +4,7 @@ import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { sendEmailSignIn, verifyEmailCode } from "@/features/auth/sign-in";
 import { colors, radius, space } from "@/theme/tokens";
@@ -12,6 +13,7 @@ import { CODE_LENGTH, CodeInput } from "@/ui/CodeInput";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 
 /**
  * Finishing an email sign-in.
@@ -37,6 +39,7 @@ import { useToast } from "@/ui/Toast";
 export default function CheckEmail() {
   const { loading, session, profile } = useSession();
   const params = useLocalSearchParams<{ email?: string }>();
+  const t = useT();
   const toast = useToast();
 
   const [code, setCode] = useState("");
@@ -96,7 +99,7 @@ export default function CheckEmail() {
     const result = await sendEmailSignIn(email);
 
     toast.show(
-      result.ok ? "Sent. Use the newest email." : result.message,
+      result.ok ? t("auth.email.resent") : result.message,
       result.ok ? "positive" : "danger",
     );
     setResending(false);
@@ -104,6 +107,10 @@ export default function CheckEmail() {
 
   return (
     <Screen topInset>
+      <View style={{ alignItems: "flex-end" }}>
+        <LanguageSwitcher variant="bordered" />
+      </View>
+
       <View style={{ alignItems: "center", marginTop: space.section }}>
         <View
           style={{
@@ -119,7 +126,7 @@ export default function CheckEmail() {
         </View>
 
         <Text variant="title" center style={{ marginTop: space.xl }}>
-          Check your email.
+          {t("auth.email.sentTitle")}
         </Text>
         <Text
           variant="body"
@@ -127,9 +134,7 @@ export default function CheckEmail() {
           center
           style={{ marginTop: space.md, maxWidth: 330 }}
         >
-          {email
-            ? `We sent a ${CODE_LENGTH}-digit code to ${email}. Enter it below.`
-            : `We sent you a ${CODE_LENGTH}-digit code. Enter it below.`}
+          {`${t("auth.email.sentBody")} ${email}`.trim()}
         </Text>
       </View>
 
@@ -156,7 +161,7 @@ export default function CheckEmail() {
       ) : null}
 
       <Button
-        label="Sign in"
+        label={t("auth.email.codeCta")}
         loading={verifying}
         disabled={code.length !== CODE_LENGTH}
         onPress={() => void submit()}
@@ -172,21 +177,19 @@ export default function CheckEmail() {
         }}
       >
         <Text variant="caption" tone="muted">
-          The same email has a button you can tap instead. On some phones the
-          browser will not hand the link back to the app, which is why the code
-          is here &mdash; it always works.
+          {t("auth.email.linkNote")}
         </Text>
       </View>
 
       <View style={{ marginTop: space.xxl, alignItems: "center", gap: space.sm }}>
         <TextButton
-          label={resending ? "Sending…" : "Send another email"}
+          label={resending ? t("common.sending") : t("auth.email.resend")}
           tone="muted"
           disabled={resending || !email}
           onPress={() => void resend()}
         />
         <TextButton
-          label="Use a different address"
+          label={t("auth.email.sentRetry")}
           tone="muted"
           onPress={() => router.replace(routes.signIn)}
         />

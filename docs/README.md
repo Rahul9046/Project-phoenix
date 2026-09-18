@@ -17,10 +17,28 @@ aspirations — where something is undecided it is listed in
 | [05-content.md](05-content.md) | Voice, wording rules, claims we may and may not make |
 | [06-technical.md](06-technical.md) | Stack, structure, accessibility and performance rules |
 | [07-open-questions.md](07-open-questions.md) | Decisions still to be made, and known gaps |
+| [08-backend.md](08-backend.md) | Schema, Row Level Security, and the rules the database enforces |
+| [09-mobile.md](09-mobile.md) | The Expo app: structure, navigation, and what differs from the web |
+| [10-payments.md](10-payments.md) | Prepaid Premium, pricing, and why nothing renews |
+| [11-moderation-and-analytics.md](11-moderation-and-analytics.md) | The reports queue, who may moderate, and the funnel |
+| [BUILD_REVIEW_WORKFLOW.md](BUILD_REVIEW_WORKFLOW.md) | Generating the review package for an outside reviewer |
 
 ## Status
 
-The landing page and its supporting pages are built. No member-facing product
-exists yet: there is no account system, no profiles and no messaging. Everything
-in these documents that describes the app itself is specification, not shipped
-behaviour.
+The product is built and deployed at `eraya.app`, on both the web and an Expo
+app: sign-in by emailed code, onboarding, discovery, interest, connections,
+messaging, blocking, reporting with a moderation queue, account deletion, and
+Premium bought through Razorpay.
+
+Three things are deliberately not finished, and the documents say so where they
+come up rather than implying otherwise:
+
+- **Phone verification is mocked.** Any six digits pass and no SMS is sent, so
+  nothing in the product may show a "verified number" mark. Real SMS needs DLT
+  registration.
+- **Razorpay is in test mode.** No live key is configured; no real money moves.
+- **Privacy policy and terms are placeholders.** India's DPDP Act applies and
+  both app stores require them. This is a launch blocker.
+
+Where a document still describes intent rather than shipped behaviour, it says
+so in place.

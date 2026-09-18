@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { account } from "@/features/account/content";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { deleteAccount } from "@/features/account/actions";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 
@@ -26,6 +26,7 @@ import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
  * person is the part somebody may genuinely not have considered.
  */
 export function DeleteAccount() {
+  const t = useT();
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
@@ -80,9 +81,9 @@ export function DeleteAccount() {
   if (done) {
     return (
       <div role="status" className="rounded-2xl border border-line bg-surface p-6">
-        <p className="text-name text-ink">{account.deletedTitle}</p>
+        <p className="text-name text-ink">{t("account.deletedTitle")}</p>
         <p className="mt-2.5 leading-relaxed text-ink-muted">
-          {account.deletedBody}
+          {t("account.deletedBody")}
         </p>
       </div>
     );
@@ -91,7 +92,7 @@ export function DeleteAccount() {
   return (
     <div>
       <p className="max-w-2xl leading-relaxed text-ink-muted">
-        {account.dangerBody}
+        {t("account.dangerBody")}
       </p>
 
       {!confirming ? (
@@ -100,23 +101,28 @@ export function DeleteAccount() {
           onClick={() => setConfirming(true)}
           className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full border border-line-strong bg-surface px-6 text-[0.95rem] font-medium text-ember-text transition-colors hover:border-ember-text hover:bg-sand"
         >
-          {account.dangerCta}
+          {t("account.dangerCta")}
         </button>
       ) : (
         <div
           ref={confirmRef}
           tabIndex={-1}
           role="group"
-          aria-label={account.confirmTitle}
+          aria-label={t("account.confirmTitle")}
           className="mt-5 rounded-2xl border border-ember/40 bg-sand/40 p-5 focus:outline-none sm:p-6"
         >
-          <p className="text-name text-ink">{account.confirmTitle}</p>
+          <p className="text-name text-ink">{t("account.confirmTitle")}</p>
           <p className="mt-2.5 leading-relaxed text-ink-muted">
-            {account.confirmBody}
+            {t("account.confirmBody")}
           </p>
 
           <ul className="mt-4 grid gap-2">
-            {account.confirmList.map((item) => (
+            {([
+              t("account.confirmItem1"),
+              t("account.confirmItem2"),
+              t("account.confirmItem3"),
+              t("account.confirmItem4"),
+            ]).map((item) => (
               <li
                 key={item}
                 className="flex items-start gap-2.5 text-[0.95rem] leading-relaxed text-ink-muted"
@@ -140,7 +146,7 @@ export function DeleteAccount() {
               disabled={pending}
               className="inline-flex min-h-12 items-center justify-center rounded-full border border-line-strong bg-surface px-5 text-[0.95rem] font-medium text-ink transition-colors hover:border-ink hover:bg-sand disabled:opacity-60"
             >
-              {account.confirmCancel}
+              {t("account.confirmCancel")}
             </button>
 
             <button
@@ -149,7 +155,7 @@ export function DeleteAccount() {
               disabled={pending}
               className="inline-flex min-h-12 items-center justify-center rounded-full bg-ember-text px-5 text-[0.95rem] font-medium text-canvas transition-colors hover:bg-ember-strong disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? account.confirmPending : account.confirmCta}
+              {pending ? t("account.confirmPending") : t("account.confirmCta")}
             </button>
           </div>
         </div>

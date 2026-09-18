@@ -453,7 +453,7 @@ Never the bare CLI — see "Pushing config" above for what that silently breaks.
 
 The sending domain needs SPF and DKIM records. The sender mailbox does not need
 to receive anything: mail goes out as `no-reply@eraya.app`, and the address that
-is actually read, `hello@eraya.app`, is named in the body so a reply is never
+is actually read, `support@eraya.app`, is named in the body so a reply is never
 silently lost.
 
 ### Templates live in the repository

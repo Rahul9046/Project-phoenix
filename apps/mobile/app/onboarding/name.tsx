@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
 import { saveName } from "@/features/onboarding/data";
 import { Step } from "@/features/onboarding/Step";
@@ -17,6 +18,7 @@ import { Field } from "@/ui/Input";
  */
 export default function NameStep() {
   const { profile, refresh } = useSession();
+  const t = useT();
   const [name, setName] = useState(profile?.firstName ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +43,8 @@ export default function NameStep() {
   return (
     <Step
       step="name"
-      title="What should we call you?"
-      lede="Your first name is what other members see. Nothing else about your name is ever shown."
+      title={t("onboarding.name.title")}
+      lede={t("onboarding.name.lede")}
       onContinue={() => void submit()}
       canContinue={name.trim().length >= 2}
       pending={pending}
@@ -50,13 +52,13 @@ export default function NameStep() {
       canGoBack={false}
     >
       <Field
-        label="First name"
+        label={t("onboarding.name.label")}
         value={name}
         onChangeText={(next) => {
           setName(next);
           if (error) setError(null);
         }}
-        placeholder="Your first name"
+        placeholder={t("onboarding.name.placeholder")}
         autoCapitalize="words"
         autoComplete="given-name"
         textContentType="givenName"

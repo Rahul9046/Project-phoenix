@@ -11,17 +11,19 @@ import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { OTPInput, OTP_LENGTH } from "@/features/auth/components/OTPInput";
 import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { otpStep } from "@/features/auth/content";
+
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describeAuthError } from "@/features/auth/describeAuthError";
 import { authRoutes, nextRoute } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { formatPhone } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /** Long enough to register as confirmation, short enough not to be a wait. */
 const SUCCESS_PAUSE_MS = 1100;
 
 export function OTPScreen() {
+  const t = useT();
   const router = useRouter();
   const { verifyCode } = useAuth();
   const fieldId = useId();
@@ -49,7 +51,7 @@ export function OTPScreen() {
     if (pending || verified) return;
 
     if (value.length < OTP_LENGTH) {
-      setError(otpStep.incompleteError);
+      setError(t("auth.otp.incompleteError"));
       return;
     }
 
@@ -82,12 +84,12 @@ export function OTPScreen() {
   }
 
   const lede = session.phone
-    ? `${otpStep.ledePrefix} ${formatPhone(session.phone)}.`
-    : otpStep.ledePrefix;
+    ? `${t("auth.otp.ledePrefix")} ${formatPhone(session.phone)}.`
+    : t("auth.otp.ledePrefix");
 
   return (
-    <AuthLayout backHref={authRoutes.phone} backLabel={otpStep.changeCta}>
-      <AuthHeader title={otpStep.title} lede={lede} />
+    <AuthLayout backHref={authRoutes.phone} backLabel={t("auth.otp.changeCta")}>
+      <AuthHeader title={t("auth.otp.title")} lede={lede} />
 
       <form
         onSubmit={(event) => {
@@ -99,7 +101,7 @@ export function OTPScreen() {
       >
         <OTPInput
           id={fieldId}
-          label={otpStep.label}
+          label={t("auth.otp.label")}
           value={code}
           onChange={(value) => {
             setCode(value);
@@ -115,15 +117,15 @@ export function OTPScreen() {
         {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
 
         {verified ? (
-          <SuccessMessage className="mt-7">{otpStep.success}</SuccessMessage>
+          <SuccessMessage className="mt-7">{t("auth.otp.success")}</SuccessMessage>
         ) : (
           <PrimaryButton
             type="submit"
             loading={pending}
-            loadingLabel={otpStep.pending}
+            loadingLabel={t("common.saving")}
             className="mt-7"
           >
-            {otpStep.cta}
+            {t("auth.otp.cta")}
           </PrimaryButton>
         )}
       </form>

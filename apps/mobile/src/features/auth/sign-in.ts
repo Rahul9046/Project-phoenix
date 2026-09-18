@@ -120,6 +120,32 @@ function readReturnedUrl(url: string): ReturnedUrl {
   };
 }
 
+/**
+ * One exchange per returned URL, whoever gets there first.
+ *
+ * A provider redirect arrives twice. `openAuthSessionAsync` resolves with the
+ * URL, and Android also delivers the same URL to the app as an intent, which
+ * the deep link handler at the root picks up. Both then tried to exchange it,
+ * and a PKCE code is single-use -- so every OAuth sign-in logged
+ *
+ *   sign-in link could not be completed: invalid flow state
+ *
+ * from whichever lost the race. The session was fine; the message was not, and
+ * a log that cries wolf on every successful sign-in is worse than no log.
+ *
+ * Claiming is by URL rather than by a flag, because the two paths cannot see
+ * each other and the URL is the one thing they agree on. The set is bounded:
+ * these accumulate one per sign-in and are worthless once used.
+ */
+const claimed = new Set<string>();
+
+function claimReturnedUrl(url: string): boolean {
+  if (claimed.has(url)) return false;
+  if (claimed.size > 20) claimed.clear();
+  claimed.add(url);
+  return true;
+}
+
 /** Turns either shape into a session. Shared by the OAuth and link paths. */
 async function establishSession(returned: ReturnedUrl): Promise<SignInResult> {
   if (returned.error) return { ok: false, message: returned.error };
@@ -173,6 +199,13 @@ export async function signInWithProvider(
   if (result.type !== "success") {
     recordProviderOutcome(provider, false, "browser_closed");
     return { ok: false, message: GENERIC };
+  }
+
+  if (!claimReturnedUrl(result.url)) {
+    // The deep link handler got there first and is exchanging it. Reporting a
+    // failure here would be reporting somebody else's success.
+    recordProviderOutcome(provider, true, "handled_by_link");
+    return { ok: true };
   }
 
   const session = await establishSession(readReturnedUrl(result.url));
@@ -321,5 +354,7 @@ export async function verifyEmailCode(
 export async function completeSignInFromUrl(
   url: string,
 ): Promise<SignInResult> {
+  // The OAuth path may already be exchanging this one. See claimReturnedUrl.
+  if (!claimReturnedUrl(url)) return { ok: true };
   return establishSession(readReturnedUrl(url));
 }

@@ -4,7 +4,8 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { relationshipLabels } from "@/features/auth/types";
+import { relationshipLabelKeys } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { photoUrlFor } from "@/features/members/data";
 import { useMyDetails } from "@/features/members/me";
 import { colors, iconSize, space } from "@/theme/tokens";
@@ -29,6 +30,7 @@ import { Text } from "@/ui/Text";
  */
 export default function MyProfile() {
   const { profile } = useSession();
+  const t = useT();
   const { details } = useMyDetails();
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -144,7 +146,7 @@ export default function MyProfile() {
               Chapter
             </Text>
             <Text variant="body" style={{ marginTop: space.xxs }}>
-              {relationshipLabels[profile.relationshipStatus]}
+              {t(relationshipLabelKeys[profile.relationshipStatus])}
             </Text>
           </View>
         ) : null}

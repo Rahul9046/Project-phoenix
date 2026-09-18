@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useT } from "@/features/i18n/LocaleProvider";
 import { Step } from "@/features/onboarding/Step";
 import {
   dialCodes,
@@ -29,6 +30,7 @@ import { Text } from "@/ui/Text";
  * does not say "verify" and the button does not say "send code".
  */
 export default function PhoneStep() {
+  const t = useT();
   const [dialCode, setDialCode] = useState<string>(defaultDialCode);
   const [national, setNational] = useState("");
   const [picking, setPicking] = useState(false);
@@ -60,8 +62,8 @@ export default function PhoneStep() {
   return (
     <Step
       step="phone"
-      title="Add your phone number."
-      lede="We send a six-digit code to check it, and keep it for account recovery. It is never shown on your profile, and no other member ever sees it."
+      title={t("auth.phone.title")}
+      lede={t("auth.phone.lede")}
       onContinue={() => void submit()}
       canContinue={isPlausibleNumber(dialCode, national)}
       pending={pending}
@@ -71,7 +73,7 @@ export default function PhoneStep() {
       <View style={{ flexDirection: "row", gap: space.md }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Country code, ${selectedLabel}. Tap to change.`}
+          accessibilityLabel={`${t("auth.phone.countryLabel")}, ${selectedLabel}`}
           onPress={() => setPicking(true)}
           style={({ pressed }) => ({
             minHeight: hit.control,
@@ -100,13 +102,13 @@ export default function PhoneStep() {
             setNational(normaliseNumber(next));
             if (error) setError(null);
           }}
-          placeholder="98765 43210"
+          placeholder={t("auth.phone.numberPlaceholder")}
           keyboardType="number-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
           maxLength={14}
           autoFocus
-          accessibilityLabel="Phone number"
+          accessibilityLabel={t("auth.phone.label")}
         />
       </View>
 
@@ -127,8 +129,7 @@ export default function PhoneStep() {
             color={colors.inkMuted}
           />
           <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
-            Checking numbers by SMS is not switched on yet, so nothing will be
-            sent. Your number is stored, and no other member ever sees it.
+            {t("auth.phone.notLiveNote")}
           </Text>
         </View>
       ) : null}
@@ -136,7 +137,7 @@ export default function PhoneStep() {
       <BottomSheet
         visible={picking}
         onClose={() => setPicking(false)}
-        title="Country code"
+        title={t("auth.phone.countryLabel")}
       >
         <View style={{ gap: space.xs }}>
           {dialCodes.map((entry) => (

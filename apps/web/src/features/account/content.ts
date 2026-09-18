@@ -1,97 +1,16 @@
-/** Every word the account area says. */
-
-export const account = {
-  title: "Your account",
-  lede: "Everything Eraya knows about you, and everything you control.",
-
-  profileTitle: "Profile",
-  profileLede: "What other members see.",
-
-  contactTitle: "Sign-in and contact",
-
-  membershipTitle: "Membership",
-
-  privacyTitle: "Privacy",
-  /*
-   * Rewritten when discovery shipped.
-   *
-   * This previously said "Eraya shows your profile to no one else yet" and
-   * "nobody can browse or search for your profile". Both were true when written
-   * and became false the day introductions started -- which is the failure mode
-   * of privacy copy: it is written once, describes a temporary state, and is not
-   * revisited when the state changes.
-   */
-  privacyLede:
-    "What other members can see, and what they never can. These are enforced by the database, not by settings you have to find.",
-  privacyPoints: [
-    "You are introduced to a few people at a time, and appear in theirs. There is no directory and no way to search for you.",
-    "Your first name, age, city, chapter and languages are what another member sees.",
-    "Your exact date of birth is never shown — only your age.",
-    "Your email address and phone number are never shown to another member.",
-    "If someone passes on your profile, you are never told.",
-    "Nobody can message you unless you have both expressed interest.",
-  ],
-
-  settingsTitle: "Settings",
-  settingsLede: "Account details and preferences.",
-
-  dangerTitle: "Leaving Eraya",
-  dangerBody:
-    "You can delete your account at any time. It is yours, and you should not have to ask us for it back.",
-  dangerCta: "Delete my account",
-
-  /*
-   * The confirmation step.
-   *
-   * It lists what actually disappears rather than saying "all your data", which
-   * is a phrase people skim past. Someone about to do something irreversible
-   * deserves to know precisely what they are about to lose -- particularly the
-   * part they may not have considered, that conversations vanish for the other
-   * person too.
-   */
-  confirmTitle: "Delete your account?",
-  confirmBody:
-    "This cannot be undone. There is no grace period and no way for us to restore it afterwards.",
-  confirmList: [
-    "Your profile, and everything you told us about yourself",
-    "Every connection you have made",
-    "Every conversation, for you and for the people you were speaking to",
-    "Your sign-in — you would start again from scratch",
-  ],
-  confirmCta: "Yes, delete my account",
-  confirmCancel: "Keep my account",
-  confirmPending: "Deleting…",
-
-  /* Shown on the way out. Warm, brief, and asking nothing of them. */
-  deletedTitle: "Your account has been deleted.",
-  deletedBody:
-    "Everything of yours has been removed from Eraya. If you ever want to begin again, you would be welcome.",
-
-  notProvided: "Not provided",
-  notAnswered: "Not answered",
-  labels: {
-    name: "First name",
-    dateOfBirth: "Date of birth",
-    age: "Age",
-    gender: "Gender",
-    city: "City",
-    relationship: "Chapter",
-    languages: "Languages",
-    email: "Email",
-    phone: "Phone",
-    signInMethod: "Sign-in method",
-    memberSince: "Member since",
-  },
-  /*
-   * Not "Verified". The OTP step is mocked -- any six digits pass and no SMS is
-   * sent -- so the only honest thing this pill can report is that the step was
-   * completed, which is exactly what it now says.
-   */
-  phoneVerified: "Added",
-  phoneUnverified: "Not added",
-  languagesUndisclosed: "Prefer not to say",
-  editCta: "Edit",
-} as const;
+/**
+ * What is left of the account area's own copy.
+ *
+ * Everything a member reads about their account, their privacy and deleting it
+ * now lives in `@eraya/i18n` and is written in whichever of the six languages
+ * they chose. This file holds only the membership panel, which is still English
+ * because it describes prices and plans -- deliberately out of scope for the
+ * localization pass, and the wrong thing to translate in the same change that
+ * touches nothing else about payments.
+ *
+ * It is the last of the old content modules. When membership copy is
+ * translated, this file goes and there is one place words live.
+ */
 
 export const membershipCopy = {
   title: "Membership",

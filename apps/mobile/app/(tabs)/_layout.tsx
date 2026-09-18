@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "@/features/auth/SessionProvider";
 import { isOnboarded, nextRouteFor, routes } from "@/features/auth/routing";
 import { getHomeSummary } from "@/features/members/data";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, hit, radius, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
 import { text } from "@/theme/typography";
@@ -57,6 +58,7 @@ function tabLabel(title: string) {
 }
 
 export default function TabsLayout() {
+  const t = useT();
   const { loading, session, profile } = useSession();
 
   // The guard is here rather than on each screen, so there is one rule and no
@@ -111,8 +113,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: "My Eraya",
-          tabBarLabel: tabLabel("My Eraya"),
+          title: t("home.eyebrow"),
+          tabBarLabel: tabLabel(t("home.eyebrow")),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
@@ -125,8 +127,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="discover"
         options={{
-          title: "Discover",
-          tabBarLabel: tabLabel("Discover"),
+          title: t("shell.navDiscovery"),
+          tabBarLabel: tabLabel(t("shell.navDiscovery")),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "compass" : "compass-outline"}
@@ -139,8 +141,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="connections"
         options={{
-          title: "Connections",
-          tabBarLabel: tabLabel("Connections"),
+          title: t("connections.title"),
+          tabBarLabel: tabLabel(t("connections.title")),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "people" : "people-outline"}
@@ -153,8 +155,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: "Messages",
-          tabBarLabel: tabLabel("Messages"),
+          title: t("messages.title"),
+          tabBarLabel: tabLabel(t("messages.title")),
           tabBarIcon: ({ color, focused }) => (
             <View>
               <Ionicons
@@ -170,8 +172,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="you"
         options={{
-          title: "You",
-          tabBarLabel: tabLabel("You"),
+          title: t("shell.navAccount"),
+          tabBarLabel: tabLabel(t("shell.navAccount")),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person" : "person-outline"}

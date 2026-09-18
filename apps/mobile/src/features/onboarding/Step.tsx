@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button, IconButton } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
@@ -42,7 +44,7 @@ export function Step({
   title,
   lede,
   children,
-  continueLabel = "Continue",
+  continueLabel,
   onContinue,
   canContinue,
   pending = false,
@@ -55,6 +57,7 @@ export function Step({
   /** One line under the heading. Two at most -- this is not a page of copy. */
   lede?: string;
   children: ReactNode;
+  /** Defaults to the ordinary "Continue", translated. */
   continueLabel?: string;
   onContinue: () => void;
   canContinue: boolean;
@@ -65,6 +68,7 @@ export function Step({
   canGoBack?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const index = onboardingSteps.indexOf(step);
 
   return (
@@ -94,7 +98,7 @@ export function Step({
         <View style={{ width: 44 }}>
           {canGoBack && router.canGoBack() ? (
             <IconButton
-              accessibilityLabel="Go back"
+              accessibilityLabel={t("common.back")}
               onPress={() => router.back()}
               icon={
                 <Ionicons
@@ -109,7 +113,18 @@ export function Step({
 
         <Progress index={index} total={onboardingSteps.length} />
 
-        <View style={{ width: 44 }} />
+        {/*
+          The slot on the right was an empty 44pt spacer, kept so the progress
+          bar stayed centred against the back button. It now holds the language
+          control.
+
+          Reachable from every step, not only the first screen: somebody three
+          questions in who realises they would rather read this in Tamil should
+          not have to finish the form in a language they are struggling with, and
+          the alternative -- abandoning onboarding and finding the setting
+          afterwards -- means answering these questions twice.
+        */}
+        <LanguageSwitcher />
       </View>
 
       <Screen bottomSpace={0} contentStyle={{ flexGrow: 1 }}>
@@ -149,7 +164,7 @@ export function Step({
         }}
       >
         <Button
-          label={continueLabel}
+          label={continueLabel ?? t("common.continue")}
           onPress={onContinue}
           disabled={!canContinue}
           loading={pending}
@@ -170,11 +185,16 @@ export function Step({
  * work feel unbounded.
  */
 function Progress({ index, total }: { index: number; total: number }) {
+  const t = useT();
+
   return (
     <View
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={`Step ${index + 1} of ${total}`}
+      accessibilityLabel={t("onboarding.stepOf", {
+        current: index + 1,
+        total,
+      })}
       style={{
         flex: 1,
         flexDirection: "row",

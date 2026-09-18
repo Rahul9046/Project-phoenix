@@ -11,11 +11,15 @@ import { CitySearch } from "@/shared/ui/CitySearch";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { ProgressIndicator } from "@/features/auth/components/ProgressIndicator";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
-import { cityStep } from "@/features/auth/content";
 import { authRoutes, onboardingStepIndex } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
-import { getCityById, type CityResult } from "@/shared/data/cities";
+import {
+  getCityById,
+  isListedCity,
+  type CityChoice,
+} from "@/shared/data/cities";
 import type { OnboardingProfile } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 export function CityScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.city);
@@ -24,17 +28,31 @@ export function CityScreen() {
 }
 
 function CityForm({ profile }: { profile: OnboardingProfile }) {
+  const t = useT();
   const router = useRouter();
 
-  const [city, setCity] = useState<CityResult | null>(null);
+  /*
+   * A typed town needs no lookup: the text is already on the profile, so it is
+   * the initial state rather than something an effect fills in afterwards. Only
+   * a city id has to be fetched, which is what the effect below is for.
+   */
+  const [city, setCity] = useState<CityChoice | null>(() =>
+    profile.city === "other" && profile.otherCity
+      ? { name: profile.otherCity }
+      : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  // The profile stores a city id. Someone returning to change an answer should
-  // see the city they already chose, not an empty box implying it was lost.
+  /*
+   * Someone returning to change an answer should see the city they already
+   * chose, not an empty box implying it was lost. `profile.city` carries the
+   * city id, or the sentinel "other" when the answer was typed -- and the typed
+   * case is handled above, so there is nothing to fetch for it here.
+   */
   useEffect(() => {
     const storedId = profile.city;
-    if (!storedId) return;
+    if (!storedId || storedId === "other") return;
 
     let cancelled = false;
     void getCityById(storedId).then((found) => {
@@ -51,16 +69,23 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
     if (pending) return;
 
     if (!city) {
-      setError(cityStep.error);
+      setError(t("onboarding.city.error"));
       return;
     }
 
     setError(null);
     setPending(true);
 
-    // Always a real city id now. Registration is open across India, so there is
-    // no "somewhere else" case left to record as free text.
-    const result = await saveCity({ cityId: city.id, otherCity: null });
+    /*
+     * One of the 493, or a town somebody typed. The action already understood
+     * both and clears whichever column does not apply; only this screen insisted
+     * on the first, which is what made an unlisted town unfinishable on the web.
+     */
+    const result = await saveCity(
+      isListedCity(city)
+        ? { cityId: city.id, otherCity: null }
+        : { cityId: null, otherCity: city.name },
+    );
 
     if (!result.ok) {
       setError(result.message);
@@ -73,16 +98,24 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
 
   return (
     <AuthLayout
-      backHref={authRoutes.basics}
+      backHref={authRoutes.seeking}
       progress={
         <ProgressIndicator currentIndex={onboardingStepIndex(authRoutes.city)} />
       }
     >
-      <AuthHeader title={cityStep.title} lede={cityStep.lede} showLogo={false} />
+      <AuthHeader title={t("onboarding.city.title")} lede={t("onboarding.city.lede")} showLogo={false} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
         <CitySearch
-          labels={cityStep}
+          labels={{
+            searchLabel: t("onboarding.city.searchLabel"),
+            searchPlaceholder: t("onboarding.city.searchPlaceholder"),
+            searching: t("onboarding.city.searching"),
+            noMatches: t("onboarding.city.noMatches"),
+            changeCta: t("common.change"),
+            useTyped: (typed) => t("onboarding.city.useTyped", { typed }),
+            typedSubtitle: t("onboarding.city.typedSubtitle"),
+          }}
           value={city}
           onChange={(next) => {
             setCity(next);
@@ -94,7 +127,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
 
         {!city ? (
           <p className="mt-2.5 text-sm leading-relaxed text-ink-subtle">
-            {cityStep.hint}
+            {t("onboarding.city.hint")}
           </p>
         ) : null}
 
@@ -106,7 +139,7 @@ function CityForm({ profile }: { profile: OnboardingProfile }) {
           loadingLabel="Saving…"
           className="mt-8"
         >
-          {cityStep.cta}
+          {t("common.continue")}
         </PrimaryButton>
       </form>
     </AuthLayout>

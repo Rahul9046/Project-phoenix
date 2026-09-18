@@ -59,7 +59,21 @@
     from a change of voice. The scale below is what makes that work; a heading
     that differed from body text only by being larger would be flat.
   */
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  /*
+    Manrope first, then whatever the active script needs.
+
+    `--font-script` is set on `<html>` per request from the member's language.
+    Manrope has no Devanagari, Bengali, Telugu or Tamil glyphs -- a page in any
+    of those set in Manrope alone renders as empty boxes -- and browsers fall
+    back glyph by glyph, so keeping Manrope at the front means Latin text inside
+    an Indic sentence ("Eraya", an email address, a price) is still Eraya's own
+    typeface while only the Indic glyphs come from the system font.
+
+    The default covers the case where nothing set it: English, and the stack it
+    always had.
+  */
+  --font-script: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), var(--font-script);
 
   /*
     The type scale.
