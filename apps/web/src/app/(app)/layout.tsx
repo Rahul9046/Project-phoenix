@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { myPhotoUrl } from "@/features/account/my-photo";
 import { AppHeader } from "@/features/app-shell/AppHeader";
 import { MobileTabBar } from "@/features/app-shell/MobileTabBar";
 import { AuthSessionProvider } from "@/features/auth/AuthSessionProvider";
@@ -57,10 +58,19 @@ export default async function AppGroupLayout({
 
   const name = session.profile.firstName ?? session.user.displayName;
 
+  // After the gates rather than beside the session read: somebody being sent
+  // back into onboarding has no header to draw, and no reason to pay for the
+  // query.
+  const photoUrl = await myPhotoUrl();
+
   return (
     <AuthSessionProvider serverSession={session}>
       <div className="flex min-h-dvh flex-col bg-canvas">
-        <AppHeader name={name} email={session.user.email} />
+        <AppHeader
+          name={name}
+          email={session.user.email}
+          photoUrl={photoUrl}
+        />
 
         <main id="main" className="flex-1">
           {children}
