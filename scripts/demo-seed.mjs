@@ -593,8 +593,29 @@ async function remove() {
   console.log(`Removing ${demo.length} demo members...\n`);
 
   for (const user of demo) {
+    /*
+     * Photographs first, and through the Storage API because there is no other
+     * way: `storage.objects` has no foreign key to `auth.users`, so deleting
+     * the account cascades everything except the files, and Supabase refuses a
+     * direct `delete from storage.objects` whatever role tries it. Skipping
+     * this is how four folders of faces came to be sitting in the bucket,
+     * belonging to accounts that no longer existed.
+     *
+     * Afterwards there is no id left to find them by, so the order matters.
+     */
+    const { data: files } = await admin.storage
+      .from("profile-photos")
+      .list(user.id, { limit: 100 });
+
+    if (files?.length) {
+      await admin.storage
+        .from("profile-photos")
+        .remove(files.map((file) => `${user.id}/${file.name}`));
+    }
+
     const { error } = await admin.auth.admin.deleteUser(user.id);
-    console.log(`  ${user.email} ${error ? error.message : "removed"}`);
+    const photos = files?.length ? `, ${files.length} photo(s)` : "";
+    console.log(`  ${user.email} ${error ? error.message : `removed${photos}`}`);
   }
 
   console.log("\nDone. Real accounts are untouched.");

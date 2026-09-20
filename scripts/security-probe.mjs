@@ -725,6 +725,164 @@ for (const fn of ["membership_catalogue", "my_membership", "my_payments"]) {
   );
 }
 
+// ---------------------------------------------------------------------------
+console.log("\nDeleting an account takes the photographs with it");
+// ---------------------------------------------------------------------------
+//
+// Nothing in the database can do this. `storage.objects` has no foreign key to
+// `auth.users`, and Supabase refuses a direct `delete from storage.objects`
+// whatever role attempts it -- so there is no cascade, trigger or constraint
+// available, and the only interface that removes a file is the Storage API.
+//
+// That makes it a promise kept entirely by application code, which is the kind
+// of promise that quietly stops being true. It had already: `delete_my_account`
+// carried a storage delete that could never have run, the web never called that
+// function at all, and four folders of photographs belonging to deleted accounts
+// were found sitting in the bucket.
+//
+// So this walks the member's own path with the member's own token -- upload,
+// clear the folder, delete the account -- and then looks in the bucket. It is a
+// privacy boundary, not housekeeping: somebody told their account is deleted has
+// been told their photograph is gone.
+//
+// Its own throwaway account, created and destroyed here, so the probe still
+// writes nothing that outlives it.
+
+{
+  const email = "deletionprobe@demo.eraya.invalid";
+  const bucketUrl = `${URL_BASE}/storage/v1/object/profile-photos`;
+
+  const existing = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const stale = existing.data.users.find((u) => u.email === email);
+  if (stale) await admin.auth.admin.deleteUser(stale.id);
+
+  const { data: made, error: makeError } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { demo: true },
+  });
+
+  if (makeError || !made?.user) {
+    check("a throwaway account exists to delete", false, makeError?.message ?? "no user");
+  } else {
+    const id = made.user.id;
+    const { token } = await signIn(email);
+    const asMember = { apikey: ANON, Authorization: `Bearer ${token}` };
+
+    // Uploaded by the member, so the insert policy is exercised too. Four bytes
+    // of JPEG; this is about whether the file survives, not what it shows.
+    const uploaded = await fetch(`${bucketUrl}/${id}/probe-0.jpg`, {
+      method: "POST",
+      headers: { ...asMember, "Content-Type": "image/jpeg" },
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    });
+    check(
+      "a member can store a photograph in their own folder",
+      uploaded.status < 400,
+      `status ${uploaded.status}`,
+    );
+
+    const filesUnder = async (folder) => {
+      const response = await fetch(`${URL_BASE}/storage/v1/object/list/profile-photos`, {
+        method: "POST",
+        headers: {
+          apikey: SERVICE,
+          Authorization: `Bearer ${SERVICE}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prefix: folder, limit: 100 }),
+      });
+      const rows = await response.json();
+      return Array.isArray(rows) ? rows.filter((o) => o.id) : [];
+    };
+
+    check("the photograph is there before deletion", (await filesUnder(id)).length === 1);
+
+    // The authority the member is given is their own folder and no more. Worth
+    // asserting here rather than assuming, because the deletion flow below
+    // relies on exactly this policy.
+    const theft = await fetch(`${bucketUrl}`, {
+      method: "DELETE",
+      headers: { ...asMember, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefixes: [`${meera.id}/`] }),
+    });
+    const stillThere = await filesUnder(meera.id);
+    check(
+      "a member cannot delete another member's photo files",
+      stillThere.length > 0 || theft.status >= 400,
+      `status ${theft.status}, ${stillThere.length} of meera's file(s) left`,
+    );
+
+    // What the app does, in the order the app does it: clear the folder through
+    // the Storage API, then delete the account.
+    const listed = await fetch(`${URL_BASE}/storage/v1/object/list/profile-photos`, {
+      method: "POST",
+      headers: { ...asMember, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: id, limit: 100 }),
+    });
+    const own = await listed.json();
+    const paths = (Array.isArray(own) ? own : [])
+      .filter((o) => o.id)
+      .map((o) => `${id}/${o.name}`);
+
+    await fetch(`${bucketUrl}`, {
+      method: "DELETE",
+      headers: { ...asMember, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefixes: paths }),
+    });
+
+    const deleted = await fetch(`${URL_BASE}/rest/v1/rpc/delete_my_account`, {
+      method: "POST",
+      headers: { ...asMember, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    check(
+      "a member can delete their own account",
+      deleted.status < 400,
+      `status ${deleted.status}: ${(await deleted.text()).slice(0, 160)}`,
+    );
+
+    const left = await filesUnder(id);
+    check(
+      "the photograph is gone with the account",
+      left.length === 0,
+      `${left.length} file(s) left: ${left.map((o) => o.name).join(", ")}`,
+    );
+
+    const profile = await (
+      await fetch(`${URL_BASE}/rest/v1/profiles?id=eq.${id}&select=id`, {
+        headers: { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` },
+      })
+    ).json();
+    check(
+      "and the profile row with it",
+      Array.isArray(profile) && profile.length === 0,
+      JSON.stringify(profile).slice(0, 120),
+    );
+
+    // Whatever happened above, leave nothing behind.
+    const after = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const survivor = after.data.users.find((u) => u.email === email);
+    if (survivor) {
+      const residue = await filesUnder(survivor.id);
+      if (residue.length) {
+        await fetch(`${bucketUrl}`, {
+          method: "DELETE",
+          headers: {
+            apikey: SERVICE,
+            Authorization: `Bearer ${SERVICE}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prefixes: residue.map((o) => `${survivor.id}/${o.name}`),
+          }),
+        });
+      }
+      await admin.auth.admin.deleteUser(survivor.id);
+    }
+  }
+}
+
 const failed = results.filter((r) => !r.passed);
 console.log(
   `\n${results.length - failed.length} of ${results.length} checks passed.`,
