@@ -37,7 +37,6 @@ export default async function MembershipPage() {
   ] as const;
 
   const premiumAdds = [
-    "See who expressed interest in you",
     "More profile reverts",
     "Browse incognito",
     "Priority profile visibility",

@@ -15,7 +15,6 @@ import {
   getHomeSummary,
   type HomeSummary,
 } from "@/features/members/data";
-import { useEntitlements } from "@/features/membership/entitlements";
 import type { Conversation } from "@/features/members/types";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { TextButton } from "@/ui/Button";
@@ -41,7 +40,6 @@ import { Text } from "@/ui/Text";
  */
 export default function Home() {
   const { profile } = useSession();
-  const { entitlements } = useEntitlements();
   const t = useT();
 
   const [summary, setSummary] = useState<HomeSummary | null>(null);
@@ -165,6 +163,61 @@ export default function Home() {
           <LanguageSwitcher />
         </View>
       </View>
+
+      {/*
+        Interest received: a real number, and nothing to tap.
+
+        Accent tone, which is `ember-tint` -- the same surface the website gives
+        this card, so the two clients highlight it identically.
+
+        No `onPress` and no chevron, both deliberately. There is no screen
+        behind this card because the identities do not leave the database at
+        any tier, and a card that looked tappable would send somebody hunting
+        for a destination that does not exist. The explanation sits on the card
+        for the same reason — "who?" is the next thought every reader has, and
+        it should be answered here rather than at the end of a search.
+
+        First on the screen, because it is the only thing here that is news --
+        everything below is available whenever they look. Hidden entirely at
+        zero, so nobody is told that nobody chose them.
+      */}
+      {summary && summary.interestsReceived > 0 ? (
+        <Card
+          tone="accent"
+          accessibilityLabel={`${
+            summary.interestsReceived === 1
+              ? t("home.interestOne")
+              : t("home.interestMany", { count: summary.interestsReceived })
+          }. ${
+            summary.interestsReceived === 1
+              ? t("home.interestPrivateOne")
+              : t("home.interestPrivateMany")
+          }`}
+          style={{ marginTop: space.section }}
+        >
+          <View style={{ flexDirection: "row", gap: space.lg }}>
+            <Ionicons
+              name="mail-unread-outline"
+              size={iconSize.lg}
+              color={colors.emberText}
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="headline">
+                {summary.interestsReceived === 1
+                  ? t("home.interestOne")
+                  : t("home.interestMany", {
+                      count: summary.interestsReceived,
+                    })}
+              </Text>
+              <Text variant="bodySm" tone="muted" style={{ marginTop: space.xs }}>
+                {summary.interestsReceived === 1
+                  ? t("home.interestPrivateOne")
+                  : t("home.interestPrivateMany")}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
 
       {/* Today's introductions. */}
       <Card
@@ -331,63 +384,6 @@ export default function Home() {
             ))}
           </Card>
         </View>
-      ) : null}
-
-      {/* Interest received. Real numbers, and an honest reason to upgrade. */}
-      {summary && summary.interestsReceived > 0 ? (
-        <Card
-          tone={entitlements.canSeeInteresters ? "surface" : "accent"}
-          onPress={() =>
-            router.push(
-              entitlements.canSeeInteresters
-                ? "/interests"
-                : "/you/membership",
-            )
-          }
-          accessibilityLabel={`${
-            summary.interestsReceived === 1
-              ? t("home.interestOne")
-              : t("home.interestMany", { count: summary.interestsReceived })
-          }. ${
-            entitlements.canSeeInteresters
-              ? t("home.interestSeeWho")
-              : t("home.interestPremium")
-          }`}
-          style={{ marginTop: space.section }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space.lg,
-            }}
-          >
-            <Ionicons
-              name="mail-unread-outline"
-              size={iconSize.lg}
-              color={colors.emberText}
-            />
-            <View style={{ flex: 1 }}>
-              <Text variant="headline">
-                {summary.interestsReceived === 1
-                  ? t("home.interestOne")
-                  : t("home.interestMany", {
-                      count: summary.interestsReceived,
-                    })}
-              </Text>
-              <Text variant="bodySm" tone="muted" style={{ marginTop: space.xs }}>
-                {entitlements.canSeeInteresters
-                  ? t("home.interestSeeWho")
-                  : t("home.interestPremium")}
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={iconSize.md}
-              color={colors.inkSubtle}
-            />
-          </View>
-        </Card>
       ) : null}
 
       <ProfilePrompt />

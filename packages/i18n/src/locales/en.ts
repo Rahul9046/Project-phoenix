@@ -345,10 +345,6 @@ export const en = {
     introductionsCta: "See who",
     connectionsTitle: "Your connections",
     connectionsEmpty: "Nobody yet. A connection opens when interest is mutual.",
-    interestTitle: "People interested in you",
-    interestLocked:
-      "Eraya Premium shows you who has expressed interest before you decide.",
-    interestEmpty: "Nobody new since you last looked.",
     profileTitle: "Your profile",
     profileComplete: "Your profile is complete.",
     profileCta: "Review your profile",
@@ -369,10 +365,12 @@ export const en = {
     allMessages: "All messages",
     fromYou: "You:",
     unread: "Unread",
-    interestOne: "Someone is interested in you",
-    interestMany: "{count} people are interested in you",
-    interestSeeWho: "See who they are.",
-    interestPremium: "Seeing who they are is part of Eraya Premium.",
+    interestOne: "Someone is interested in getting to know you",
+    interestMany: "{count} people are interested in getting to know you",
+    interestPrivateOne:
+      "We keep interests private so you can discover people without pressure or influence. We won't reveal who it is — even with Premium. If you both choose each other, we'll let you know.",
+    interestPrivateMany:
+      "We keep interests private so you can discover people without pressure or influence. We won't reveal who they are — even with Premium. If you both choose each other, we'll let you know.",
     promptTitle: "Say a little more about yourself",
     promptBody: "A few lines in your own words is the difference between a profile and a person. It takes a minute, and you can change it whenever you like.",
     promptCta: "Add it now",

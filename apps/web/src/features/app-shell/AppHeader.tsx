@@ -17,9 +17,11 @@ import { Logo } from "@/shared/brand/Logo";
 export function AppHeader({
   name,
   email,
+  photoUrl,
 }: {
   name: string | null;
   email: string | null;
+  photoUrl: string | null;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/95 backdrop-blur">
@@ -53,7 +55,7 @@ export function AppHeader({
             the problem.
           */}
           <LanguageSwitch />
-          <AccountMenu name={name} email={email} />
+          <AccountMenu name={name} email={email} photoUrl={photoUrl} />
         </div>
       </div>
     </header>

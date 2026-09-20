@@ -272,16 +272,6 @@ console.log("\nGranting yourself premium");
     `status ${status}: ${body.slice(0, 120)}`,
   );
 
-  const { body: interestsBody } = await request(
-    meera.token,
-    "rpc/interests_received",
-    { method: "POST", body: "{}" },
-  );
-  check(
-    "interests_received returns nothing without premium",
-    JSON.parse(interestsBody).length === 0,
-    interestsBody.slice(0, 160),
-  );
 }
 
 {
@@ -289,7 +279,7 @@ console.log("\nGranting yourself premium");
     method: "POST",
     body: JSON.stringify({
       tier: "free",
-      key: "canSeeInteresters",
+      key: "canUseIncognito",
       kind: "boolean",
       value: "true",
     }),
@@ -298,6 +288,93 @@ console.log("\nGranting yourself premium");
     "cannot write an entitlement",
     status >= 400,
     `status ${status}: ${body.slice(0, 120)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+console.log("\nInterest, counted but never named");
+// ---------------------------------------------------------------------------
+//
+// A member learns how many people have expressed interest in them and never
+// who, at any tier. The identities are not withheld pending payment -- there is
+// no function that returns them, which is a stronger claim and the one worth
+// probing. See 20260920100100_interest_awareness.sql.
+
+{
+  const { status, body } = await request(
+    meera.token,
+    "rpc/interests_received_count",
+    { method: "POST", body: "{}" },
+  );
+  const value = (() => {
+    try {
+      return JSON.parse(body);
+    } catch {
+      return null;
+    }
+  })();
+
+  check(
+    "a member can read their own incoming-interest count",
+    status < 400 && typeof value === "number" && value >= 0,
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+
+  // A bare integer, not a row. Anything with fields is something somebody will
+  // eventually be tempted to add a name to.
+  check(
+    "the count is a number, carrying nothing about anybody",
+    typeof value === "number",
+    `got ${typeof value}: ${body.slice(0, 120)}`,
+  );
+}
+
+{
+  // The function that used to return the interested members themselves. Gone,
+  // not emptied -- an empty function invites somebody to "fix" it later.
+  const { status, body } = await request(
+    meera.token,
+    "rpc/interests_received",
+    { method: "POST", body: "{}" },
+  );
+  check(
+    "the function that named the interested members no longer exists",
+    status === 404,
+    `status ${status}: ${body.slice(0, 160)}`,
+  );
+}
+
+{
+  // The count takes its id from the session. Offering one is the obvious way to
+  // try to read somebody else's, so it has to be refused rather than ignored.
+  const { status, body } = await request(
+    meera.token,
+    "rpc/interests_received_count",
+    { method: "POST", body: JSON.stringify({ p_profile: sanjay.id }) },
+  );
+  check(
+    "a member cannot ask for somebody else's count",
+    status >= 400,
+    `status ${status}: ${body.slice(0, 160)}`,
+  );
+}
+
+{
+  // The ledger underneath. If this were readable, the count would be decoration.
+  const { body } = await request(
+    meera.token,
+    `member_interests?to_id=eq.${meera.id}&select=from_id`,
+  );
+  let rows;
+  try {
+    rows = JSON.parse(body);
+  } catch {
+    rows = null;
+  }
+  check(
+    "a member cannot read who expressed interest in them",
+    !Array.isArray(rows) || rows.length === 0,
+    body.slice(0, 160),
   );
 }
 
@@ -361,7 +438,11 @@ console.log("\nReverts");
 console.log("\nAnonymous access");
 // ---------------------------------------------------------------------------
 
-for (const fn of ["discover_members", "interests_received", "member_profile"]) {
+for (const fn of [
+  "discover_members",
+  "interests_received_count",
+  "member_profile",
+]) {
   const response = await fetch(`${URL_BASE}/rest/v1/rpc/${fn}`, {
     method: "POST",
     headers: {

@@ -18,9 +18,11 @@ import { useT } from "@/features/i18n/LocaleProvider";
 export function AccountMenu({
   name,
   email,
+  photoUrl,
 }: {
   name: string | null;
   email: string | null;
+  photoUrl: string | null;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -62,7 +64,7 @@ export function AccountMenu({
         aria-haspopup="menu"
         className="flex min-h-11 items-center gap-2.5 rounded-full border border-line py-1 pl-1 pr-3 text-ink transition-colors hover:border-line-strong hover:bg-sand"
       >
-        <Avatar name={name} />
+        <Avatar name={name} photoUrl={photoUrl} />
         <span className="hidden text-[0.95rem] font-medium sm:inline">
           {name ?? "Account"}
         </span>
