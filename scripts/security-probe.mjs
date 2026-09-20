@@ -419,6 +419,44 @@ console.log("\nBlocks");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\nReports");
+// ---------------------------------------------------------------------------
+//
+// Filing a report is a member-facing action. Reading one is not, and the whole
+// of moderation rests on that asymmetry: a member who could read the reports
+// table would learn who had reported whom, which is the one disclosure that
+// makes reporting a stranger dangerous rather than safe.
+//
+// Read-only on purpose. This file runs against the seeded demo members, and a
+// report filed here would block two of them and leave a row behind.
+
+{
+  const { status, body } = await request(meera.token, "member_reports?select=*");
+  check(
+    "a member reads nothing from member_reports",
+    status >= 400 || body.replace(/\s/g, "") === "[]",
+    `status ${status}: ${body.slice(0, 120)}`,
+  );
+
+  const { body: queue } = await request(meera.token, "rpc/admin_list_reports", {
+    method: "POST",
+    body: JSON.stringify({ p_filter: "all" }),
+  });
+  let rows = [];
+  try {
+    const parsed = JSON.parse(queue);
+    rows = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    rows = [];
+  }
+  check(
+    "a member listing the moderation queue receives nothing",
+    rows.length === 0,
+    queue.slice(0, 120),
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log("\nReverts");
 // ---------------------------------------------------------------------------
 
@@ -442,6 +480,7 @@ for (const fn of [
   "discover_members",
   "interests_received_count",
   "member_profile",
+  "report_and_block_member",
 ]) {
   const response = await fetch(`${URL_BASE}/rest/v1/rpc/${fn}`, {
     method: "POST",

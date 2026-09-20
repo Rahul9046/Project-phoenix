@@ -1157,6 +1157,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      report_and_block_member: {
+        Args: {
+          p_details?: string
+          p_reason: Database["public"]["Enums"]["report_reason"]
+          p_target: string
+        }
+        Returns: undefined
+      }
       revert_last_pass: { Args: never; Returns: string }
       reverts_remaining: { Args: never; Returns: number }
       search_cities: {
@@ -1212,6 +1220,9 @@ export type Database = {
         | "scam"
         | "incorrect_relationship_status"
         | "other"
+        | "spam"
+        | "safety_threat"
+        | "underage"
       report_status: "received" | "reviewing" | "actioned" | "dismissed"
       subscription_status:
         | "pending"
@@ -1408,6 +1419,9 @@ export const Constants = {
         "scam",
         "incorrect_relationship_status",
         "other",
+        "spam",
+        "safety_threat",
+        "underage",
       ],
       report_status: ["received", "reviewing", "actioned", "dismissed"],
       subscription_status: [

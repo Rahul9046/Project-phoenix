@@ -106,10 +106,21 @@ export default async function AdminReportsPage({
               key={report.id}
               className="rounded-2xl border border-line bg-surface p-6"
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <p className="text-name text-ink">
-                  {reasonLabels[report.reasonCode] ?? report.reasonCode}
-                </p>
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                <div>
+                  <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                    Reason
+                  </p>
+                  <p className="mt-0.5 text-name text-ink">
+                    {reasonLabels[report.reasonCode] ?? report.reasonCode}
+                  </p>
+                  {/* The stored identifier as well as its label. A category
+                      added to the enum before this map catches up would
+                      otherwise show a moderator nothing they could act on. */}
+                  <p className="mt-0.5 font-mono text-meta text-ink-subtle">
+                    {report.reasonCode}
+                  </p>
+                </div>
                 <p className="text-meta text-ink-subtle">{when(report.createdAt)}</p>
               </div>
 
@@ -129,15 +140,21 @@ export default async function AdminReportsPage({
                 {statusLabels[report.status]}
               </p>
 
-              {report.description ? (
-                <p className="mt-4 whitespace-pre-wrap rounded-xl bg-sand px-4 py-3 text-[0.95rem] leading-relaxed text-ink-muted">
-                  {report.description}
+              <div className="mt-4">
+                <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                  Details
                 </p>
-              ) : (
-                <p className="mt-4 text-[0.95rem] italic text-ink-subtle">
-                  No description was given.
-                </p>
-              )}
+                {report.description ? (
+                  <p className="mt-1.5 whitespace-pre-wrap rounded-xl bg-sand px-4 py-3 text-[0.95rem] leading-relaxed text-ink-muted">
+                    {report.description}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-[0.95rem] italic text-ink-subtle">
+                    None given. Optional for every reason except “Something
+                    else”, which cannot be filed without them.
+                  </p>
+                )}
+              </div>
 
               <ReportActions
                 reportId={report.id}
