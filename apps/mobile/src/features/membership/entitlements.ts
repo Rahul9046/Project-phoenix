@@ -25,7 +25,6 @@ import { supabase } from "@/lib/supabase/client";
 
 export type Entitlements = {
   tier: "free" | "premium";
-  canSeeInteresters: boolean;
   canUseIncognito: boolean;
   canUsePriorityVisibility: boolean;
   canBrowseProfiles: boolean;
@@ -42,7 +41,6 @@ export type Entitlements = {
  */
 export const freeDefaults: Entitlements = {
   tier: "free",
-  canSeeInteresters: false,
   canUseIncognito: false,
   canUsePriorityVisibility: false,
   canBrowseProfiles: true,
@@ -103,7 +101,6 @@ export async function getEntitlements(): Promise<Entitlements> {
 
   return {
     tier,
-    canSeeInteresters: boolean("canSeeInteresters", false),
     canUseIncognito: boolean("canUseIncognito", false),
     canUsePriorityVisibility: boolean("canUsePriorityVisibility", false),
     canBrowseProfiles: boolean("canBrowseProfiles", true),

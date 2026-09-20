@@ -155,16 +155,21 @@ export async function getMember(id: string): Promise<MemberCard | null> {
 }
 
 /**
- * Who has expressed interest. Premium.
+ * How many people have expressed interest. Never who.
  *
- * The database checks the subscription, not this function — so an empty array
- * genuinely means "not premium, or nobody yet", and cannot be argued with by
- * calling the API directly.
+ * There is no companion function returning the identities, at any tier — the
+ * one that used to was deleted rather than gated, so this is not a summary of
+ * something richer a client could ask for instead. See
+ * `supabase/migrations/20260920100100_interest_awareness.sql`.
+ *
+ * Zero when the call fails, because zero is the value that renders nothing. The
+ * alternative is inventing a number on a page whose whole claim is that its
+ * numbers are real.
  */
-export async function getInterestsReceived(): Promise<MemberCard[]> {
+export async function getInterestsReceivedCount(): Promise<number> {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("interests_received");
-  return toCards(supabase, (data ?? []) as RawCard[]);
+  const { data } = await supabase.rpc("interests_received_count");
+  return typeof data === "number" ? data : 0;
 }
 
 export type Connection = {

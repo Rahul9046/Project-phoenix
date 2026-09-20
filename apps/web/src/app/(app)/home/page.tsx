@@ -9,11 +9,10 @@ import { MemberSummary } from "@/features/members/MemberPresentation";
 import { MemberRowLink } from "@/features/members/MemberRowLink";
 import {
   getConnections,
-  getInterestsReceived,
+  getInterestsReceivedCount,
   getIntroductions,
   getProfileCompleteness,
 } from "@/features/members/data";
-import { loadMembership } from "@/features/membership/entitlements";
 import { Button } from "@/shared/ui/Button";
 
 export const metadata = { title: "My Eraya" };
@@ -25,24 +24,27 @@ export const metadata = { title: "My Eraya" };
  * scrolling; this answers "where am I?" and rewards leaving. Every section is
  * finite, and none of them grows by staying on the page.
  *
- * Nothing here counts anything at the person. No unread badges, no "3 people are
- * waiting", no streak. Those exist to convert guilt into sessions, and Eraya's
- * members are rebuilding after a divorce or a death — the last thing that should
- * happen when they open this is being made to feel behind.
+ * Nothing here is counted at the person. No unread badges, no streak, no "you
+ * have not opened this in four days". Those exist to convert guilt into
+ * sessions, and Eraya's members are rebuilding after a divorce or a death — the
+ * last thing that should happen when they open this is being made to feel
+ * behind.
+ *
+ * The one number on this page is how many people have expressed interest, and it
+ * is here because withholding it was the worse option: somebody was choosing
+ * them and Eraya knew and said nothing. It is shown only when it is at least
+ * one, carries no name, and cannot be acted on — so it reads as news rather
+ * than as a queue with work in it.
  */
 export default async function HomePage() {
-  const [session, membership, introductions, connections, completeness] =
+  const [session, introductions, connections, completeness, interestCount] =
     await Promise.all([
       loadAuthSession(),
-      loadMembership(),
       getIntroductions(3),
       getConnections(),
       getProfileCompleteness(),
+      getInterestsReceivedCount(),
     ]);
-
-  const interested = membership.entitlements.canSeeInteresters
-    ? await getInterestsReceived()
-    : [];
 
   const name = session.profile.firstName;
   const t = await getT();
@@ -62,6 +64,42 @@ export default async function HomePage() {
       <p className="mt-3 text-lg leading-relaxed text-ink-muted">{t("home.lede")}</p>
 
       <div className="mt-12 grid gap-12">
+        {/* --- Interest received -----------------------------------------
+            First on the page, because it is the only item here that is news.
+            Everything below is available whenever they look; this one changed
+            because somebody else acted, and it was three sections down.
+
+            Tinted rather than outlined. `ember-tint` is the design system's
+            accent surface -- the same tone the app's accent card uses -- so
+            both clients highlight this the same way rather than each inventing
+            an emphasis of its own.
+
+            Deliberately nothing to click. There is no screen behind it because
+            there is nothing to show: the identities are not withheld pending
+            payment, they do not leave the database at all. Saying so on the
+            card is the point -- somebody who has just read "someone is
+            interested" goes looking for the way to find out who, and the
+            answer has to be here rather than at the end of a hunt through the
+            pricing page.
+
+            Omitted entirely at zero. "Nobody is interested in you" is a true
+            sentence that no product needs to say to somebody who has just
+            rebuilt their life. -------------------------------------------- */}
+        {interestCount > 0 ? (
+          <section className="rounded-2xl bg-ember-tint p-6 sm:p-7">
+            <h2 className="text-name text-ink">
+              {interestCount === 1
+                ? t("home.interestOne")
+                : t("home.interestMany", { count: interestCount })}
+            </h2>
+            <p className="mt-3 max-w-xl leading-relaxed text-ink-muted">
+              {interestCount === 1
+                ? t("home.interestPrivateOne")
+                : t("home.interestPrivateMany")}
+            </p>
+          </section>
+        ) : null}
+
         {/* --- Introductions ------------------------------------------- */}
         <section>
           <div className="flex items-baseline justify-between gap-4">
@@ -142,53 +180,6 @@ export default async function HomePage() {
             <p className="mt-3 max-w-xl leading-relaxed text-ink-muted">
               {t("home.connectionsEmpty")}
             </p>
-          )}
-        </section>
-
-        {/* --- Interest received (premium) ------------------------------ */}
-        <section>
-          <h2 className="text-name text-ink">
-            {t("home.interestTitle")}
-          </h2>
-
-          {membership.entitlements.canSeeInteresters ? (
-            interested.length > 0 ? (
-              <ul className="mt-6 grid gap-3">
-                {interested.map((member) => (
-                  <li key={member.id}>
-                    <MemberRowLink
-                      href={`${appRoutes.discovery}/${member.id}`}
-                      name={member.firstName}
-                      photoUrl={member.photoUrl}
-                    >
-                      <MemberSummary member={member} />
-                    </MemberRowLink>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 leading-relaxed text-ink-muted">
-                {t("home.interestEmpty")}
-              </p>
-            )
-          ) : (
-            /*
-              Stated plainly, once, with no count. "3 people are interested"
-              would be a number designed to nag; withholding the number entirely
-              is the honest version of the same fact.
-            */
-            <div className="mt-4 rounded-2xl border border-line bg-sand/50 p-5">
-              <p className="leading-relaxed text-ink-muted">
-                {t("home.interestLocked")}
-              </p>
-              <Button
-                href={appRoutes.membership}
-                variant="secondary"
-                className="mt-4"
-              >
-                See what Premium includes
-              </Button>
-            </div>
           )}
         </section>
 
