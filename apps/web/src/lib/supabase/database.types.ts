@@ -1049,16 +1049,6 @@ export type Database = {
           unread_conversations: number
         }[]
       }
-      interests_received: {
-        Args: never
-        Returns: Database["public"]["CompositeTypes"]["member_card"][]
-        SetofOptions: {
-          from: "*"
-          to: "member_card"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
       interests_received_count: { Args: never; Returns: number }
       intro_offer_used: { Args: { p_profile: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }

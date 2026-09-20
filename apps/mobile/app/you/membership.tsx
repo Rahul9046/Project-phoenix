@@ -43,11 +43,6 @@ import { LoadingState } from "@/ui/States";
 
 const PREMIUM_ADDS = [
   {
-    icon: "mail-open-outline",
-    title: "See who is interested",
-    body: "The people who have said yes to you, before you say anything back.",
-  },
-  {
     icon: "arrow-undo-outline",
     title: "More second chances",
     body: "Bring back more of the people you passed on by mistake.",
@@ -55,7 +50,7 @@ const PREMIUM_ADDS = [
   {
     icon: "eye-off-outline",
     title: "Browse quietly",
-    body: "Look at profiles without appearing in their interested list.",
+    body: "Look at profiles without showing up in their viewers.",
   },
   {
     icon: "trending-up-outline",

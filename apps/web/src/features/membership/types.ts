@@ -13,7 +13,6 @@ export type PaymentProvider = Database["public"]["Enums"]["payment_provider"];
  * directly -- see `entitlements.ts` for why.
  */
 export type EntitlementKey =
-  | "canSeeInteresters"
   | "canUseIncognito"
   | "canUsePriorityVisibility"
   | "canBrowseProfiles"
@@ -24,7 +23,6 @@ export type EntitlementKey =
 
 export type Entitlements = {
   readonly tier: MembershipTier;
-  readonly canSeeInteresters: boolean;
   readonly canUseIncognito: boolean;
   readonly canUsePriorityVisibility: boolean;
   readonly canBrowseProfiles: boolean;

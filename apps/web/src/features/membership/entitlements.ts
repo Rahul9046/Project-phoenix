@@ -35,7 +35,6 @@ import {
  */
 const FREE_FALLBACK: Entitlements = {
   tier: "free",
-  canSeeInteresters: false,
   canUseIncognito: false,
   canUsePriorityVisibility: false,
   canBrowseProfiles: true,
@@ -120,10 +119,6 @@ export async function loadMembership(): Promise<Membership> {
 
   const entitlements: Entitlements = {
     tier,
-    canSeeInteresters: asBoolean(
-      valueOf("canSeeInteresters"),
-      FREE_FALLBACK.canSeeInteresters,
-    ),
     canUseIncognito: asBoolean(
       valueOf("canUseIncognito"),
       FREE_FALLBACK.canUseIncognito,

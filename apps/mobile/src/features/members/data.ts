@@ -237,21 +237,17 @@ export async function revertsRemaining(): Promise<number> {
 // Interest received
 // ---------------------------------------------------------------------------
 
-/** Premium. Returns nothing for a free member -- checked in SQL, not here. */
-export type InterestsReceived = { members: Member[]; failed: boolean };
-
-export async function getInterestsReceived(): Promise<InterestsReceived> {
-  const { data, error } = await supabase.rpc("interests_received");
-  if (error || !data) return { members: [], failed: true };
-  return { members: (data as RawCard[]).map(toMember), failed: false };
-}
-
 /**
- * The real number of people waiting, available to everyone.
+ * How many people have expressed interest. Never who.
  *
- * A free member is told the truth and told that seeing who they are is what
- * premium is for. No blurred faces, no invented count -- both of which are lies
- * told to sell a subscription.
+ * There is no companion call returning the identities, at any tier -- the one
+ * that used to was deleted rather than gated, so this is not a summary of
+ * something richer the app could ask for instead. See
+ * `supabase/migrations/20260920100100_interest_awareness.sql`.
+ *
+ * Zero when the call fails, because zero is the value that renders nothing. The
+ * alternative is showing an invented number on a screen whose whole claim is
+ * that its numbers are real.
  */
 export async function getInterestsReceivedCount(): Promise<number> {
   const { data, error } = await supabase.rpc("interests_received_count");
