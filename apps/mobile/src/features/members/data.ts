@@ -1,3 +1,9 @@
+import {
+  REPORT_REASONS,
+  reportNeedsDetails,
+  type ReportReasonCode,
+} from "@eraya/i18n";
+
 import { supabase } from "@/lib/supabase/client";
 import type {
   Conversation,
@@ -400,40 +406,50 @@ export async function blockMember(targetId: string): Promise<boolean> {
   return !error;
 }
 
-export type ReportReason = Database["public"]["Enums"]["report_reason"];
+/**
+ * What a report is allowed to say.
+ *
+ * The categories themselves live in `@eraya/i18n` beside their translations,
+ * because the website offers the same list in the same order and two copies of
+ * it would drift. The labels were hard-coded here and in English only, which
+ * meant somebody using the app in Tamil chose their reason from a list they
+ * could not read.
+ */
+export type ReportOutcome =
+  | { ok: true }
+  | { ok: false; problem: "reason" | "details" | "failed" };
 
-export const reportReasons: readonly {
-  value: ReportReason;
-  label: string;
-}[] = [
-  { value: "fake_profile", label: "Fake profile" },
-  { value: "harassment", label: "Harassment" },
-  { value: "inappropriate_content", label: "Inappropriate content" },
-  { value: "scam", label: "Scam or suspicious behaviour" },
-  {
-    value: "incorrect_relationship_status",
-    label: "Their chapter is not what they say",
-  },
-  { value: "other", label: "Something else" },
-];
-
-export async function reportMember(
+/**
+ * Reporting somebody, which blocks them.
+ *
+ * One RPC rather than an insert followed by an insert. The two-call version
+ * could file the report and then fail to write the block, which leaves someone
+ * who has just said they are frightened of a member still visible to them --
+ * `report_and_block_member` writes both rows or neither.
+ *
+ * The two checks below are a courtesy, not the boundary: the database refuses
+ * an unknown reason by the type of the argument and an empty "other" by a check
+ * constraint, whatever this client believes.
+ */
+export async function reportAndBlockMember(
   targetId: string,
-  reason: ReportReason,
-  description: string,
-): Promise<boolean> {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) return false;
+  reason: ReportReasonCode,
+  details: string,
+): Promise<ReportOutcome> {
+  if (!REPORT_REASONS.includes(reason)) return { ok: false, problem: "reason" };
 
-  const { error } = await supabase.from("member_reports").insert({
-    reporter_id: me,
-    reported_id: targetId,
-    reason_code: reason,
-    description: description.trim() || null,
+  const trimmed = details.trim();
+  if (reportNeedsDetails(reason) && !trimmed) {
+    return { ok: false, problem: "details" };
+  }
+
+  const { error } = await supabase.rpc("report_and_block_member", {
+    p_target: targetId,
+    p_reason: reason,
+    p_details: trimmed || undefined,
   });
 
-  return !error;
+  return error ? { ok: false, problem: "failed" } : { ok: true };
 }
 
 // ---------------------------------------------------------------------------

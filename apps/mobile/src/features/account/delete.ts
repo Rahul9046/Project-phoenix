@@ -13,7 +13,49 @@ import { supabase } from "@/lib/supabase/client";
  */
 export type DeleteResult = { ok: true } | { ok: false; message: string };
 
+/**
+ * The photographs, which nothing else will remove.
+ *
+ * `storage.objects` has no foreign key to `auth.users`, so no cascade reaches
+ * it -- and Supabase refuses a direct `delete from storage.objects` whatever
+ * role attempts it ("Direct deletion from storage tables is not allowed"). So
+ * it cannot be done inside `delete_my_account`, and it has to be done by the
+ * caller, through the Storage API, before the account goes.
+ *
+ * No service role is involved and none is needed: the "Members delete their own
+ * photo files" policy lets a member clear their own folder and nobody else's,
+ * which is exactly the authority this call should have.
+ *
+ * Failure does not stop the deletion. Somebody who has asked to be deleted gets
+ * deleted; refusing because a file would not budge would leave them with an
+ * account they asked us to remove.
+ */
+async function removePhotoFiles(memberId: string): Promise<string | null> {
+  const bucket = supabase.storage.from("profile-photos");
+
+  const { data, error } = await bucket.list(memberId, { limit: 100 });
+  if (error) return error.message;
+  if (!data || data.length === 0) return null;
+
+  const { error: removeError } = await bucket.remove(
+    data.map((file) => `${memberId}/${file.name}`),
+  );
+
+  return removeError?.message ?? null;
+}
+
 export async function deleteAccount(): Promise<DeleteResult> {
+  // Before the account, because afterwards there is no id to find them by.
+  const { data: auth } = await supabase.auth.getUser();
+  if (auth.user) {
+    const photoError = await removePhotoFiles(auth.user.id);
+    if (photoError) {
+      console.warn("[eraya] deleteAccount left photo files behind", {
+        message: photoError,
+      });
+    }
+  }
+
   const { error } = await supabase.rpc("delete_my_account");
 
   if (error) {

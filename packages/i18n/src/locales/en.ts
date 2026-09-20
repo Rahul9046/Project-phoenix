@@ -426,6 +426,60 @@ export const en = {
       "Conversations begin after you and someone else have both expressed interest. Nobody can message you before that.",
   },
 
+  /*
+   * Reporting somebody, which always blocks them.
+   *
+   * One group rather than more keys under `messages`, because this flow is
+   * reached from a conversation on the website and from both a conversation and
+   * a profile in the app -- and a member who reports from two places must be
+   * asked the same question in the same words.
+   *
+   * The wording still promises no review, because there is still no queue a
+   * member can be told about. What it does promise is the block, which is real,
+   * immediate, and enforced by the database rather than by this screen.
+   *
+   * `reasons` is keyed by the `report_reason` enum in Postgres. The keys are
+   * identifiers and are never translated; only the sentences beside them are.
+   */
+  report: {
+    title: "Report and block {name}?",
+    body:
+      "{name} is blocked the moment you send this — no messages, and neither of you is shown to the other again.",
+    note:
+      "Eraya is small and has no moderation team yet, so we cannot promise anyone will write back. The block does not wait for us; it takes effect immediately either way.",
+
+    reasonLabel: "Why are you reporting {name}?",
+    reasons: {
+      harassment: "Harassment or abusive behaviour",
+      inappropriate_content: "Inappropriate or sexual content",
+      fake_profile: "Fake or misleading profile",
+      scam: "Scam or asking for money",
+      spam: "Spam or unwanted promotion",
+      safety_threat: "Threats or safety concern",
+      underage: "Under 18",
+      other: "Something else",
+    },
+
+    detailsLabel: "Tell us more",
+    detailsOptional: "Optional. A sentence is enough.",
+    detailsRequired:
+      "Required, because “Something else” does not say what happened.",
+    detailsPlaceholder: "In your own words.",
+    detailsMissing: "Please tell us what happened.",
+    reasonMissing: "Please choose a reason.",
+
+    cancel: "Cancel",
+    submit: "Report & block {name}",
+    submitting: "Reporting…",
+    failed:
+      "We could not do that just now. Please try again in a moment, or write to us.",
+
+    doneTitle: "Report received. {name} is blocked.",
+    doneBody:
+      "Your report has been recorded, and {name} has been blocked — you will not be shown to each other again, and neither of you can send the other anything.",
+    doneCta: "Done",
+  },
+
   account: {
     title: "Your account",
     lede: "Everything Eraya knows about you, and everything you control.",

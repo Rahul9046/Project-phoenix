@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { appRoutes } from "@/features/app-shell/nav";
 import { Conversation } from "@/features/members/Conversation";
-import { ConversationSafety } from "@/features/members/ConversationSafety";
+import { MemberSafety } from "@/features/members/MemberSafety";
 import { MemberAvatar } from "@/features/members/MemberAvatar";
 import { MemberSummary, TrustMarks } from "@/features/members/MemberPresentation";
 import { getConversation } from "@/features/members/data";
@@ -59,11 +59,12 @@ export default async function ConversationPage({
 
       {/* Quiet, and always present. Someone who needs it should not have to
           hunt for it, and nobody else should have to look at it. */}
-      <ConversationSafety
-        connectionId={connection.id}
+      <MemberSafety
         memberId={connection.member.id}
         otherName={connection.member.firstName}
+        connectionId={connection.id}
         ended={Boolean(connection.endedAt)}
+        doneHref={appRoutes.connections}
       />
     </div>
   );

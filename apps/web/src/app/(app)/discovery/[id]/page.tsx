@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { appRoutes } from "@/features/app-shell/nav";
 import { IntroductionCard } from "@/features/members/IntroductionCard";
+import { MemberSafety } from "@/features/members/MemberSafety";
 import { getMember } from "@/features/members/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,6 +47,16 @@ export default async function MemberPage({
       <div className="mt-6">
         <IntroductionCard member={member} />
       </div>
+
+      {/* Reporting needs no connection. Somebody looking at a profile that is
+          plainly fake, or at a person who is plainly not eighteen, must be able
+          to say so from here -- asking them to be introduced first would be
+          asking them to engage with the thing they are trying to report. */}
+      <MemberSafety
+        memberId={member.id}
+        otherName={member.firstName}
+        doneHref={appRoutes.discovery}
+      />
     </div>
   );
 }
