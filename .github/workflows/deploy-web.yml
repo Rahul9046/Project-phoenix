@@ -79,10 +79,18 @@ jobs:
           NEXT_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.NEXT_PUBLIC_MSG91_WIDGET_ID }}
           NEXT_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.NEXT_PUBLIC_MSG91_TOKEN_AUTH }}
 
-          # NEXT_PUBLIC_ALLOW_INDEXING is deliberately absent. Its absence is
-          # what keeps the pre-launch product out of search results, through
-          # both the robots meta tag and the X-Robots-Tag header. Setting it to
-          # "true" here is the whole of launch day.
+          # Launch day, thrown. This one switch releases both the `robots`
+          # meta tag in the root layout and the X-Robots-Tag header in
+          # next.config.ts -- they read the same variable, so they cannot
+          # disagree. Only the literal string "true" counts.
+          #
+          # It belongs here and nowhere else. This workflow runs on pushes to
+          # `main` only, so the production build is the only one that ever
+          # sees it; local development, previews, branch builds and forks
+          # leave it unset and stay noindex by default. The signed-in area
+          # declares its own noindex regardless, so member profiles do not
+          # become public along with the landing page.
+          NEXT_PUBLIC_ALLOW_INDEXING: "true"
 
           # The server-side Supabase credential. Present at build because a
           # route rendered during the build would otherwise fail on a missing

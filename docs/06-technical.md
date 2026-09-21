@@ -192,8 +192,9 @@ Razorpay, MSG91 and SMTP values do **not** belong here; they are Supabase edge
 function secrets. Nothing secret is ever prefixed `NEXT_PUBLIC_`: that prefix is
 what puts a value into the browser bundle.
 
-`NEXT_PUBLIC_ALLOW_INDEXING` is deliberately **not** set, so the deployment is
-`noindex`. See below.
+`NEXT_PUBLIC_ALLOW_INDEXING` is set to `true` in the deploy workflow, so the
+production deployment is indexable. Everywhere it is unset -- local, previews,
+branch builds, forks -- is still `noindex`. See below.
 
 ### Cloudflare Workers, built by GitHub Actions
 
@@ -276,6 +277,11 @@ It is an environment variable rather than a hardcoded `noindex` on purpose: a
 hardcoded one is a code change somebody must remember to revert on launch day,
 and forgetting it means launching invisible to search — a silent failure worse
 than the problem it solves.
+
+It is now `true`, set in `.github/workflows/deploy-web.yml` beside the other
+build-time `NEXT_PUBLIC_*` values. That workflow runs on pushes to `main`, so
+the production build is the only one that receives it and the setting survives
+every future deploy without anyone remembering it.
 
 **One switch, two outputs.** `NEXT_PUBLIC_ALLOW_INDEXING` gates both the `robots`
 meta tag in the root layout and the `X-Robots-Tag` header set in
