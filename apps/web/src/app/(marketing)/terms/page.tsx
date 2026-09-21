@@ -8,6 +8,7 @@ import { getT } from "@/features/i18n/server";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The agreement between you and Eraya.",
+  alternates: { canonical: "/terms" },
 };
 
 export default async function TermsPage() {

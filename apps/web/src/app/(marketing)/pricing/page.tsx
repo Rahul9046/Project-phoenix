@@ -15,6 +15,7 @@ import { Eyebrow, SectionHeading } from "@/shared/ui/SectionHeading";
 export const metadata: Metadata = {
   title: "Pricing",
   description: `What ${site.name} costs, and what is free.`,
+  alternates: { canonical: "/pricing" },
 };
 
 /**
