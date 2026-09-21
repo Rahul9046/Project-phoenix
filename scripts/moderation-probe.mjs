@@ -50,6 +50,10 @@ const svc = { apikey: service, Authorization: `Bearer ${service}`, "Content-Type
 const ADMIN_EMAIL = "moderationadmin@demo.eraya.invalid";
 const MEMBER_EMAIL = "moderationmember@demo.eraya.invalid";
 const TARGET_EMAIL = "moderationtarget@demo.eraya.invalid";
+// Reported by the filing checks and nothing else. A separate account
+// because those checks end with a block, and the interest-count section
+// further down measures a number a block silently changes.
+const REPORTED_EMAIL = "moderationreported@demo.eraya.invalid";
 
 const results = [];
 function check(name, passed, detail = "") {
@@ -311,6 +315,199 @@ try {
   );
   check("an admin can dismiss a report", dismissed.status < 400, `status ${dismissed.status}`);
 
+
+  // -------------------------------------------------------------------------
+  console.log("\nFiling a report says what happened, and always blocks");
+  // -------------------------------------------------------------------------
+  //
+  // The rules a report has to obey are enforced in three places -- the enum
+  // refuses an identifier that is not a category, a check constraint refuses an
+  // "other" that says nothing, and `report_and_block_member` refuses both
+  // before writing either row. Only the third is reachable from a client, which
+  // is exactly why it is the one worth proving against a real session rather
+  // than trusting the two screens that call it.
+  //
+  // Its own target, blocked by the end of this section, so nothing here
+  // disturbs the counts measured further down.
+
+  const victim = await sessionFor(REPORTED_EMAIL);
+  await assertRealSession("the member being reported", victim);
+
+  const reportsAbout = async (who) =>
+    await (
+      await fetch(
+        `${url}/rest/v1/member_reports?reporter_id=eq.${member.id}&reported_id=eq.${who}&select=reason_code,description&order=created_at`,
+        { headers: svc },
+      )
+    ).json();
+
+  const blocksBetween = async (from, to) =>
+    await (
+      await fetch(
+        `${url}/rest/v1/member_blocks?blocker_id=eq.${from}&blocked_id=eq.${to}&select=blocker_id`,
+        { headers: svc },
+      )
+    ).json();
+
+  const bogusReason = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "not_a_reason", p_details: "probe" },
+    member.headers,
+  );
+  check(
+    "an invalid reason identifier is refused",
+    bogusReason.status >= 400,
+    `status ${bogusReason.status}`,
+  );
+
+  const noReason = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_details: "probe" },
+    member.headers,
+  );
+  check(
+    "a report with no reason at all is refused",
+    noReason.status >= 400,
+    `status ${noReason.status}`,
+  );
+
+  const bareOther = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "other" },
+    member.headers,
+  );
+  check(
+    'a reason of "other" with no details is refused',
+    bareOther.status >= 400,
+    `status ${bareOther.status}`,
+  );
+
+  const blankOther = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "other", p_details: "   \n  " },
+    member.headers,
+  );
+  check(
+    'a reason of "other" with only whitespace is refused',
+    blankOther.status >= 400,
+    `status ${blankOther.status}`,
+  );
+
+  const selfReport = await rpc(
+    "report_and_block_member",
+    { p_target: member.id, p_reason: "spam", p_details: "probe" },
+    member.headers,
+  );
+  check(
+    "a member cannot report themselves",
+    selfReport.status >= 400,
+    `status ${selfReport.status}`,
+  );
+
+  // A refusal must leave nothing behind. A rejected report that blocked
+  // somebody anyway, or a block with no report explaining it, is the worst of
+  // both outcomes.
+  const afterRefusals = await reportsAbout(victim.id);
+  const blocksAfterRefusals = await blocksBetween(member.id, victim.id);
+  check(
+    "a refused report writes neither a report nor a block",
+    Array.isArray(afterRefusals) &&
+      afterRefusals.length === 0 &&
+      Array.isArray(blocksAfterRefusals) &&
+      blocksAfterRefusals.length === 0,
+    `${afterRefusals?.length} report(s), ${blocksAfterRefusals?.length} block(s)`,
+  );
+
+  const signedOut = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "spam", p_details: "probe" },
+    { apikey: anon, "Content-Type": "application/json" },
+  );
+  check(
+    "a signed-out caller cannot file a report",
+    signedOut.status >= 400,
+    `status ${signedOut.status}`,
+  );
+
+  // Details are optional for a category that says what happened by itself.
+  // `safety_threat` is also one of the three categories this change added, so a
+  // pass here is proof the migration reached this database.
+  const predefined = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "safety_threat" },
+    member.headers,
+  );
+  check(
+    "a predefined reason files with no details at all",
+    predefined.status < 400,
+    `status ${predefined.status}`,
+  );
+
+  const filedBare = await reportsAbout(victim.id);
+  check(
+    "the reason is stored as its identifier, the details left empty",
+    filedBare?.[0]?.reason_code === "safety_threat" &&
+      filedBare?.[0]?.description === null,
+    JSON.stringify(filedBare?.[0]),
+  );
+
+  const blockedByReport = await blocksBetween(member.id, victim.id);
+  check(
+    "reporting blocked the member",
+    Array.isArray(blockedByReport) && blockedByReport.length === 1,
+    `${blockedByReport?.length} block(s)`,
+  );
+
+  // "Other" with words, against somebody already blocked by the report above --
+  // the second report must not fail on the block the first one wrote.
+  const WORDS = "Probe fixture. Not a real report.";
+  const withDetails = await rpc(
+    "report_and_block_member",
+    { p_target: victim.id, p_reason: "other", p_details: `  ${WORDS}  ` },
+    member.headers,
+  );
+  check(
+    'a reason of "other" with details files, even against someone already blocked',
+    withDetails.status < 400,
+    `status ${withDetails.status}`,
+  );
+
+  const filedOther = (await reportsAbout(victim.id))?.[1];
+  check(
+    "the category and the words are stored separately, the words trimmed",
+    filedOther?.reason_code === "other" && filedOther?.description === WORDS,
+    JSON.stringify(filedOther),
+  );
+
+  const asVictim = await (
+    await fetch(`${url}/rest/v1/member_reports?select=*`, { headers: victim.headers })
+  ).json();
+  check(
+    "the reported member cannot read the reports filed about them",
+    !Array.isArray(asVictim) || asVictim.length === 0,
+    JSON.stringify(asVictim).slice(0, 120),
+  );
+
+  const asReporter = await (
+    await fetch(`${url}/rest/v1/member_reports?select=*`, { headers: member.headers })
+  ).json();
+  check(
+    "the reporter cannot read their own report back",
+    !Array.isArray(asReporter) || asReporter.length === 0,
+    JSON.stringify(asReporter).slice(0, 120),
+  );
+
+  const queue = await rpc("admin_list_reports", { p_filter: "all" }, admin.headers);
+  const seenByAdmin = Array.isArray(queue.data)
+    ? queue.data.filter((r) => r.reported_id === victim.id)
+    : [];
+  check(
+    "the admin queue shows both the reason and the details",
+    seenByAdmin.some((r) => r.reason_code === "safety_threat") &&
+      seenByAdmin.some((r) => r.reason_code === "other" && r.description === WORDS),
+    JSON.stringify(seenByAdmin.map((r) => [r.reason_code, r.description])).slice(0, 200),
+  );
+
   // -------------------------------------------------------------------------
   console.log("\nThe interest count, and who drops out of it");
   // -------------------------------------------------------------------------
@@ -445,7 +642,7 @@ try {
 
   // Remove the throwaway accounts. Their reports and audit rows go with them.
   const users = await (await fetch(`${url}/auth/v1/admin/users?per_page=500`, { headers: svc })).json();
-  for (const email of [ADMIN_EMAIL, MEMBER_EMAIL, TARGET_EMAIL]) {
+  for (const email of [ADMIN_EMAIL, MEMBER_EMAIL, TARGET_EMAIL, REPORTED_EMAIL]) {
     const found = users.users?.find((u) => u.email === email);
     if (found) {
       await fetch(`${url}/auth/v1/admin/users/${found.id}`, { method: "DELETE", headers: svc });

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "What Eraya collects, why, who can see it, and what happens when you leave.",
+  alternates: { canonical: "/privacy" },
 };
 
 /**

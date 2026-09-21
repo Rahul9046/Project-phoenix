@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Community and Safety Guidelines",
   description:
     "What Eraya asks of its members, and what to do when someone does not.",
+  alternates: { canonical: "/safety" },
 };
 
 /**

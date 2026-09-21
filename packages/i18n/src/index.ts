@@ -16,6 +16,13 @@ import { mr } from "./locales/mr";
 import { te } from "./locales/te";
 import { ta } from "./locales/ta";
 import type { TFunction, TranslationKey, TranslationVars } from "./types";
+import {
+  OTHER_REASON,
+  REPORT_REASONS,
+  reportNeedsDetails,
+  reportReasonKey,
+  type ReportReasonCode,
+} from "./report";
 
 /**
  * Eraya's words, in six languages, shared by the website and the app.
@@ -141,9 +148,20 @@ export {
   LOCALES,
   LOCALE_NAMES,
   LOCALE_SCRIPTS,
+  OTHER_REASON,
+  REPORT_REASONS,
   isLocale,
   matchLocale,
+  reportNeedsDetails,
+  reportReasonKey,
   toLocale,
 };
 
-export type { Locale, TFunction, TranslationKey, TranslationVars, Translations };
+export type {
+  Locale,
+  ReportReasonCode,
+  TFunction,
+  TranslationKey,
+  TranslationVars,
+  Translations,
+};

@@ -3,11 +3,17 @@ import { View, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import {
+  REPORT_REASONS,
+  reportNeedsDetails,
+  reportReasonKey,
+  type ReportReasonCode,
+} from "@eraya/i18n";
+
+import { useT } from "@/features/i18n/LocaleProvider";
+import {
   blockMember,
   endConnection,
-  reportMember,
-  reportReasons,
-  type ReportReason,
+  reportAndBlockMember,
 } from "@/features/members/data";
 import { colors, hit, iconSize, radius, space } from "@/theme/tokens";
 import { Button, TextButton } from "@/ui/Button";
@@ -25,17 +31,24 @@ import { useToast } from "@/ui/Toast";
  * find them in the same place every time, and must never have to discover a
  * long-press to get at them.
  *
- * Two decisions built into the behaviour:
+ * Four decisions built into the behaviour:
  *
- * Reporting blocks as well. A report that only files a row into a table nobody
- * is reading yet is an affordance that looks like protection and is not; the
- * block is immediate and enforced in the database, so filing a report always
- * does something real.
+ * Reporting blocks as well, and the two are one call. `report_and_block_member`
+ * writes both rows or neither, so there is no outcome where somebody has told
+ * us they are frightened of a member and that member can still see them.
  *
- * The wording never promises a review. There is no moderation team and no queue,
- * so it says the report is recorded and the person is blocked -- both true --
- * and nothing about anybody reading it. When a review process exists, this copy
- * changes and not before.
+ * Exactly one reason, from a fixed list shared with the website. A report that
+ * claims four things at once is a report nobody can act on first, and a
+ * hand-typed reason cannot be counted or triaged at all.
+ *
+ * The written details are optional for every category except "Something else",
+ * which is the one that says nothing by itself.
+ *
+ * The wording never promises a review. There is no moderation team and no
+ * queue, so it says the report is recorded and the person is blocked -- both
+ * true -- and nothing about anybody reading it. Afterwards it says both of
+ * those things in a panel rather than a toast that slides away: somebody who
+ * has just done a difficult thing should be able to read what happened twice.
  */
 export function SafetyActions({
   memberId,
@@ -51,44 +64,56 @@ export function SafetyActions({
   onDone: () => void;
   style?: ViewStyle;
 }) {
+  const t = useT();
   const toast = useToast();
-  const [sheet, setSheet] = useState<"none" | "report" | "block" | "end">(
-    "none",
-  );
-  const [reason, setReason] = useState<ReportReason | null>(null);
-  const [description, setDescription] = useState("");
+  const [sheet, setSheet] = useState<
+    "none" | "report" | "reported" | "block" | "end"
+  >("none");
+  const [reason, setReason] = useState<ReportReasonCode | null>(null);
+  const [details, setDetails] = useState("");
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const detailsRequired = reason !== null && reportNeedsDetails(reason);
 
   function close() {
     setSheet("none");
     setReason(null);
-    setDescription("");
+    setDetails("");
+    setDetailsError(null);
   }
 
   async function submitReport() {
-    if (!reason) return;
-    setPending(true);
+    if (pending || !reason) return;
 
-    const filed = await reportMember(memberId, reason, description);
-    // The block is what actually protects them, so it runs even if the report
-    // failed to record.
-    const blocked = await blockMember(memberId);
-
-    setPending(false);
-    close();
-
-    if (!blocked) {
-      toast.show("That did not go through. Please try again.", "danger");
+    // Checked here so the member is told what is missing rather than handed a
+    // failure. The database checks it again and is the one that decides.
+    if (reportNeedsDetails(reason) && !details.trim()) {
+      setDetailsError(t("report.detailsMissing"));
       return;
     }
 
-    toast.show(
-      filed
-        ? `${memberName} is blocked, and your report is recorded.`
-        : `${memberName} is blocked.`,
-      "positive",
-    );
-    onDone();
+    setPending(true);
+    const outcome = await reportAndBlockMember(memberId, reason, details);
+    setPending(false);
+
+    if (!outcome.ok) {
+      if (outcome.problem === "details") {
+        setDetailsError(t("report.detailsMissing"));
+        return;
+      }
+      toast.show(
+        outcome.problem === "reason"
+          ? t("report.reasonMissing")
+          : t("report.failed"),
+        "danger",
+      );
+      return;
+    }
+
+    // Kept open, on the confirmation. `close()` would clear the reason behind
+    // the panel that is still being read.
+    setSheet("reported");
   }
 
   async function submitBlock() {
@@ -147,7 +172,7 @@ export function SafetyActions({
           onPress={() => setSheet("block")}
         />
         <TextButton
-          label="Report"
+          label={t("messages.reportCta")}
           tone="muted"
           onPress={() => setSheet("report")}
         />
@@ -190,11 +215,10 @@ export function SafetyActions({
       <BottomSheet
         visible={sheet === "report"}
         onClose={close}
-        title={`Report ${memberName}`}
+        title={t("report.title", { name: memberName })}
       >
         <Text variant="body" tone="muted">
-          {memberName} will be blocked straight away. Your report is recorded
-          with whatever you tell us below.
+          {t("report.body", { name: memberName })}
         </Text>
 
         <View
@@ -213,31 +237,42 @@ export function SafetyActions({
             color={colors.inkMuted}
           />
           <Text variant="caption" tone="muted" style={{ flex: 1 }}>
-            Eraya is small and has no moderation team yet, so we cannot promise
-            anyone will reply. Blocking takes effect immediately either way.
+            {t("report.note")}
           </Text>
         </View>
 
         <Text variant="label" style={{ marginTop: space.xxl }}>
-          What happened?
+          {t("report.reasonLabel", { name: memberName })}
         </Text>
 
         <View style={{ gap: space.sm, marginTop: space.md }}>
-          {reportReasons.map((option) => (
+          {REPORT_REASONS.map((code) => (
             <SelectionCard
-              key={option.value}
-              label={option.label}
-              selected={reason === option.value}
-              onPress={() => setReason(option.value)}
+              key={code}
+              label={t(reportReasonKey(code))}
+              selected={reason === code}
+              onPress={() => {
+                setReason(code);
+                setDetailsError(null);
+              }}
             />
           ))}
         </View>
 
         <Field
-          label="Anything you want to add"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Optional, but it is the only thing we will have to go on."
+          label={t("report.detailsLabel")}
+          hint={
+            detailsRequired
+              ? t("report.detailsRequired")
+              : t("report.detailsOptional")
+          }
+          error={detailsError}
+          value={details}
+          onChangeText={(next) => {
+            setDetails(next);
+            if (detailsError) setDetailsError(null);
+          }}
+          placeholder={t("report.detailsPlaceholder")}
           multiline
           numberOfLines={4}
           maxLength={2000}
@@ -249,17 +284,40 @@ export function SafetyActions({
             where a thumb lands by habit. */}
         <View style={{ marginTop: space.xxl, gap: space.md }}>
           <Button
-            label="Cancel"
+            label={t("report.cancel")}
             variant="secondary"
             disabled={pending}
             onPress={close}
           />
           <Button
-            label={`Block and report ${memberName}`}
+            label={t("report.submit", { name: memberName })}
             variant="danger"
             disabled={!reason}
             loading={pending}
             onPress={() => void submitReport()}
+          />
+        </View>
+      </BottomSheet>
+
+      <BottomSheet
+        visible={sheet === "reported"}
+        onClose={() => {
+          close();
+          onDone();
+        }}
+        title={t("report.doneTitle", { name: memberName })}
+      >
+        <Text variant="body" tone="muted">
+          {t("report.doneBody", { name: memberName })}
+        </Text>
+
+        <View style={{ marginTop: space.xxl }}>
+          <Button
+            label={t("report.doneCta")}
+            onPress={() => {
+              close();
+              onDone();
+            }}
           />
         </View>
       </BottomSheet>
