@@ -13,7 +13,7 @@ import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
 import { useAuth } from "@/features/auth/AuthSessionProvider";
-import { describeAuthError } from "@/features/auth/describeAuthError";
+import { describePhoneError } from "@/features/auth/describeAuthError";
 import { authRoutes, nextRoute } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { formatPhone } from "@/features/auth/types";
@@ -78,7 +78,7 @@ export function OTPScreen() {
         router.push(nextRoute({ ...session, stage: "phoneVerified" }));
       }, SUCCESS_PAUSE_MS);
     } catch (cause) {
-      setError(describeAuthError(cause));
+      setError(describePhoneError(cause));
       setPending(false);
     }
   }

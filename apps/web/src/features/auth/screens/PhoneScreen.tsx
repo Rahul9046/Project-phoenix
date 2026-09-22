@@ -13,7 +13,7 @@ import { StartOverLink } from "@/features/auth/components/StartOverLink";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
 import { useAuth } from "@/features/auth/AuthSessionProvider";
-import { describeAuthError } from "@/features/auth/describeAuthError";
+import { describePhoneError } from "@/features/auth/describeAuthError";
 import { authRoutes } from "@/features/auth/flow";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import type { PhoneNumber } from "@/features/auth/types";
@@ -95,7 +95,7 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
       await sendVerificationCode({ countryCode, nationalNumber });
       router.push(authRoutes.otp);
     } catch (cause) {
-      setFormError(describeAuthError(cause));
+      setFormError(describePhoneError(cause));
       setPending(false);
     }
   }
