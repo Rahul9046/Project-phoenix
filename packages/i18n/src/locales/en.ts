@@ -162,6 +162,18 @@ export const en = {
     },
     otp: {
       title: "Confirm your number.",
+      /*
+       * The number is masked. They typed it one screen ago, so the last two
+       * digits are enough to confirm it went to the right place, and the
+       * screen is reachable on a shared or borrowed phone.
+       */
+      lede: "Enter the six-digit code sent to {phone}.",
+      /*
+       * The app only. Its SMS path is genuinely not switched on -- it waits on
+       * a DLT-approved template -- so this sentence is true there and was a
+       * lie on the web, which has been sending real codes since MSG91 went
+       * live. The web used to render it and now renders `lede`.
+       */
       ledePrefix:
         "Checking codes by SMS is not switched on yet, so any six digits will do for now. Your number is",
       label: "6-digit code",
@@ -171,7 +183,8 @@ export const en = {
       changeCta: "Change phone number",
       /* Not "Phone verified" -- the step is complete rather than verified. */
       success: "Phone number saved.",
-      resendIn: "You can ask for another code in {seconds}s.",
+      resendIn: "Resend code in {seconds}s",
+      resend: "Resend code",
       resendSent: "A new code is on its way.",
     },
     providers: {

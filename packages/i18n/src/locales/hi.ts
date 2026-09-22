@@ -120,6 +120,7 @@ export const hi: Translations = {
     },
     otp: {
       title: "अपना नंबर पक्का करें।",
+      lede: "{phone} पर भेजा गया छह अंकों का कोड डालें।",
       ledePrefix:
         "SMS से कोड जाँचना अभी शुरू नहीं हुआ है, इसलिए फ़िलहाल कोई भी छह अंक चलेंगे। आपका नंबर है",
       label: "6 अंकों का कोड",
@@ -128,7 +129,8 @@ export const hi: Translations = {
       invalidError: "यहाँ छह अंक चाहिए। जाँचकर फिर कोशिश करें।",
       changeCta: "फ़ोन नंबर बदलें",
       success: "फ़ोन नंबर सहेज लिया गया।",
-      resendIn: "आप {seconds} सेकंड में दूसरा कोड माँग सकते हैं।",
+      resendIn: "{seconds} सेकंड में कोड फिर भेजें",
+      resend: "कोड फिर भेजें",
       resendSent: "नया कोड भेजा जा रहा है।",
     },
     providers: {
