@@ -4,7 +4,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { relationshipLabelKeys } from "@/features/auth/types";
+import {
+  relationshipLabelKeys,
+  religionLabelKeys,
+} from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { photoUrlFor } from "@/features/members/data";
 import { useMyDetails } from "@/features/members/me";
@@ -153,6 +156,24 @@ export default function MyProfile() {
             </Text>
             <Text variant="body" style={{ marginTop: space.xxs }}>
               {t(relationshipLabelKeys[profile.relationshipStatus])}
+            </Text>
+          </View>
+        ) : null}
+
+        {/*
+          Their own screen, so "Prefer not to say" is shown back to them when
+          that is what they chose -- they should be able to see their own
+          answer and know it is the one in force. It is the only place that
+          value is ever rendered; another member's view of them never receives
+          it at all.
+        */}
+        {profile?.religion ? (
+          <View style={{ marginBottom: space.lg }}>
+            <Text variant="labelSm" tone="subtle">
+              {t("account.labelReligion")}
+            </Text>
+            <Text variant="body" style={{ marginTop: space.xxs }}>
+              {t(religionLabelKeys[profile.religion])}
             </Text>
           </View>
         ) : null}

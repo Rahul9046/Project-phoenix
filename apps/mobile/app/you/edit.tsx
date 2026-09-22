@@ -4,7 +4,12 @@ import { router } from "expo-router";
 
 import { useSession } from "@/features/auth/SessionProvider";
 import { useT } from "@/features/i18n/LocaleProvider";
-import { relationshipOptions, seekingOptions, type Gender } from "@/features/auth/types";
+import {
+  relationshipOptions,
+  religionOptions,
+  seekingOptions,
+  type Gender,
+} from "@/features/auth/types";
 import { CityPicker } from "@/features/onboarding/CityPicker";
 import {
   listLanguages,
@@ -12,6 +17,7 @@ import {
   saveLanguages,
   saveName,
   saveRelationship,
+  saveReligion,
   saveSeeking,
   saveStory,
   type LanguageOption,
@@ -82,6 +88,9 @@ function EditForm({
   const [relationship, setRelationship] = useState(
     profile.relationshipStatus ?? null,
   );
+  // Null for anybody who joined before the question existed. Left null until
+  // they choose -- nothing here supplies a value they did not give.
+  const [religion, setReligion] = useState(profile.religion ?? null);
   const [languageIds, setLanguageIds] = useState<string[]>(profile.languageIds);
   const [seeking, setSeeking] = useState<Gender[]>(profile.seeking);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
@@ -124,6 +133,18 @@ function EditForm({
       () =>
         relationship
           ? saveRelationship(relationship)
+          : Promise.resolve({ ok: true as const }),
+      /*
+       * Including when it changes to "prefer not to say".
+       *
+       * That is a write like any other, and the moment it lands the member
+       * disappears from every religion filter and the row leaves every other
+       * member's view of their profile -- because both read the disclosed
+       * value, which is then null. Withdrawing is not a special path.
+       */
+      () =>
+        religion
+          ? saveReligion(religion)
           : Promise.resolve({ ok: true as const }),
       () =>
         seeking.length > 0
@@ -231,6 +252,20 @@ function EditForm({
             label={t(option.labelKey)}
             selected={relationship === option.value}
             onPress={() => setRelationship(option.value)}
+          />
+        ))}
+      </View>
+
+      <Text variant="label" style={{ marginTop: space.section }}>
+        {t("account.labelReligion")}
+      </Text>
+      <View style={{ gap: space.sm, marginTop: space.sm }}>
+        {religionOptions.map((option) => (
+          <SelectionCard
+            key={option.value}
+            label={t(option.labelKey)}
+            selected={religion === option.value}
+            onPress={() => setReligion(option.value)}
           />
         ))}
       </View>

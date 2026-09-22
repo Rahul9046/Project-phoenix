@@ -13,6 +13,15 @@ import type { Database } from "@/lib/supabase/database.types";
  */
 
 export type Gender = Database["public"]["Enums"]["gender"];
+
+/**
+ * Taken from the database, for the same reason `Gender` is.
+ *
+ * Includes `prefer_not_to_say`, which is a choice a member makes rather than
+ * the absence of one -- that is `null`, and it is what every account created
+ * before this question existed still holds.
+ */
+export type Religion = Database["public"]["Enums"]["religion"];
 export type RelationshipStatus =
   Database["public"]["Enums"]["relationship_status"];
 export type OnboardingStage =
@@ -37,6 +46,14 @@ export type ProfileSnapshot = {
   cityId: string | null;
   otherCity: string | null;
   relationshipStatus: RelationshipStatus | null;
+  /**
+   * What they said, including having said they would rather not.
+   *
+   * Null means the question has not been answered -- true of every account that
+   * existed before it was asked, and what lets the routing tell "not yet" from
+   * "declined". What another member may see is decided in SQL, not here.
+   */
+  religion: Religion | null;
   languagesUndisclosed: boolean;
   languageIds: string[];
   phoneVerifiedAt: string | null;
@@ -147,6 +164,57 @@ export const seekingOptions: readonly {
   { value: "man", labelKey: "onboarding.seeking.men" },
   { value: "non_binary", labelKey: "onboarding.seeking.nonBinaryPeople" },
 ];
+
+/**
+ * Religion, as the member states it.
+ *
+ * The order is the order on the screen, and `prefer_not_to_say` is last because
+ * it is the way past the question rather than one of its answers -- though it
+ * is stored exactly as the others are, and a member who chooses it has answered.
+ *
+ * Nothing infers a value from anywhere else: not a name, not a city, not a
+ * language. There is no caste, community, sub-caste or denomination here and
+ * none is coming -- that absence is what keeps this a profile question rather
+ * than a biodata form.
+ */
+export const religionOptions: readonly {
+  value: Religion;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "hindu", labelKey: "onboarding.religion.hindu" },
+  { value: "muslim", labelKey: "onboarding.religion.muslim" },
+  { value: "christian", labelKey: "onboarding.religion.christian" },
+  { value: "sikh", labelKey: "onboarding.religion.sikh" },
+  { value: "buddhist", labelKey: "onboarding.religion.buddhist" },
+  { value: "jain", labelKey: "onboarding.religion.jain" },
+  { value: "other", labelKey: "onboarding.religion.other" },
+  { value: "prefer_not_to_say", labelKey: "onboarding.religion.preferNotToSay" },
+];
+
+/**
+ * The ones a member can be filtered by.
+ *
+ * `prefer_not_to_say` is deliberately absent, for the same reason it is absent
+ * from `seekingOptions`: a reasonable answer about yourself, an unusable one as
+ * a preference. Offering it would turn a filter into a way of finding precisely
+ * the members who asked not to be found this way -- and the database refuses it
+ * independently, matching on the disclosed value only.
+ */
+export const religionFilterOptions = religionOptions.filter(
+  (option) => option.value !== "prefer_not_to_say",
+);
+
+/** For showing a stored value back, the way `relationshipLabelKeys` does. */
+export const religionLabelKeys: Record<Religion, TranslationKey> = {
+  hindu: "onboarding.religion.hindu",
+  muslim: "onboarding.religion.muslim",
+  christian: "onboarding.religion.christian",
+  sikh: "onboarding.religion.sikh",
+  buddhist: "onboarding.religion.buddhist",
+  jain: "onboarding.religion.jain",
+  other: "onboarding.religion.other",
+  prefer_not_to_say: "onboarding.religion.preferNotToSay",
+};
 
 export const relationshipLabelKeys: Record<RelationshipStatus, TranslationKey> =
   {

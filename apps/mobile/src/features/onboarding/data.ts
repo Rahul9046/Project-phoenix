@@ -5,6 +5,7 @@ import {
   stageAtLeast,
   type Gender,
   type OnboardingStage,
+  type Religion,
   type RelationshipStatus,
 } from "@/features/auth/types";
 
@@ -124,6 +125,21 @@ export function saveRelationship(
   relationshipStatus: RelationshipStatus,
 ): Promise<SaveResult> {
   return patch({ relationship_status: relationshipStatus });
+}
+
+/**
+ * What the member said about their religion, and only that.
+ *
+ * `prefer_not_to_say` is written like any other value. It is an answer, and
+ * storing it is what lets the product tell somebody who declined from somebody
+ * who has not been asked -- which is null, and which every account that existed
+ * before this question still holds.
+ *
+ * Nothing here derives a value from a name, a city or a language, and there is
+ * no path that could: the only argument is the one the member chose.
+ */
+export function saveReligion(religion: Religion): Promise<SaveResult> {
+  return patch({ religion });
 }
 
 export function saveStory(values: {

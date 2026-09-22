@@ -28,6 +28,7 @@ export const routes = {
   seeking: "/onboarding/seeking",
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
+  religion: "/onboarding/religion",
   languages: "/onboarding/languages",
   photo: "/onboarding/photo",
   phone: "/onboarding/phone",
@@ -104,6 +105,25 @@ export function nextRouteFor(profile: ProfileSnapshot | null): Href {
   if (profile.seeking.length === 0) return routes.seeking;
   if (!profile.cityId && !profile.otherCity) return routes.city;
   if (!profile.relationshipStatus) return routes.relationship;
+
+  /*
+   * Religion, and only for somebody still being onboarded.
+   *
+   * The stage check is not belt and braces. Every account that existed before
+   * this question was added has `religion` null and `onboarding_stage`
+   * `onboarding_completed`, and without the second half of this condition all
+   * of them would be pulled out of the product and back into the questions the
+   * next time they opened the app. Null means "never asked", which is exactly
+   * true of them, and the right thing to do about it is nothing.
+   *
+   * They can still set it whenever they like, from Edit profile.
+   */
+  if (
+    !profile.religion &&
+    profile.stage !== "onboarding_completed"
+  ) {
+    return routes.religion;
+  }
 
   // Languages are answerable with "I would rather not say", so an empty list is
   // only unfinished if that flag has not been set.

@@ -529,6 +529,7 @@ export type Database = {
           other_city: string | null
           phone_verified_at: string | null
           phone_verified_via: string | null
+          religion: Database["public"]["Enums"]["religion"] | null
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -553,6 +554,7 @@ export type Database = {
           other_city?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -577,6 +579,7 @@ export type Database = {
           other_city?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -768,6 +771,7 @@ export type Database = {
           min_age?: number
           page_offset?: number
           relationship_statuses?: Database["public"]["Enums"]["relationship_status"][]
+          religions?: Database["public"]["Enums"]["religion"][]
         }
         Returns: Database["public"]["CompositeTypes"]["member_card"][]
         SetofOptions: {
@@ -882,6 +886,15 @@ export type Database = {
         | "stripe"
         | "apple_app_store"
         | "google_play"
+      religion:
+        | "hindu"
+        | "muslim"
+        | "christian"
+        | "sikh"
+        | "buddhist"
+        | "jain"
+        | "other"
+        | "prefer_not_to_say"
       relationship_status: "divorced" | "separated" | "widowed"
       report_reason:
         | "fake_profile"
@@ -930,6 +943,7 @@ export type Database = {
         photo_count: number | null
         phone_verified: boolean | null
         email_verified: boolean | null
+        religion: Database["public"]["Enums"]["religion"] | null
       }
     }
   }

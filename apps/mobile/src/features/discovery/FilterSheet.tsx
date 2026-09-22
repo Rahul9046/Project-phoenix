@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { relationshipOptions } from "@/features/auth/types";
+import {
+  relationshipOptions,
+  religionFilterOptions,
+} from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import {
   listLanguages,
@@ -115,6 +118,15 @@ export function FilterSheet({
     setCityQuery("");
   }
 
+  function toggleReligion(value: DiscoveryFilters["religions"][number]) {
+    setDraft((current) => ({
+      ...current,
+      religions: current.religions.includes(value)
+        ? current.religions.filter((entry) => entry !== value)
+        : [...current.religions, value],
+    }));
+  }
+
   function toggleRelationship(value: DiscoveryFilters["relationshipStatuses"][number]) {
     setDraft((current) => ({
       ...current,
@@ -163,6 +175,33 @@ export function FilterSheet({
               label={t(option.labelKey)}
               selected={draft.relationshipStatuses.includes(option.value)}
               onPress={() => toggleRelationship(option.value)}
+            />
+          ))}
+        </ChipGroup>
+      </FilterSection>
+
+      {/*
+        Free, like every other filter here.
+
+        For a great many of Eraya's members religion decides whether meeting
+        somebody is practical at all, which puts it in exactly the same
+        category as age, city and language -- and behind a subscription it
+        would make the free product deliberately worse rather than the paid one
+        better.
+
+        "Prefer not to say" is not offered. It is a reasonable answer about
+        yourself and an unusable one as a preference, and offering it would turn
+        this into a way of finding precisely the people who asked not to be
+        found this way. The database refuses it independently.
+      */}
+      <FilterSection title={t("discovery.filterReligion")}>
+        <ChipGroup>
+          {religionFilterOptions.map((option) => (
+            <Chip
+              key={option.value}
+              label={t(option.labelKey)}
+              selected={draft.religions.includes(option.value)}
+              onPress={() => toggleReligion(option.value)}
             />
           ))}
         </ChipGroup>

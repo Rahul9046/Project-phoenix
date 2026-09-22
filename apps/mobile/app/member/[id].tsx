@@ -5,7 +5,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { relationshipLabelKeys } from "@/features/auth/types";
+import {
+  relationshipLabelKeys,
+  religionLabelKeys,
+} from "@/features/auth/types";
 import { ConnectionMoment } from "@/features/connections/ConnectionMoment";
 import { SafetyActions } from "@/features/connections/SafetyActions";
 import {
@@ -247,6 +250,24 @@ export default function MemberProfile() {
               <Detail
                 label="Chapter"
                 value={t(relationshipLabelKeys[member.relationshipStatus])}
+              />
+            ) : null}
+
+            {/*
+              Ordinary profile context, the same weight as Chapter above it and
+              in the same list. Not a badge, not a header, not a chip of its
+              own: it is one fact among several about a person.
+
+              It is here at all only when they disclosed it. `member.religion`
+              is already null for somebody who chose "prefer not to say" --
+              collapsed in SQL by `disclosed_religion()` before it left the
+              database -- so there is no "Religion: Prefer not to say" to
+              suppress here, and no way to render one by mistake.
+            */}
+            {member.religion ? (
+              <Detail
+                label={t("account.labelReligion")}
+                value={t(religionLabelKeys[member.religion])}
               />
             ) : null}
 

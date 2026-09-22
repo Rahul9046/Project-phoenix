@@ -20,6 +20,7 @@ export const authRoutes = {
   seeking: "/onboarding/seeking",
   city: "/onboarding/city",
   relationship: "/onboarding/relationship",
+  religion: "/onboarding/religion",
   languages: "/onboarding/languages",
   photo: "/onboarding/photo",
   complete: "/onboarding/complete",
@@ -33,6 +34,7 @@ export const onboardingSteps = [
   { route: authRoutes.seeking, label: "Who you'd like to meet" },
   { route: authRoutes.city, label: "City" },
   { route: authRoutes.relationship, label: "Chapter" },
+  { route: authRoutes.religion, label: "Religion" },
   { route: authRoutes.languages, label: "Languages" },
   { route: authRoutes.photo, label: "Photo" },
 ] as const;
@@ -61,6 +63,20 @@ function hasCity(session: AuthSession): boolean {
 
 function hasRelationship(session: AuthSession): boolean {
   return Boolean(session.profile.relationshipStatus);
+}
+
+/*
+ * Answered, which includes having answered "I would rather not say".
+ *
+ * A plain null check, and that is the whole point of storing the refusal as a
+ * value rather than as an absence: null means the question has not been put to
+ * them, which is true of every account made before it existed, and those
+ * accounts must never be dragged back through onboarding on account of it.
+ * `nextRoute` returns early for anybody already finished, which is what keeps
+ * that promise.
+ */
+function hasReligion(session: AuthSession): boolean {
+  return session.profile.religion !== null;
 }
 
 /*
@@ -153,11 +169,18 @@ export function resolveRedirect(
     if (!hasSeeking(session)) return authRoutes.seeking;
     return hasCity(session) ? null : authRoutes.city;
   }
-  if (route === authRoutes.languages) {
+  if (route === authRoutes.religion) {
     if (!hasBasics(session)) return authRoutes.basics;
     if (!hasSeeking(session)) return authRoutes.seeking;
     if (!hasCity(session)) return authRoutes.city;
     return hasRelationship(session) ? null : authRoutes.relationship;
+  }
+  if (route === authRoutes.languages) {
+    if (!hasBasics(session)) return authRoutes.basics;
+    if (!hasSeeking(session)) return authRoutes.seeking;
+    if (!hasCity(session)) return authRoutes.city;
+    if (!hasRelationship(session)) return authRoutes.relationship;
+    return hasReligion(session) ? null : authRoutes.religion;
   }
   /*
    * The photo step, and the screen after it.
@@ -172,6 +195,7 @@ export function resolveRedirect(
     if (!hasSeeking(session)) return authRoutes.seeking;
     if (!hasCity(session)) return authRoutes.city;
     if (!hasRelationship(session)) return authRoutes.relationship;
+    if (!hasReligion(session)) return authRoutes.religion;
     return hasLanguages(session) ? null : authRoutes.languages;
   }
 
@@ -193,6 +217,7 @@ export function nextRoute(session: AuthSession): AuthRoute {
   if (!hasSeeking(session)) return authRoutes.seeking;
   if (!hasCity(session)) return authRoutes.city;
   if (!hasRelationship(session)) return authRoutes.relationship;
+  if (!hasReligion(session)) return authRoutes.religion;
   if (!hasLanguages(session)) return authRoutes.languages;
 
   /*

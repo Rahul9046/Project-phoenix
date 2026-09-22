@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { legalRoutes } from "@eraya/legal";
 
+import { ReligionField } from "@/features/account/ReligionField";
 import { getT } from "@/features/i18n/server";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
 import { accountNav, appRoutes } from "@/features/app-shell/nav";
@@ -93,6 +94,18 @@ export default async function AccountPage() {
             <DetailRow
               label={t("account.labelRelationship")}
               value={relationshipLabel ?? absent}
+            />
+            {/*
+              Editable in place, and the only field here that is.
+
+              It is the one the product requires a member to be able to
+              withdraw, and the web has no edit-profile flow to put it in --
+              see ReligionField. Rendered as an ordinary row among the others,
+              because that is what it is.
+            */}
+            <DetailRow
+              label={t("account.labelReligion")}
+              value={<ReligionField current={profile.religion} />}
             />
             <DetailRow label={t("account.labelLanguages")} value={languages} />
           </dl>

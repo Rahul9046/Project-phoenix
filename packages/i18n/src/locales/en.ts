@@ -354,6 +354,33 @@ export const en = {
       widowedBody: "I lost my spouse.",
       trustNote: "Eraya does not check this. It is taken on trust, the same way you are trusting everyone else here.",
     },
+    religion: {
+      title: "What's your religion?",
+      lede: "Share only what you're comfortable with. You can choose not to say.",
+      error: "Choose an option to continue.",
+      hindu: "Hindu",
+      muslim: "Muslim",
+      christian: "Christian",
+      sikh: "Sikh",
+      buddhist: "Buddhist",
+      jain: "Jain",
+      other: "Other",
+      /*
+       * An answer, and the screen treats it as one -- it is chosen, it is
+       * stored, and it lets somebody continue. What it never becomes is a line
+       * on a profile: "Religion: Prefer not to say" advertises that the
+       * question was asked and points at the one person who declined, which is
+       * worse than silence. The database collapses it to nothing before it
+       * reaches another member; see disclosed_religion().
+       */
+      preferNotToSay: "Prefer not to say",
+      /*
+       * Said on the screen, because it is the thing somebody hesitating is
+       * actually worried about. Eraya asks, stores what it is told, and infers
+       * nothing -- not from a name, a city or a language.
+       */
+      privacyNote: "You can change this at any time, or stop sharing it. Eraya never guesses your religion from your name, your city or the languages you speak.",
+    },
     languages: {
       title: "What languages do you speak?",
       lede: "Choose as many as you like. Conversations are easier in a language you're comfortable in.",
@@ -457,6 +484,7 @@ export const en = {
     undoPass: "Undo last pass",
     readMore: "Read more",
     filters: "Filters",
+    filterReligion: "Religion",
   },
 
   connections: {
@@ -629,6 +657,7 @@ export const en = {
     labelCity: "City",
     labelRelationship: "Chapter",
     labelLanguages: "Languages",
+    labelReligion: "Religion",
     labelEmail: "Email",
     labelPhone: "Phone",
     labelSignInMethod: "Sign-in method",

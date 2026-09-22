@@ -247,6 +247,20 @@ export const hi: Translations = {
       widowedBody: "मैंने अपने जीवनसाथी को खो दिया।",
       trustNote: "Eraya इसकी जाँच नहीं करता। इसे भरोसे पर लिया जाता है, जैसे आप यहाँ बाकी सब पर भरोसा कर रहे हैं।",
     },
+    religion: {
+      title: "आपका धर्म क्या है?",
+      lede: "उतना ही बताएँ जितने में आप सहज हों। आप न बताने का विकल्प भी चुन सकते हैं।",
+      error: "आगे बढ़ने के लिए एक विकल्प चुनें।",
+      hindu: "हिंदू",
+      muslim: "मुस्लिम",
+      christian: "ईसाई",
+      sikh: "सिख",
+      buddhist: "बौद्ध",
+      jain: "जैन",
+      other: "अन्य",
+      preferNotToSay: "नहीं बताना चाहेंगे",
+      privacyNote: "आप इसे कभी भी बदल सकते हैं, या बताना बंद कर सकते हैं। एराया आपके नाम, शहर या भाषाओं से आपका धर्म कभी नहीं मानता।",
+    },
     languages: {
       title: "आप कौन सी भाषाएँ बोलते हैं?",
       lede: "जितनी चाहें उतनी चुनें। बातचीत उस भाषा में आसान होती है जिसमें आप सहज हों।",
@@ -339,6 +353,7 @@ export const hi: Translations = {
     undoPass: "पिछला निर्णय वापस लें",
     readMore: "और पढ़ें",
     filters: "छाँटें",
+    filterReligion: "धर्म",
   },
 
   connections: {
@@ -478,6 +493,7 @@ export const hi: Translations = {
     labelCity: "शहर",
     labelRelationship: "अध्याय",
     labelLanguages: "भाषाएँ",
+    labelReligion: "धर्म",
     labelEmail: "ईमेल",
     labelPhone: "फ़ोन",
     labelSignInMethod: "साइन-इन का तरीक़ा",
