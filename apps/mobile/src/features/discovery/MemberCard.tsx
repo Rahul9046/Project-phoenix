@@ -138,7 +138,10 @@ export function MemberCard({
           }}
         >
           {chapter ? <Chip label={chapter} tone="quiet" /> : <View />}
-          <TrustMarks emailVerified={member.emailVerified} />
+          <TrustMarks
+            emailVerified={member.emailVerified}
+            phoneVerified={member.phoneVerified}
+          />
         </View>
 
         {/*

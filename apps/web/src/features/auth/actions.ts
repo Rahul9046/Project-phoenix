@@ -359,6 +359,13 @@ export async function saveLanguages(input: {
 /**
  * Moves the onboarding stage on, once the phone step is behind them.
  *
+ * Called from both sides of an optional step: by the code screen after a number
+ * is verified, and by "Skip for now" on the phone screen. That is deliberate
+ * and not a shortcut -- what this records is that the question was asked and
+ * answered, which is equally true of both answers. It writes no number, no
+ * timestamp and no status, so a member who declines leaves here with exactly
+ * the verification state they arrived with: none.
+ *
  * It no longer writes `phone_verified_at`, and could not if it tried: that
  * column is set by the verify edge function holding the service role, and a
  * trigger on `profiles` refuses it to every client. This used to write it

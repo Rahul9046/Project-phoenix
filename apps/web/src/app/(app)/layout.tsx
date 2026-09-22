@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 
 import { myPhotoUrl } from "@/features/account/my-photo";
+import { navActivity } from "@/features/app-shell/activity";
 import { AppHeader } from "@/features/app-shell/AppHeader";
 import { MobileTabBar } from "@/features/app-shell/MobileTabBar";
 import { AuthSessionProvider } from "@/features/auth/AuthSessionProvider";
 import { authRoutes, nextRoute } from "@/features/auth/flow";
 import { loadAuthSession } from "@/features/auth/load-session";
+import { getT } from "@/features/i18n/server";
+import { getActivitySummary } from "@/features/members/data";
+import { appRoutes, primaryNav } from "@/features/app-shell/nav";
 
 /**
  * The signed-in application.
@@ -58,10 +62,29 @@ export default async function AppGroupLayout({
 
   const name = session.profile.firstName ?? session.user.displayName;
 
-  // After the gates rather than beside the session read: somebody being sent
-  // back into onboarding has no header to draw, and no reason to pay for the
-  // query.
-  const photoUrl = await myPhotoUrl();
+  /*
+   * After the gates rather than beside the session read: somebody being sent
+   * back into onboarding has no header to draw, and no reason to pay for the
+   * queries.
+   *
+   * The activity counts are fetched here, in the layout, because that is where
+   * the navigation that shows them lives -- and it is why clearing a badge
+   * revalidates the layout rather than a page. The App Router does not
+   * re-render a layout when you move between two pages inside it, so a badge
+   * refreshed any other way would still be claiming there was something new on
+   * the screen you were already looking at.
+   */
+  const [photoUrl, summary, t] = await Promise.all([
+    myPhotoUrl(),
+    getActivitySummary(),
+    getT(),
+  ]);
+
+  const connectionsLabel =
+    primaryNav.find((item) => item.href === appRoutes.connections)?.label ??
+    "Connections";
+
+  const activity = navActivity(t, summary, connectionsLabel);
 
   return (
     <AuthSessionProvider serverSession={session}>
@@ -70,13 +93,14 @@ export default async function AppGroupLayout({
           name={name}
           email={session.user.email}
           photoUrl={photoUrl}
+          activity={activity}
         />
 
         <main id="main" className="flex-1">
           {children}
         </main>
 
-        <MobileTabBar />
+        <MobileTabBar activity={activity} />
       </div>
     </AuthSessionProvider>
   );

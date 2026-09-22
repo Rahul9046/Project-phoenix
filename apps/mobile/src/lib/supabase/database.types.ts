@@ -514,6 +514,7 @@ export type Database = {
         Row: {
           about: string | null
           city_id: string | null
+          connections_seen_at: string | null
           created_at: string
           date_of_birth: string | null
           first_name: string | null
@@ -527,6 +528,7 @@ export type Database = {
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
           other_city: string | null
           phone_verified_at: string | null
+          phone_verified_via: string | null
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -536,6 +538,7 @@ export type Database = {
         Insert: {
           about?: string | null
           city_id?: string | null
+          connections_seen_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name?: string | null
@@ -549,6 +552,7 @@ export type Database = {
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_verified_at?: string | null
+          phone_verified_via?: string | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -558,6 +562,7 @@ export type Database = {
         Update: {
           about?: string | null
           city_id?: string | null
+          connections_seen_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name?: string | null
@@ -571,6 +576,7 @@ export type Database = {
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_verified_at?: string | null
+          phone_verified_via?: string | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -797,6 +803,15 @@ export type Database = {
         }[]
       }
       interests_received_count: { Args: never; Returns: number }
+      activity_summary: {
+        Args: never
+        Returns: {
+          connections_needing_attention: number
+          new_connections: number
+          unread_conversations: number
+        }[]
+      }
+      mark_connections_seen: { Args: never; Returns: undefined }
       mark_conversation_read: {
         Args: { connection_id: string }
         Returns: undefined

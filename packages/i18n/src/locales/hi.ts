@@ -36,6 +36,8 @@ export const hi: Translations = {
     notAnswered: "उत्तर नहीं दिया",
     preferNotToSay: "बताना नहीं चाहेंगे",
     changeLanguage: "भाषा बदलें",
+    emailVerified: "ईमेल सत्यापित",
+    phoneVerified: "फ़ोन सत्यापित",
   },
 
   shell: {
@@ -50,6 +52,12 @@ export const hi: Translations = {
     navConnections: "संबंध",
     navMessages: "संदेश",
     navAccount: "खाता",
+
+    activityNewConnectionsOne: "1 नया जुड़ाव",
+    activityNewConnectionsMany: "{count} नए जुड़ाव",
+    activityUnreadOne: "1 बातचीत में बिना पढ़े संदेश",
+    activityUnreadMany: "{count} बातचीत में बिना पढ़े संदेश",
+    activityBoth: "{connections}, और {messages}",
   },
 
   auth: {
@@ -107,7 +115,7 @@ export const hi: Translations = {
     },
     phone: {
       title: "अपना फ़ोन नंबर जोड़ें।",
-      lede: "हम इसे खाता वापस पाने के लिए रखते हैं, और सत्यापन के लिए जब वह शुरू होगा। यह आपकी प्रोफ़ाइल पर कभी नहीं दिखता।",
+      lede: "हम इसे खाता वापस पाने के लिए रखते हैं, और सत्यापन के लिए, अगर आप वह चुनें। यह आपकी प्रोफ़ाइल पर कभी नहीं दिखता।",
       countryLabel: "देश कोड",
       label: "फ़ोन नंबर",
       cta: "आगे बढ़ें",
@@ -117,6 +125,9 @@ export const hi: Translations = {
         "इसे केवल आप देख सकते हैं। कोई दूसरा सदस्य आपका नंबर कभी नहीं देखता, और न ही वे लोग जिनसे आप जुड़ते हैं।",
       numberPlaceholder: "98765 43210",
       notLiveNote: "SMS से नंबर की जाँच अभी चालू नहीं है, इसलिए कुछ भी नहीं भेजा जाएगा। आपका नंबर सहेजा जाता है, और कोई दूसरा सदस्य उसे कभी नहीं देखता।",
+      optional: "यह वैकल्पिक है। सत्यापन आपकी प्रोफ़ाइल पर भरोसे का एक निशान जोड़ता है, और आप इसे बाद में अपने खाते से भी कर सकते हैं।",
+      skip: "अभी के लिए छोड़ें",
+      skipping: "एक क्षण…",
     },
     otp: {
       title: "अपना नंबर पक्का करें।",
@@ -338,6 +349,7 @@ export const hi: Translations = {
       "संबंध तभी खुलता है जब रुचि दोनों ओर से हो — इसलिए कोई भी आपको अचानक नहीं लिख सकता।",
     openConversation: "खोलें",
     noMessages: "अभी कोई संदेश नहीं",
+    unreadMark: "बिना पढ़े संदेश",
     ended: "यह संबंध समाप्त हो चुका है",
     seeWhoIsHere: "देखें कौन यहाँ है",
   },
@@ -470,8 +482,27 @@ export const hi: Translations = {
     labelPhone: "फ़ोन",
     labelSignInMethod: "साइन-इन का तरीक़ा",
     labelMemberSince: "सदस्य बने",
-    phoneAdded: "जोड़ा गया",
-    phoneNotAdded: "नहीं जोड़ा गया",
+    navVerificationDescription: "एराया ने क्या जाँचा है, और क्या नहीं",
+
+    verification: {
+      title: "सत्यापन",
+      lede: "एराया केवल उसी चीज़ का निशान दिखाता है जिसे उसने सचमुच जाँचा है। जहाँ नहीं जाँचा, वहाँ वह ऐसा कह देता है।",
+
+      emailLabel: "ईमेल पता",
+      emailDone: "पुष्टि हो चुकी है। आप इसी से साइन इन करते हैं।",
+      emailAbsent: "हमने जो कोड भेजा है, उससे अपना पता पक्का करें।",
+
+      phoneLabel: "फ़ोन सत्यापन",
+      phoneDone: "आपका फ़ोन नंबर निजी रहता है।",
+      phoneAbsent: "अपनी प्रोफ़ाइल पर भरोसे का एक और निशान जोड़ें। आपका फ़ोन नंबर निजी रहता है।",
+      phoneCta: "फ़ोन सत्यापित करें",
+
+      identityLabel: "पहचान",
+      identityDetail: "एराया पहचान के दस्तावेज़ों की जाँच नहीं करता। यहाँ किसी की भी किसी दस्तावेज़ से जाँच नहीं हुई है।",
+
+      relationshipLabel: "वैवाहिक स्थिति",
+      relationshipDetail: "आप पर और बाकी सब पर भरोसा करके ली गई है। हमारे पास इसकी पुष्टि का कोई तरीका नहीं है।",
+    },
   },
 
   errors: {

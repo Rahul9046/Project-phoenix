@@ -130,3 +130,52 @@ export async function blockMember(
   revalidatePath("/connections");
   return { ok: !error };
 }
+
+// ---------------------------------------------------------------------------
+// Activity indicators
+// ---------------------------------------------------------------------------
+//
+// Both of these clear a badge, and both revalidate the *layout* rather than a
+// page. The badges are drawn by the signed-in shell, which the App Router does
+// not re-render on a navigation between two pages inside it -- so revalidating
+// `/connections` alone would refresh the list underneath a badge that still
+// said there was something new on it.
+
+/**
+ * Records that this member has opened their Connections list.
+ *
+ * The timestamp is the server's; see `mark_connections_seen` in the migration
+ * for why a client-supplied one is a badge that can be switched off forever by
+ * a wrong device clock.
+ *
+ * Failure is swallowed on purpose. The worst outcome is a badge that clears on
+ * the next visit instead of this one, and an error banner on a screen somebody
+ * opened to look at their connections would be a much worse trade.
+ */
+export async function markConnectionsSeen(): Promise<void> {
+  const supabase = await createClient();
+
+  await supabase.rpc("mark_connections_seen");
+
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Records that this member has opened a conversation.
+ *
+ * The same `mark_conversation_read` the app has always called -- there is one
+ * read marker per person per connection and this is it. It writes only the
+ * caller's own side, so nothing here tells the other person anything: Eraya has
+ * no read receipts and this is not one.
+ *
+ * The web never called it until now, which is why an unread conversation on the
+ * web stayed unread forever. Nothing surfaced it because nothing on the web
+ * rendered the unread state.
+ */
+export async function markConversationRead(connectionId: string): Promise<void> {
+  const supabase = await createClient();
+
+  await supabase.rpc("mark_conversation_read", { connection_id: connectionId });
+
+  revalidatePath("/", "layout");
+}

@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
 import { Platform, View, type ColorValue } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { ActivityProvider, useActivity } from "@/features/activity/ActivityProvider";
 import { useSession } from "@/features/auth/SessionProvider";
 import { isOnboarded, nextRouteFor, routes } from "@/features/auth/routing";
-import { getHomeSummary } from "@/features/members/data";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, hit, radius, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
@@ -58,7 +57,6 @@ function tabLabel(title: string) {
 }
 
 export default function TabsLayout() {
-  const t = useT();
   const { loading, session, profile } = useSession();
 
   // The guard is here rather than on each screen, so there is one rule and no
@@ -66,6 +64,23 @@ export default function TabsLayout() {
   if (loading) return null;
   if (!session) return <Redirect href={routes.signIn} />;
   if (!isOnboarded(profile)) return <Redirect href={nextRouteFor(profile)} />;
+
+  return (
+    <ActivityProvider>
+      <TabsInner />
+    </ActivityProvider>
+  );
+}
+
+/*
+ * Inside the provider, because the badges read it.
+ *
+ * Split out rather than nested inline so the guards above stay the first thing
+ * this file does: a signed-out person should not mount a provider that starts
+ * asking the database what is waiting for them.
+ */
+function TabsInner() {
+  const t = useT();
 
   return (
     <Tabs
@@ -144,11 +159,14 @@ export default function TabsLayout() {
           title: t("connections.title"),
           tabBarLabel: tabLabel(t("connections.title")),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "people" : "people-outline"}
-              size={24}
-              color={color}
-            />
+            <View>
+              <Ionicons
+                name={focused ? "people" : "people-outline"}
+                size={24}
+                color={color}
+              />
+              <ConnectionsBadge />
+            </View>
           ),
         }}
       />
@@ -164,7 +182,7 @@ export default function TabsLayout() {
                 size={22}
                 color={color}
               />
-              <UnreadDot />
+              <MessagesBadge />
             </View>
           ),
         }}
@@ -188,49 +206,88 @@ export default function TabsLayout() {
 }
 
 /**
- * A dot, not a number.
+ * A number, where there used to be a dot.
  *
- * "You have something to read" is the useful signal. A count is a target, and a
- * product built for people who have had enough of feeling owed a reply should
- * not put a growing red number on their home screen. It also cannot be wrong in
- * the way a stale count can.
+ * This was deliberately a dot, and the reasoning is worth keeping rather than
+ * deleting: a count is a target, and a product for people who have had enough
+ * of feeling owed a reply should think hard before putting a growing number on
+ * their home screen. That argument still stands against counting *messages*,
+ * and nothing here does -- the messages badge counts conversations, so eight
+ * messages from one person is a 1, and the number only ever grows when another
+ * person is waiting. It answers "how many people", which is a question somebody
+ * can act on, rather than "how much do you owe", which is not.
+ *
+ * Terracotta, not red. Red belongs to destructive actions and errors in this
+ * design system, and a first message from somebody who chose you back should
+ * not arrive in the colour of a warning.
  */
-function UnreadDot() {
-  const [unread, setUnread] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    async function check() {
-      const summary = await getHomeSummary();
-      if (active) setUnread(summary.unreadConversations > 0);
-    }
-
-    void check();
-    // Polled rather than subscribed: a realtime channel held open for the life
-    // of the app costs a socket and a wake-up budget for one boolean.
-    const timer = setInterval(check, 60_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
-
-  if (!unread) return null;
+function TabBadge({ count, label }: { count: number; label: string }) {
+  if (count <= 0) return null;
 
   return (
     <View
-      accessibilityLabel="You have unread messages"
+      accessible
+      accessibilityLabel={label}
       style={{
         position: "absolute",
-        top: -2,
-        right: -4,
-        width: 8,
-        height: 8,
+        top: -6,
+        // Far enough right to clear the glyph, not so far that it leaves the
+        // tab's own column on a narrow phone.
+        right: -12,
+        minWidth: 16,
+        height: 16,
+        paddingHorizontal: 4,
         borderRadius: radius.pill,
         backgroundColor: colors.ember,
+        alignItems: "center",
+        justifyContent: "center",
       }}
+    >
+      <Text
+        // Not a `Text` variant: nothing else in the product is this small, and
+        // adding a scale step for one badge would invite it to be used.
+        style={{
+          ...text.labelSm,
+          fontSize: 10,
+          lineHeight: 12,
+          color: colors.canvas,
+        }}
+        numberOfLines={1}
+      >
+        {count > 99 ? "99+" : String(count)}
+      </Text>
+    </View>
+  );
+}
+
+function ConnectionsBadge() {
+  const { newConnections } = useActivity();
+  const t = useT();
+
+  return (
+    <TabBadge
+      count={newConnections}
+      label={
+        newConnections === 1
+          ? t("shell.activityNewConnectionsOne")
+          : t("shell.activityNewConnectionsMany", { count: newConnections })
+      }
+    />
+  );
+}
+
+function MessagesBadge() {
+  const { unreadConversations } = useActivity();
+  const t = useT();
+
+  return (
+    <TabBadge
+      count={unreadConversations}
+      label={
+        unreadConversations === 1
+          ? t("shell.activityUnreadOne")
+          : t("shell.activityUnreadMany", { count: unreadConversations })
+      }
     />
   );
 }

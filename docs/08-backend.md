@@ -146,19 +146,35 @@ technical one.
 
 ### Phone verification
 
-Still mocked, in `apps/web/src/features/auth/phone-verification.ts`. Any plausible number and any
-six-digit code are accepted, and `apps/web/src/features/auth/actions.ts` writes
-`phone_verified_at` directly.
+Real, and **optional**. The web verifies through MSG91's OTP widget; the app
+uses MSG91's OTP API, which still waits on a DLT-approved SMS template. Both end
+at the same SQL in `20260905120100_real_phone_verification.sql`, so the cooldown,
+the daily caps, the attempt limit and the one-account-per-verified-number rule
+cannot drift between clients.
 
-That file documents exactly what to change once an SMS provider is chosen. The
-schema is already ready for it: `on_auth_user_phone_confirmed` mirrors
-`auth.users.phone_confirmed_at` onto the profile, so the application simply
-stops writing the column.
+No client writes the outcome. `phone_verified_at`, `phone_number` and
+`phone_verified_via` are set only by the verify edge function holding the
+service role, and `guard_phone_verification` on `profiles` refuses all three to
+any caller carrying a JWT.
 
-The number being verified is deliberately **not** stored. It lives in
-`sessionStorage` between the two screens (`apps/web/src/features/auth/pending-phone.ts`) because
-an unverified number means nothing, and once Supabase phone auth is live the
-number belongs to `auth.users.phone`.
+Since 2026-09-22 a member may decline the step and finish onboarding. What that
+writes is `onboarding_stage = 'phone_verified'`, which has always meant *the
+phone step is behind them* rather than *this number was checked* -- see the
+comment on the enum. No number, timestamp or status is written, so a member who
+declines is indistinguishable from one who was never asked, which is the point.
+Declining costs nothing: discovery, interest, connections and messaging are all
+gated on `onboarding_completed` and never on a phone.
+
+Two columns answer "has Eraya checked this number", never one.
+`phone_verified_at` alone is true for every account the pre-launch stand-in
+marked; `phone_is_verified(verified_at, via)` requires
+`phone_verified_via = 'msg91'` and is the only predicate a member-facing mark may
+use. Both producers of `member_card` call it.
+
+The number being verified is deliberately **not** stored before it is verified.
+It lives in `sessionStorage` between the two screens
+(`apps/web/src/features/auth/pending-phone.ts`) because an unverified number
+means nothing.
 
 ## Authentication state
 
@@ -168,7 +184,7 @@ The stages the UI has always used map onto the database:
 | --- | --- |
 | `unauthenticated` | No Supabase session |
 | `authenticated` | Session exists, `profiles.onboarding_stage = 'authenticated'` |
-| `phoneVerified` | `'phone_verified'` |
+| `phoneStepDone` | `'phone_verified'` |
 | `onboardingStarted` | `'onboarding_started'` |
 | `onboardingCompleted` | `'onboarding_completed'` |
 

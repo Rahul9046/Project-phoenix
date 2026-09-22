@@ -35,6 +35,8 @@ export const mr: Translations = {
     notAnswered: "उत्तर दिलेले नाही",
     preferNotToSay: "सांगू इच्छित नाही",
     changeLanguage: "भाषा बदला",
+    emailVerified: "ईमेल पडताळलेला",
+    phoneVerified: "फोन पडताळलेला",
   },
 
   shell: {
@@ -49,6 +51,12 @@ export const mr: Translations = {
     navConnections: "नाती",
     navMessages: "संदेश",
     navAccount: "खाते",
+
+    activityNewConnectionsOne: "1 नवीन जुळणी",
+    activityNewConnectionsMany: "{count} नवीन जुळण्या",
+    activityUnreadOne: "1 संवादात न वाचलेले संदेश",
+    activityUnreadMany: "{count} संवादांत न वाचलेले संदेश",
+    activityBoth: "{connections}, आणि {messages}",
   },
 
   auth: {
@@ -106,7 +114,7 @@ export const mr: Translations = {
     },
     phone: {
       title: "तुमचा फोन नंबर जोडा.",
-      lede: "खाते परत मिळवण्यासाठी, आणि पडताळणी सुरू झाल्यावर तिच्यासाठी आम्ही तो ठेवतो. तो तुमच्या प्रोफाइलवर कधीही दिसत नाही.",
+      lede: "खाते परत मिळवण्यासाठी, आणि तुम्ही निवडल्यास पडताळणीसाठी आम्ही तो ठेवतो. तो तुमच्या प्रोफाइलवर कधीही दिसत नाही.",
       countryLabel: "देश कोड",
       label: "फोन नंबर",
       cta: "पुढे जा",
@@ -116,6 +124,9 @@ export const mr: Translations = {
         "तो फक्त तुम्हालाच दिसतो. दुसऱ्या कोणत्याही सदस्याला तुमचा नंबर कधीच दिसत नाही, आणि ज्यांच्याशी तुम्ही जोडले जाता त्यांनाही नाही.",
       numberPlaceholder: "98765 43210",
       notLiveNote: "SMS ने नंबर तपासणे अजून सुरू झालेले नाही, म्हणून काहीही पाठवले जाणार नाही. तुमचा नंबर साठवला जातो, आणि दुसरा कोणताही सदस्य तो कधीही पाहत नाही.",
+      optional: "हे ऐच्छिक आहे. पडताळणी केल्याने तुमच्या प्रोफाइलवर विश्वासाची एक खूण जोडली जाते, आणि तुम्ही ती नंतर तुमच्या खात्यातूनही करू शकता.",
+      skip: "आत्ता नको",
+      skipping: "एक क्षण…",
     },
     otp: {
       title: "तुमचा नंबर नक्की करा.",
@@ -337,6 +348,7 @@ export const mr: Translations = {
       "दोन्ही बाजूंनी आवड असेल तेव्हाच नाते उघडते — त्यामुळे कोणीही अचानक तुम्हाला लिहू शकत नाही.",
     openConversation: "उघडा",
     noMessages: "अजून कोणताही संदेश नाही",
+    unreadMark: "न वाचलेले संदेश",
     ended: "हे नाते संपले आहे",
     seeWhoIsHere: "इथे कोण आहे ते पाहा",
   },
@@ -469,8 +481,27 @@ export const mr: Translations = {
     labelPhone: "फोन",
     labelSignInMethod: "साइन-इनची पद्धत",
     labelMemberSince: "सदस्य झाल्यापासून",
-    phoneAdded: "जोडला आहे",
-    phoneNotAdded: "जोडलेला नाही",
+    navVerificationDescription: "एरायाने काय तपासले आहे, आणि काय नाही",
+
+    verification: {
+      title: "पडताळणी",
+      lede: "एराया फक्त त्याच गोष्टीची खूण दाखवते जी तिने खरोखर तपासली आहे. जिथे तपासलेली नाही, तिथे ती तसे सांगते.",
+
+      emailLabel: "ईमेल पत्ता",
+      emailDone: "पक्के झाले आहे. तुम्ही याच्यानेच साइन इन करता.",
+      emailAbsent: "आम्ही पाठवलेल्या कोडने तुमचा पत्ता पक्का करा.",
+
+      phoneLabel: "फोन पडताळणी",
+      phoneDone: "तुमचा फोन नंबर खाजगीच राहतो.",
+      phoneAbsent: "तुमच्या प्रोफाइलवर विश्वासाची आणखी एक खूण जोडा. तुमचा फोन नंबर खाजगीच राहतो.",
+      phoneCta: "फोन पडताळा",
+
+      identityLabel: "ओळख",
+      identityDetail: "एराया ओळखपत्रांची पडताळणी करत नाही. इथे कोणाचीही कागदपत्रांशी तपासणी झालेली नाही.",
+
+      relationshipLabel: "वैवाहिक स्थिती",
+      relationshipDetail: "तुमच्यावर आणि बाकी सर्वांवर विश्वास ठेवून घेतलेली. तिची खात्री करण्याचा आमच्याकडे कोणताही मार्ग नाही.",
+    },
   },
 
   errors: {

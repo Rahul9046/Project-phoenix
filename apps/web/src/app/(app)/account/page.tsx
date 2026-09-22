@@ -60,7 +60,6 @@ export default async function AccountPage() {
   const relationshipLabel = relationshipKey ? t(relationshipKey) : null;
 
   const age = ageFrom(profile.dateOfBirth);
-  const phoneVerified = session.stage !== "authenticated";
 
   const languages = profile.languages.length
     ? profile.languages.join(", ")
@@ -105,14 +104,33 @@ export default async function AccountPage() {
               label={t("account.labelEmail")}
               value={user?.email ?? absent}
             />
+            {/*
+              Read from the profile, not from the stage.
+              
+              This row used to say "Added" whenever the stage had moved past
+              `authenticated`, which was true while the phone step was
+              compulsory and became false the moment it stopped being: a member
+              who declines passes that milestone with nothing checked, and would
+              have been shown their own number as added when Eraya has never
+              seen one.
+
+              Unverified is an invitation rather than a warning tone. Nothing is
+              withheld from a member who has not done this, so there is nothing
+              to flag -- only somewhere to go if they would like to.
+            */}
             <DetailRow
               label={t("account.labelPhone")}
               value={
-                <Pill tone={phoneVerified ? "positive" : "attention"}>
-                  {phoneVerified
-                    ? t("account.phoneAdded")
-                    : t("account.phoneNotAdded")}
-                </Pill>
+                session.phoneVerified ? (
+                  <Pill tone="positive">{t("common.phoneVerified")}</Pill>
+                ) : (
+                  <Link
+                    href={appRoutes.verification}
+                    className="text-ember-text underline underline-offset-4 transition-colors hover:text-ember-strong"
+                  >
+                    {t("account.verification.phoneCta")}
+                  </Link>
+                )
               }
             />
             <DetailRow

@@ -47,6 +47,21 @@ export const en = {
      * that tapping it changes anything.
      */
     changeLanguage: "Change language",
+
+    /*
+     * The two marks Eraya is willing to put on a stranger's profile.
+     *
+     * They live in `common` because four surfaces render them -- a discovery
+     * card, a profile, a connection header and a member's own account -- across
+     * two clients, and a trust mark that is worded differently in two places is
+     * a trust mark that means something slightly different in two places.
+     *
+     * Neither says "verified profile" or "verified member". Eraya has checked a
+     * mailbox and, sometimes, a handset. It has not checked a person, and the
+     * wording must never let a reader think otherwise.
+     */
+    emailVerified: "Email verified",
+    phoneVerified: "Phone verified",
   },
 
   shell: {
@@ -62,6 +77,27 @@ export const en = {
     navConnections: "Connections",
     navMessages: "Messages",
     navAccount: "Account",
+
+    /*
+     * What a badge means, said out loud.
+     *
+     * A number in a coloured circle is invisible to a screen reader and
+     * ambiguous to everybody else -- "Connections, 2" could be two connections
+     * in total. These are the labels the navigation actually announces, so the
+     * count always arrives with the noun it is counting.
+     *
+     * Separate one/many keys because `t` substitutes placeholders and does not
+     * pluralise, and because "1 new connections" is the kind of small wrongness
+     * that makes a product feel unattended. Same pattern as `home.introductions`.
+     *
+     * `activityBoth` is the web's, where conversations live inside Connections
+     * and one badge has to speak for two kinds of thing.
+     */
+    activityNewConnectionsOne: "1 new connection",
+    activityNewConnectionsMany: "{count} new connections",
+    activityUnreadOne: "1 conversation with unread messages",
+    activityUnreadMany: "{count} conversations with unread messages",
+    activityBoth: "{connections}, and {messages}",
   },
 
   auth: {
@@ -149,7 +185,7 @@ export const en = {
      */
     phone: {
       title: "Add your phone number.",
-      lede: "We keep it for account recovery, and for verification once that is switched on. It is never shown on your profile.",
+      lede: "We keep it for account recovery, and for verification if you choose it. It is never shown on your profile.",
       countryLabel: "Country code",
       label: "Phone number",
       cta: "Continue",
@@ -159,6 +195,18 @@ export const en = {
         "Only you can see it. Another member never sees your number, and neither does anyone you connect with.",
       numberPlaceholder: "98765 43210",
       notLiveNote: "Checking numbers by SMS is not switched on yet, so nothing will be sent. Your number is stored, and no other member ever sees it.",
+      /*
+       * The step is optional, and the screen says so before the button rather
+       * than after it. A "Skip" a person only finds once they have decided they
+       * cannot face the form is a skip that arrives too late to be a choice.
+       *
+       * The sentence names the upside and the cost of declining in the same
+       * breath, and the cost is nothing: no capability is withheld, so there is
+       * no warning to give and none is given.
+       */
+      optional: "This is optional. Verifying adds a trust mark to your profile, and you can do it later from your account.",
+      skip: "Skip for now",
+      skipping: "One moment…",
     },
     otp: {
       title: "Confirm your number.",
@@ -419,6 +467,7 @@ export const en = {
       "A connection opens only when interest is mutual — so nobody can write to you out of the blue.",
     openConversation: "Open",
     noMessages: "No messages yet",
+    unreadMark: "Unread messages",
     ended: "This connection has ended",
     seeWhoIsHere: "See who is here",
   },
@@ -584,13 +633,36 @@ export const en = {
     labelPhone: "Phone",
     labelSignInMethod: "Sign-in method",
     labelMemberSince: "Member since",
+
+    navVerificationDescription: "What Eraya has checked, and what it has not",
+
     /*
-     * Not "Verified". The OTP step is mocked -- any six digits pass and no SMS
-     * is sent -- so the only honest thing this can report is that the step was
-     * completed.
+     * A member's own verification, on their own screen.
+     *
+     * The unverified half is deliberately an invitation and not a warning.
+     * Declining costs nothing -- discovery, interest, connections and messages
+     * are all untouched by it -- so wording that implies a lapse would be
+     * pressure applied on behalf of a benefit the member has already weighed.
      */
-    phoneAdded: "Added",
-    phoneNotAdded: "Not added",
+    verification: {
+      title: "Verification",
+      lede: "Eraya only shows a mark for something it has genuinely checked. Where it has not, it says so.",
+
+      emailLabel: "Email address",
+      emailDone: "Confirmed. This is how you sign in.",
+      emailAbsent: "Confirm your address with the code we sent.",
+
+      phoneLabel: "Phone verification",
+      phoneDone: "Your phone number stays private.",
+      phoneAbsent: "Add another trust mark to your profile. Your phone number stays private.",
+      phoneCta: "Verify phone",
+
+      identityLabel: "Identity",
+      identityDetail: "Eraya does not verify identity documents. Nobody here has been checked against one.",
+
+      relationshipLabel: "Relationship status",
+      relationshipDetail: "Taken on trust, from you and from everyone else. There is no way for us to confirm it.",
+    },
   },
 
   errors: {

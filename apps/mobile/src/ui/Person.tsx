@@ -3,6 +3,7 @@ import { View, type ImageStyle, type TextStyle, type ViewStyle } from "react-nat
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Text } from "@/ui/Text";
 
@@ -181,41 +182,76 @@ export function ProfilePhoto({
 /**
  * What Eraya can actually vouch for.
  *
- * Email is the only one today. Phone deliberately does not appear: verification
- * is mocked, any six digits are accepted, and no SMS is sent -- so showing
- * another member a "phone verified" badge would be a safety claim the system
- * cannot support. When an SMS provider is connected, add it here and nowhere
- * else.
+ * Phone was deliberately absent while verification was mocked -- any six digits
+ * were accepted and no SMS was sent, so a "phone verified" mark would have been
+ * a safety claim the system could not support, shown to a stranger deciding
+ * whether to meet somebody. It is here now because the claim is now true, and
+ * it rests on `phoneVerified` from `member_card`, which the database builds
+ * with `phone_is_verified()` -- so it requires `phone_verified_via = 'msg91'`
+ * and the accounts the stand-in marked still do not qualify.
+ *
+ * Absence says nothing. Verification is optional and a member may decline it
+ * for perfectly good reasons, so there is no "phone unverified" and no empty
+ * slot where a mark would be: what is shown is what has been checked, and
+ * nothing at all is implied about the rest.
+ *
+ * Neither mark says "verified profile" or "verified member". Eraya has checked
+ * a mailbox and sometimes a handset. It has not checked a person, and no
+ * wording here may let a reader believe otherwise.
  */
 export function TrustMarks({
   emailVerified,
+  phoneVerified = false,
   style,
   /** Set when the mark sits over a photograph rather than on a page. */
   onDark = false,
 }: {
   emailVerified: boolean;
+  phoneVerified?: boolean;
   style?: ViewStyle;
   onDark?: boolean;
 }) {
-  if (!emailVerified) return null;
+  const t = useT();
+
+  const marks: string[] = [];
+  if (emailVerified) marks.push(t("common.emailVerified"));
+  if (phoneVerified) marks.push(t("common.phoneVerified"));
+
+  if (marks.length === 0) return null;
 
   const tone = onDark ? colors.positiveOnDark : colors.positive;
 
   return (
     <View
       style={[
-        { flexDirection: "row", alignItems: "center", gap: space.xs },
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: space.md,
+        },
         style,
       ]}
     >
-      <Ionicons
-        name="shield-checkmark-outline"
-        size={iconSize.sm}
-        color={tone}
-      />
-      <Text variant="caption" style={{ color: tone }}>
-        Email verified
-      </Text>
+      {marks.map((mark) => (
+        <View
+          key={mark}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.xs,
+          }}
+        >
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={iconSize.sm}
+            color={tone}
+          />
+          <Text variant="caption" style={{ color: tone }}>
+            {mark}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }

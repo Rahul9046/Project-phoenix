@@ -2,6 +2,7 @@ import { getT } from "@/features/i18n/server";
 import { appRoutes } from "@/features/app-shell/nav";
 import { MemberRowLink } from "@/features/members/MemberRowLink";
 import { getConnections } from "@/features/members/data";
+import { MarkConnectionsSeen } from "@/features/members/MarkSeen";
 
 export const metadata = { title: "Connections" };
 
@@ -20,6 +21,12 @@ export default async function ConnectionsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
+      {/*
+        Arriving here is what makes these connections no longer new. Renders
+        nothing; see MarkSeen.tsx for why the write is not done during render.
+      */}
+      <MarkConnectionsSeen />
+
       <h1 className="text-heading text-ink">
         {t("connections.title")}
       </h1>
@@ -44,6 +51,8 @@ export default async function ConnectionsPage() {
                     href={`${appRoutes.connections}/${connection.id}`}
                     name={connection.member.firstName}
                     photoUrl={connection.member.photoUrl}
+                    unread={connection.unread}
+                    unreadLabel={t("connections.unreadMark")}
                   >
                     <span className="mt-0.5 block truncate text-[0.95rem] text-ink-muted">
                       {connection.lastMessage

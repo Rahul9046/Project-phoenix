@@ -87,7 +87,15 @@ export function resolveRedirect(
   if (route === authRoutes.logout) return null;
 
   const isAuthenticated = stageAtLeast(session.stage, "authenticated");
-  const isPhoneVerified = stageAtLeast(session.stage, "phoneVerified");
+  /*
+   * Two different questions, and the phone screens ask the second one.
+   *
+   * `phoneStepBehindThem` is about the sequence: have they been offered this
+   * yet. `session.phoneVerified` is about the number: has an SMS been answered
+   * on it. Since verification became optional the two come apart for anybody
+   * who declined, and each screen below needs whichever one it actually means.
+   */
+  const phoneStepBehindThem = stageAtLeast(session.stage, "phoneStepDone");
 
   // The two entry screens. Someone already part-way through should resume
   // rather than start again.
@@ -99,22 +107,40 @@ export function resolveRedirect(
     return isAuthenticated ? nextRoute(session) : null;
   }
 
+  /*
+   * The phone screens are gated on the number, not on the stage.
+   *
+   * This is what makes the account area's "Verify phone" work. A member who
+   * skipped and finished onboarding is far past this point in the sequence, and
+   * gating on the stage would bounce them forward the instant they arrived --
+   * turning the entry point into a link that quietly does nothing. What should
+   * turn them away is having already verified, and only that.
+   */
   if (route === authRoutes.phone) {
     if (!isAuthenticated) return authRoutes.login;
-    // Already verified — going back here should move them forward instead.
-    return isPhoneVerified ? nextRoute(session) : null;
+    // Already verified — there is nothing here for them.
+    return session.phoneVerified ? nextRoute(session) : null;
   }
 
   if (route === authRoutes.otp) {
     if (!isAuthenticated) return authRoutes.login;
-    if (isPhoneVerified) return nextRoute(session);
+    if (session.phoneVerified) return nextRoute(session);
     // No number entered yet, so there is nothing to confirm.
     return session.phone ? null : authRoutes.phone;
   }
 
-  // Everything below is onboarding and needs a verified phone.
+  /*
+   * Everything below is onboarding, and none of it needs a verified phone any
+   * more. What it still needs is for the phone step to have been *reached* --
+   * asked once, answered either way -- so that the offer is not skipped over by
+   * someone typing a URL and then never made again.
+   *
+   * A member who verified but whose stage has somehow not caught up is let
+   * through on the strength of the verification itself rather than being sent
+   * back to a screen that has nothing left to ask them.
+   */
   if (!isAuthenticated) return authRoutes.login;
-  if (!isPhoneVerified) return authRoutes.phone;
+  if (!phoneStepBehindThem && !session.phoneVerified) return authRoutes.phone;
 
   if (route === authRoutes.basics) return null;
   if (route === authRoutes.seeking) return hasBasics(session) ? null : authRoutes.basics;
@@ -155,7 +181,13 @@ export function resolveRedirect(
 /** The next screen this person should see, given how far they have come. */
 export function nextRoute(session: AuthSession): AuthRoute {
   if (!stageAtLeast(session.stage, "authenticated")) return authRoutes.login;
-  if (!stageAtLeast(session.stage, "phoneVerified")) return authRoutes.phone;
+  // The offer, once. Declining it moves the stage on exactly as accepting does.
+  if (
+    !stageAtLeast(session.stage, "phoneStepDone") &&
+    !session.phoneVerified
+  ) {
+    return authRoutes.phone;
+  }
   if (session.stage === "onboardingCompleted") return authRoutes.complete;
   if (!hasBasics(session)) return authRoutes.basics;
   if (!hasSeeking(session)) return authRoutes.seeking;

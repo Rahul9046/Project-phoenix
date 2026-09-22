@@ -40,11 +40,29 @@ export type ProfileSnapshot = {
   languagesUndisclosed: boolean;
   languageIds: string[];
   phoneVerifiedAt: string | null;
+  /**
+   * Whether an SMS was genuinely answered on this member's number.
+   *
+   * Not `phoneVerifiedAt !== null`. That timestamp is set for every account the
+   * pre-launch stand-in marked, and `phone_verified_via` is the only column
+   * that separates those from a real message. A mark shown to another member
+   * may be built on this and on nothing else.
+   */
+  phoneVerified: boolean;
   emailVerified: boolean;
   stage: OnboardingStage;
 };
 
-/** The ordered stages, so "at least this far" is a comparison rather than a switch. */
+/**
+ * The ordered stages, so "at least this far" is a comparison rather than a
+ * switch.
+ *
+ * `phone_verified` is a position in the questions and not a claim about
+ * anybody: it means the phone step is behind them, whether they verified or
+ * declined. `phoneVerified` above is the claim. The two were the same thing
+ * while the step was compulsory, and keeping them apart is what stops a skipped
+ * step from being read later as a checked number.
+ */
 export const stageOrder: readonly OnboardingStage[] = [
   "authenticated",
   "phone_verified",

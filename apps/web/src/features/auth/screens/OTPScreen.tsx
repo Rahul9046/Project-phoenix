@@ -15,9 +15,10 @@ import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describePhoneError } from "@/features/auth/describeAuthError";
 import { authRoutes, nextRoute } from "@/features/auth/flow";
+import { appRoutes } from "@/features/app-shell/nav";
 import { getCodeSentAt } from "@/features/auth/pending-phone";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
-import { AuthError, maskPhone } from "@/features/auth/types";
+import { AuthError, maskPhone, stageAtLeast } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { ensureWidget, widgetConfig } from "@/features/auth/msg91-widget";
 
@@ -141,9 +142,28 @@ export function OTPScreen() {
       setVerified(true);
       setPending(false);
 
+      /*
+       * Back where they came from.
+       *
+       * Somebody verifying during signup carries on through the questions.
+       * Somebody who skipped months ago and came back from the account area to
+       * do this has no questions left, and `nextRoute` would land them on the
+       * end-of-onboarding screen -- a congratulation for finishing something
+       * they finished long ago, and no way back to the page they were on.
+       */
+      const returningMember = stageAtLeast(session.stage, "onboardingCompleted");
+
       // Let the confirmation land before moving on.
       timeout.current = setTimeout(() => {
-        router.push(nextRoute({ ...session, stage: "phoneVerified" }));
+        router.push(
+          returningMember
+            ? appRoutes.verification
+            : nextRoute({
+                ...session,
+                stage: "phoneStepDone",
+                phoneVerified: true,
+              }),
+        );
       }, SUCCESS_PAUSE_MS);
     } catch (cause) {
       setError(describePhoneError(cause));

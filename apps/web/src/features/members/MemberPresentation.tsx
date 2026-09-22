@@ -93,19 +93,30 @@ export function TrustMark({ children }: { children: ReactNode }) {
 /**
  * What Eraya can actually vouch for about a stranger.
  *
- * "Phone verified" used to appear here. It was the strongest safety signal on
- * the card and it was not true: phone verification is mocked, any six digits are
- * accepted, and no SMS is ever sent. Telling one member that another's number
- * has been checked -- in a product for people who are deliberately meeting
- * strangers -- is the one claim that must never run ahead of the system.
+ * "Phone verified" was removed from here when the mock was still in place: any
+ * six digits were accepted and no SMS was ever sent, so the strongest safety
+ * signal on the card was also the only untrue one. In a product for people
+ * deliberately meeting strangers, that is the claim that must never run ahead
+ * of the system.
  *
- * `phoneVerified` stays on the card and in the database. When an SMS provider is
- * connected (see features/auth/phone-verification.ts) the mark comes back by
- * restoring the line below, and nothing else needs to change.
+ * It is back, and it is back on a narrower footing than the one it left on.
+ * `member_card.phone_verified` now answers `phone_is_verified()` in the
+ * database, which requires `phone_verified_via = 'msg91'` -- so the accounts the
+ * stand-in marked, the demo members among them, do not qualify and cannot start
+ * qualifying by somebody widening a query.
+ *
+ * Absence is silent on purpose. Verification is optional and a member may
+ * decline it for perfectly good reasons, so there is no "phone unverified" and
+ * no missing-mark placeholder: what is shown is what has been checked, and
+ * nothing is inferred from the rest. Neither mark says "verified profile" or
+ * "verified member" either. Eraya has checked a mailbox and sometimes a
+ * handset. It has not checked a person.
  */
 export function TrustMarks({ member }: { member: MemberCard }) {
+  const t = useT();
   const marks: string[] = [];
-  if (member.emailVerified) marks.push("Email verified");
+  if (member.emailVerified) marks.push(t("common.emailVerified"));
+  if (member.phoneVerified) marks.push(t("common.phoneVerified"));
 
   if (!marks.length) return null;
 

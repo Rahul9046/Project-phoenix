@@ -199,6 +199,7 @@ export default function MemberProfile() {
 
         <TrustMarks
           emailVerified={member.emailVerified}
+          phoneVerified={member.phoneVerified}
           style={{ marginTop: space.md }}
         />
 

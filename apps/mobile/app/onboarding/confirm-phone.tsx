@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSession } from "@/features/auth/SessionProvider";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
+import { recordPhoneStepComplete } from "@/features/onboarding/data";
 import {
   confirmCode,
   phoneVerificationIsLive,
@@ -33,9 +34,16 @@ import { useToast } from "@/ui/Toast";
  * costs money.
  */
 export default function ConfirmPhoneStep() {
-  const { refresh } = useSession();
+  const { profile, refresh } = useSession();
   const t = useT();
-  const params = useLocalSearchParams<{ dialCode?: string; national?: string }>();
+  const params = useLocalSearchParams<{
+    dialCode?: string;
+    national?: string;
+    from?: string;
+  }>();
+
+  // Handed on by the phone screen. See the comment there.
+  const fromAccount = params.from === "account";
 
   const toast = useToast();
 
@@ -99,10 +107,26 @@ export default function ConfirmPhoneStep() {
       return;
     }
 
-    // Nothing is written here. The verify function set the profile server-side;
-    // this only re-reads it.
+    /*
+     * Nothing about the *verification* is written here -- the verify function
+     * set that server-side, holding the service role, and a trigger on
+     * `profiles` would refuse this client the columns anyway.
+     *
+     * The stage is a different thing: a record of the step being behind them,
+     * which the routing reads so it stops asking. It is written by both answers
+     * to this step, here and by "Skip for now", and refuses to move anybody
+     * backwards -- which is what makes it safe to call from a member who
+     * reached this screen from the account area with onboarding long finished.
+     */
+    await recordPhoneStepComplete(profile?.stage ?? "authenticated");
+
     const next = await refresh();
     setPending(false);
+
+    if (fromAccount) {
+      requestAnimationFrame(() => router.replace("/you/verification"));
+      return;
+    }
 
     /*
      * A frame between the profile arriving and the stack being rewritten.
@@ -144,6 +168,7 @@ export default function ConfirmPhoneStep() {
       canContinue={code.length === CODE_LENGTH}
       pending={pending}
       error={error}
+      progress={!fromAccount}
     >
       <CodeInput
         value={code}

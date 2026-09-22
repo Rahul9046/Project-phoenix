@@ -1,6 +1,6 @@
 import type { Href } from "expo-router";
 
-import type { ProfileSnapshot } from "@/features/auth/types";
+import { stageAtLeast, type ProfileSnapshot } from "@/features/auth/types";
 
 /**
  * Where a person belongs right now.
@@ -71,9 +71,32 @@ export function nextRouteFor(profile: ProfileSnapshot | null): Href {
   // to a screen that will bounce them here again.
   if (!profile) return routes.phone;
 
-  // Phone comes first because the stage machine gates on it, and because asking
-  // for it later would mean interrupting someone who thought they had finished.
-  if (!profile.phoneVerifiedAt) return routes.phone;
+  /*
+   * Phone comes first, and is now the one question that may be declined.
+   *
+   * What this asks is whether the step has been *reached*, not whether a number
+   * was checked -- since verification became optional those are different
+   * facts, and a member who was offered it and said no has answered this
+   * question as fully as one who said yes.
+   *
+   * Two things can settle it. `onboarding_stage` moves to `phone_verified` when
+   * the step is completed either way, which is what "Skip for now" writes. And
+   * a non-null `phoneVerifiedAt` settles it for everybody who went through the
+   * step before that stage write existed -- including the accounts the
+   * pre-launch stand-in marked, who proved nothing but did answer the question.
+   * Neither is read as evidence that a number was checked; `phoneVerified` is
+   * the only thing allowed to say that, and it is used for marks and nowhere
+   * near routing.
+   *
+   * It still comes first because asking later would mean interrupting somebody
+   * who thought they had finished.
+   */
+  if (
+    !profile.phoneVerifiedAt &&
+    !stageAtLeast(profile.stage, "phone_verified")
+  ) {
+    return routes.phone;
+  }
 
   if (!profile.firstName) return routes.name;
   if (!profile.dateOfBirth) return routes.birthday;
