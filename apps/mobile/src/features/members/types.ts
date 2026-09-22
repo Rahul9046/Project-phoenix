@@ -1,7 +1,4 @@
-import type {
-  Gender,
-  RelationshipStatus,
-} from "@/features/auth/types";
+import type { Gender, RelationshipStatus, Religion } from "@/features/auth/types";
 
 /**
  * A member, as this app understands them.
@@ -23,6 +20,13 @@ export type Member = {
   state: string | null;
   relationshipStatus: RelationshipStatus | null;
   gender: Gender | null;
+  /**
+   * Null when they have not said, and null when they said they would rather
+   * not -- the database collapses both before this leaves it, so there is no
+   * "prefer not to say" to render and no way to render it by mistake. See
+   * `disclosed_religion()`.
+   */
+  religion: Religion | null;
   languages: string[];
   about: string | null;
   lookingFor: string | null;
@@ -64,6 +68,15 @@ export type DiscoveryFilters = {
   cityIds: string[];
   languageIds: string[];
   relationshipStatuses: RelationshipStatus[];
+  /**
+   * Disclosed religions only.
+   *
+   * `prefer_not_to_say` can never appear here -- the picker does not offer it,
+   * and the database matches on the disclosed value regardless, so a member who
+   * declined is absent from every religion filter rather than being findable by
+   * the fact that they declined.
+   */
+  religions: Religion[];
 };
 
 export const emptyFilters: DiscoveryFilters = {
@@ -72,6 +85,7 @@ export const emptyFilters: DiscoveryFilters = {
   cityIds: [],
   languageIds: [],
   relationshipStatuses: [],
+  religions: [],
 };
 
 export function countActiveFilters(filters: DiscoveryFilters): number {
@@ -79,7 +93,8 @@ export function countActiveFilters(filters: DiscoveryFilters): number {
     (filters.minAge !== null || filters.maxAge !== null ? 1 : 0) +
     (filters.cityIds.length > 0 ? 1 : 0) +
     (filters.languageIds.length > 0 ? 1 : 0) +
-    (filters.relationshipStatuses.length > 0 ? 1 : 0)
+    (filters.relationshipStatuses.length > 0 ? 1 : 0) +
+    (filters.religions.length > 0 ? 1 : 0)
   );
 }
 

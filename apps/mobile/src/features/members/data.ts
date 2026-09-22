@@ -36,6 +36,7 @@ function toMember(row: RawCard): Member {
     state: row.state,
     relationshipStatus: row.relationship_status,
     gender: row.gender,
+    religion: row.religion ?? null,
     languages: row.languages ?? [],
     about: row.about,
     lookingFor: row.looking_for,
@@ -137,6 +138,7 @@ export async function getIntroductions(
     relationship_statuses: filters.relationshipStatuses.length
       ? filters.relationshipStatuses
       : undefined,
+    religions: filters.religions.length ? filters.religions : undefined,
   });
 
   /*

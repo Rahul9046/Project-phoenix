@@ -33,6 +33,7 @@ export const onboardingSteps = [
   "seeking",
   "city",
   "relationship",
+  "religion",
   "languages",
   "photo",
 ] as const;

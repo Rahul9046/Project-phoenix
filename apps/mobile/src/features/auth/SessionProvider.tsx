@@ -70,7 +70,7 @@ function timeoutSignal(ms: number): AbortSignal {
 }
 
 const PROFILE_COLUMNS =
-  "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, phone_verified_via, onboarding_stage";
+  "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, religion, languages_undisclosed, phone_verified_at, phone_verified_via, onboarding_stage";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -191,6 +191,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           cityId: null,
           otherCity: null,
           relationshipStatus: null,
+          religion: null,
           languagesUndisclosed: false,
           languageIds: [],
           phoneVerifiedAt: null,
@@ -212,6 +213,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         cityId: row.city_id,
         otherCity: row.other_city,
         relationshipStatus: row.relationship_status,
+        // The member's own value, unfiltered -- this is their own profile.
+        // What another member may see is decided by `disclosed_religion()`.
+        religion: row.religion,
         languagesUndisclosed: row.languages_undisclosed,
         languageIds: (languageRows ?? []).map((l) => l.language_id),
         phoneVerifiedAt: row.phone_verified_at,

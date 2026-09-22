@@ -76,6 +76,7 @@ function logFailure(where: string, error: unknown) {
 
 type Gender = Database["public"]["Enums"]["gender"];
 type RelationshipStatus = Database["public"]["Enums"]["relationship_status"];
+type Religion = Database["public"]["Enums"]["religion"];
 
 /** The signed-in member's id, or null. Never trust one from the client. */
 async function requireUserId(): Promise<string | null> {
@@ -267,6 +268,54 @@ export async function saveSeeking(seeking: string[]): Promise<ActionResult> {
   }
 
   revalidatePath("/onboarding", "layout");
+  return { ok: true };
+}
+
+/**
+ * What the member said about their religion, and only that.
+ *
+ * The argument is typed as `Religion`, so this cannot be handed anything the
+ * database enum does not hold -- the lesson `genderOptions` records, where a
+ * hyphen against an underscore cost a fortnight of silently failed saves.
+ *
+ * `prefer_not_to_say` is written like any other value. It is an answer, and
+ * storing it is what lets the product tell somebody who declined from somebody
+ * who was never asked -- which is null, and which every account created before
+ * this question still holds.
+ *
+ * Nothing here derives a value from a name, a city or a language, and no path
+ * exists that could: the only input is the one the member chose.
+ *
+ * Used by onboarding and by the account screen, because changing an answer and
+ * giving it the first time are the same write. Changing it to
+ * `prefer_not_to_say` is how somebody withdraws it, and the moment that lands
+ * they leave every religion filter and the row leaves every other member's view
+ * of their profile -- both read the disclosed value, which is then null.
+ */
+export async function saveReligion(religion: Religion): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!userId) return { ok: false, message: "Please sign in again." };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      religion,
+      onboarding_stage: await advanceStage(userId, "onboarding_started"),
+    })
+    .eq("id", userId);
+
+  if (error) {
+    // The value is deliberately absent from this line. Religion is sensitive
+    // personal information and a failed write is not a reason to put it in a
+    // log that somebody else will read.
+    logFailure("saveReligion", error);
+    return { ok: false, message: describeSaveFailure(error) };
+  }
+
+  revalidatePath("/onboarding", "layout");
+  revalidatePath("/account");
   return { ok: true };
 }
 

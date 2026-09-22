@@ -246,6 +246,20 @@ export const te: Translations = {
       widowedBody: "నేను నా జీవిత భాగస్వామిని కోల్పోయాను.",
       trustNote: "Eraya ఇది సరిచూడదు. మీరు ఇక్కడ మిగతా అందరినీ నమ్ముతున్నట్టే, ఇది నమ్మకం మీదే తీసుకోబడుతుంది.",
     },
+    religion: {
+      title: "మీ మతం ఏమిటి?",
+      lede: "మీకు సౌకర్యంగా అనిపించినంత మాత్రమే పంచుకోండి. చెప్పకూడదని ఎంచుకోవచ్చు.",
+      error: "కొనసాగడానికి ఒక ఎంపికను ఎంచుకోండి.",
+      hindu: "హిందూ",
+      muslim: "ముస్లిం",
+      christian: "క్రైస్తవ",
+      sikh: "సిక్కు",
+      buddhist: "బౌద్ధ",
+      jain: "జైన",
+      other: "ఇతర",
+      preferNotToSay: "చెప్పదలచుకోలేదు",
+      privacyNote: "దీన్ని మీరు ఎప్పుడైనా మార్చవచ్చు, లేదా పంచుకోవడం ఆపవచ్చు. మీ పేరు, ఊరు లేదా భాషల ఆధారంగా ఎరాయా మీ మతాన్ని ఎప్పుడూ ఊహించదు.",
+    },
     languages: {
       title: "మీరు ఏ భాషలు మాట్లాడతారు?",
       lede: "ఎన్ని కావాలంటే అన్ని ఎంచుకోండి. మీకు సౌకర్యంగా ఉన్న భాషలో సంభాషణ సులువుగా సాగుతుంది.",
@@ -338,6 +352,7 @@ export const te: Translations = {
     undoPass: "గత నిర్ణయాన్ని వెనక్కి తీసుకోండి",
     readMore: "మరింత చదవండి",
     filters: "వడపోత",
+    filterReligion: "మతం",
   },
 
   connections: {
@@ -477,6 +492,7 @@ export const te: Translations = {
     labelCity: "నగరం",
     labelRelationship: "అధ్యాయం",
     labelLanguages: "భాషలు",
+    labelReligion: "మతం",
     labelEmail: "ఈమెయిల్",
     labelPhone: "ఫోన్",
     labelSignInMethod: "సైన్-ఇన్ విధానం",

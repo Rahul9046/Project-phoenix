@@ -65,6 +65,15 @@ export type RelationshipStatus = "divorced" | "separated" | "widowed";
  */
 export type Gender = Database["public"]["Enums"]["gender"];
 
+/**
+ * Taken from the database, for the same reason `Gender` is.
+ *
+ * Includes `prefer_not_to_say`, which is a choice a member makes rather than
+ * the absence of one -- that is `null`, and it is what every account created
+ * before this question existed still holds.
+ */
+export type Religion = Database["public"]["Enums"]["religion"];
+
 export type AuthUser = {
   id: string;
   provider: AuthProviderId;
@@ -94,6 +103,14 @@ export type OnboardingProfile = {
   /** Free text, only set when `city` is the "Another city" option. */
   otherCity: string | null;
   relationshipStatus: RelationshipStatus | null;
+  /**
+   * What they said, including having said they would rather not.
+   *
+   * Null means the question has not been answered -- true of every member who
+   * joined before it was asked, and the reason onboarding can tell "not yet"
+   * from "declined". What another member may see is decided in SQL, not here.
+   */
+  religion: Religion | null;
   languages: string[];
   /**
    * "I would rather not say" is an answer, and an empty list is not. Without
@@ -132,6 +149,7 @@ export const emptyProfile: OnboardingProfile = {
   city: null,
   otherCity: null,
   relationshipStatus: null,
+  religion: null,
   languages: [],
   languagesUndisclosed: false,
 };

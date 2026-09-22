@@ -1135,6 +1135,7 @@ export function runChecks({ skip = false } = {}) {
     ["Payments probe", "payments:probe", "server-side pricing, idempotent settlement, expiry as a date, and that every plan is prepaid rather than recurring"],
     ["Moderation probe", "moderation:probe", "that the admin RPCs refuse an ordinary member who knows their names, not merely that the page hides a button"],
     ["Analytics probe", "analytics:probe", "that each funnel event is actually recorded, by performing the transition and looking for the row"],
+    ["Religion probe", "religion:probe", "that a disclosed religion reaches another member, that \"prefer not to say\" and never-answered both arrive as nothing and match no filter, and that an account predating the question keeps working with null"],
     ["Activity probe", "activity:probe", "the unread and new-connection counts, by connecting two throwaway members and messaging between them: that a count is of conversations rather than messages, that a sender never counts their own, that reading clears exactly one, that a second sign-in sees the same numbers, and that blocking or deleting leaves no phantom behind"],
   ];
   for (const [name, script, proves] of probes) {
