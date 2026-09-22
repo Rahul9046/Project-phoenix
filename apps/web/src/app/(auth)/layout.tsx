@@ -48,8 +48,32 @@ export default async function AuthGroupLayout({
           Rendered on every screen in the group, not only the two that verify.
           An empty div costs no height, and the alternative -- mounting it
           conditionally -- would reintroduce the unmount that caused this.
+
+          It is `sticky` rather than simply last in the column, and that is the
+          whole of the second problem. `AuthLayout` opens with `min-h-dvh` and
+          fills the viewport deliberately, so its next sibling begins one
+          screen below the fold -- which is where this sat when the captcha
+          "disappeared". It was drawn, correctly, out of sight.
+
+          Sticking it to the bottom of the viewport is the way to have one
+          element serve two screens. It cannot be moved into each screen's
+          column as they are shown: relocating the node would reparent the
+          iframe MSG91 drew into, browsers reload a reparented iframe, and the
+          solved challenge would be destroyed -- which is the thing this whole
+          arrangement exists to prevent. So the element stays still and the
+          viewport comes to it.
+
+          Empty, it is a zero-height box and nothing is painted: no margin, no
+          background, no shadow, because every one of those is conditioned on
+          it having content. A person on a screen that never asks for a captcha
+          sees exactly what they saw before.
         */}
-        <div id={CAPTCHA_CONTAINER_ID} />
+        <div className="pointer-events-none sticky bottom-0 z-40 mx-auto flex w-full max-w-[27rem] justify-center px-5 sm:px-8">
+          <div
+            id={CAPTCHA_CONTAINER_ID}
+            className="pointer-events-auto [&:not(:empty)]:mb-5 [&:not(:empty)]:rounded-2xl [&:not(:empty)]:bg-canvas [&:not(:empty)]:p-3 [&:not(:empty)]:shadow-lg"
+          />
+        </div>
       </AuthSessionProvider>
     </main>
   );
