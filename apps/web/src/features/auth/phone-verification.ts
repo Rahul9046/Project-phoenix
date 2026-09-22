@@ -101,6 +101,33 @@ const VERIFY_MESSAGES: Record<string, string> = {
   unauthenticated: "Your session has expired. Please sign in again.",
 };
 
+/**
+ * What the provider said, kept where somebody can read it.
+ *
+ * The sentence a member sees is chosen here and stays that way -- MSG91's
+ * wording is written for whoever reads its dashboard. But until now the
+ * provider's reason was not merely unshown, it was discarded: no log, no
+ * event, nothing. Two separate diagnoses of the same resend failure had to be
+ * argued from database audit rows, proving where the failure had *not*
+ * happened, because the place it did happen said nothing at all. The first fix
+ * that followed was wrong and shipped to production before anybody could tell.
+ *
+ * So the reason is written to the console, where reproducing the fault once
+ * with the tools open is enough to read it.
+ *
+ * Nothing identifying goes in. MSG91's messages are short and generic, but
+ * they are somebody else's strings and could carry anything, so every run of
+ * four or more digits is replaced before it is written -- that covers a phone
+ * number, a code, and the numeric part of a request id -- and the result is
+ * cut short. Keys, tokens and access tokens are never passed to this function
+ * at all.
+ */
+function logProviderFailure(step: string, cause: unknown): void {
+  const raw = cause instanceof Error ? cause.message : String(cause);
+  const safe = raw.replace(/\d{4,}/g, "[redacted]").slice(0, 200);
+  console.error(`[eraya] MSG91 ${step} failed: ${safe}`);
+}
+
 type FunctionReply = { status?: string; retryAfter?: number };
 
 async function callFunction(
@@ -175,9 +202,11 @@ export async function sendPhoneCode(
     } else {
       await widgetSendOtp(config, toE164(phone));
     }
-  } catch {
+  } catch (cause) {
     // MSG91's own wording is written for whoever reads its dashboard. What a
-    // member reads is decided here, as it is for every other outcome.
+    // member reads is decided here, as it is for every other outcome -- but
+    // the reason is now kept rather than dropped.
+    logProviderFailure(options.resend === true ? "retryOtp" : "sendOtp", cause);
     throw new AuthError("generic", SEND_FALLBACK);
   }
 }
@@ -204,7 +233,8 @@ export async function verifyPhoneCode(
   let accessToken: string;
   try {
     accessToken = await widgetVerifyOtp(config, code);
-  } catch {
+  } catch (cause) {
+    logProviderFailure("verifyOtp", cause);
     throw new AuthError(
       "invalid_code",
       VERIFY_MESSAGES.invalid_code ?? VERIFY_FALLBACK,
