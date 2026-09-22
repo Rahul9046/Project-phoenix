@@ -84,12 +84,33 @@ Deno.serve(async (request) => {
     });
 
     /*
-     * `number_taken` is answered as a rate limit rather than as itself, exactly
-     * as the OTP API path does. Telling somebody "that number already has an
-     * account" turns this screen into a directory.
+     * `number_taken` is answered as itself.
+     *
+     * It used to arrive as `unavailable`, so this screen could not be used to
+     * ask whether a stranger has an account. That protection was real and is
+     * given up here knowingly: whoever reaches this screen is already signed
+     * in, and can now learn that a number they type is registered.
+     *
+     * The reason is that the vagueness cost the person it was not protecting.
+     * Someone verifying their own second number was told "something went wrong
+     * on our side" -- untrue, unactionable, and indistinguishable from an
+     * outage -- when the honest answer is that the number already belongs to an
+     * account and they should use another. A capacity limit stays vague,
+     * because that one really is ours rather than theirs.
+     *
+     * Worth knowing if that trade is ever revisited: this check runs before the
+     * cooldown and the daily caps, so a refusal here costs the caller nothing
+     * and is not rate limited. The ordering is the thing to change then, not
+     * this word.
+     *
+     * The app is unaffected, and not by luck: this endpoint exists for the
+     * browser widget and the app never calls it. The app's own path,
+     * `phone-otp-request`, still masks `number_taken` and is untouched here.
+     * If that one is ever changed to match, its client table needs the
+     * sentence first, or the app will fall back to reporting an outage.
      */
     return json({
-      status: outcome === "number_taken" ? "unavailable" : outcome,
+      status: outcome,
       retryAfter:
         (decision as { retry_after_seconds: number | null }).retry_after_seconds ??
         undefined,
