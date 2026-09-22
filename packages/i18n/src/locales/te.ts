@@ -49,6 +49,12 @@ export const te: Translations = {
     navConnections: "అనుబంధాలు",
     navMessages: "సందేశాలు",
     navAccount: "ఖాతా",
+
+    activityNewConnectionsOne: "1 కొత్త అనుబంధం",
+    activityNewConnectionsMany: "{count} కొత్త అనుబంధాలు",
+    activityUnreadOne: "1 సంభాషణలో చదవని సందేశాలు",
+    activityUnreadMany: "{count} సంభాషణల్లో చదవని సందేశాలు",
+    activityBoth: "{connections}, మరియు {messages}",
   },
 
   auth: {
@@ -337,6 +343,7 @@ export const te: Translations = {
       "ఆసక్తి ఇరువైపులా ఉన్నప్పుడే అనుబంధం మొదలవుతుంది — కాబట్టి ఎవరూ అకస్మాత్తుగా మీకు రాయలేరు.",
     openConversation: "తెరవండి",
     noMessages: "ఇంకా సందేశాలేవీ లేవు",
+    unreadMark: "చదవని సందేశాలు",
     ended: "ఈ అనుబంధం ముగిసింది",
     seeWhoIsHere: "ఇక్కడ ఎవరున్నారో చూడండి",
   },

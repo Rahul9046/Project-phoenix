@@ -49,6 +49,12 @@ export const ta: Translations = {
     navConnections: "இணைப்புகள்",
     navMessages: "செய்திகள்",
     navAccount: "கணக்கு",
+
+    activityNewConnectionsOne: "1 புதிய இணைப்பு",
+    activityNewConnectionsMany: "{count} புதிய இணைப்புகள்",
+    activityUnreadOne: "1 உரையாடலில் படிக்காத செய்திகள்",
+    activityUnreadMany: "{count} உரையாடல்களில் படிக்காத செய்திகள்",
+    activityBoth: "{connections}, மற்றும் {messages}",
   },
 
   auth: {
@@ -337,6 +343,7 @@ export const ta: Translations = {
       "ஆர்வம் இருபுறமும் இருக்கும்போதுதான் இணைப்பு தொடங்கும் — எனவே யாரும் திடீரென உங்களுக்கு எழுத முடியாது.",
     openConversation: "திறக்க",
     noMessages: "இதுவரை செய்திகள் இல்லை",
+    unreadMark: "படிக்காத செய்திகள்",
     ended: "இந்த இணைப்பு முடிந்துவிட்டது",
     seeWhoIsHere: "இங்கே யார் இருக்கிறார்கள் என்று பாருங்கள்",
   },

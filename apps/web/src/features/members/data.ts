@@ -178,6 +178,19 @@ export type Connection = {
   connectedAt: string;
   endedAt: string | null;
   lastMessage: { body: string; at: string; fromMe: boolean } | null;
+  /**
+   * Something here this member has not read.
+   *
+   * Computed from their own marker and the last message, exactly as
+   * `my_conversations` does it in SQL -- newest message is the other person's,
+   * and it arrived after the last time this member opened the conversation.
+   * Never true of your own message: the sender is not waiting on themselves.
+   *
+   * It is on the row so the list can say *which* conversations the badge in the
+   * navigation is counting. A number on the nav that a member cannot resolve to
+   * a row is a number that makes them open every conversation to find it.
+   */
+  unread: boolean;
 };
 
 /**
@@ -197,7 +210,12 @@ export async function getConnections(): Promise<Connection[]> {
 
   const { data: rows } = await supabase
     .from("connections")
-    .select("id, member_a, member_b, created_at, ended_at")
+    // The two read markers come along for the ride. They cost nothing here --
+    // the row is already being fetched -- and save a query per connection to
+    // work out which rows the navigation badge is counting.
+    .select(
+      "id, member_a, member_b, created_at, ended_at, member_a_read_at, member_b_read_at",
+    )
     .order("created_at", { ascending: false });
 
   if (!rows?.length) return [];
@@ -216,6 +234,9 @@ export async function getConnections(): Promise<Connection[]> {
         .limit(1)
         .maybeSingle();
 
+      const myReadAt =
+        row.member_a === user.id ? row.member_a_read_at : row.member_b_read_at;
+
       return {
         id: row.id,
         member,
@@ -228,6 +249,12 @@ export async function getConnections(): Promise<Connection[]> {
               fromMe: last.sender_id === user.id,
             }
           : null,
+        unread: Boolean(
+          last &&
+            last.sender_id !== user.id &&
+            (!myReadAt ||
+              Date.parse(last.created_at) > Date.parse(myReadAt)),
+        ),
       } satisfies Connection;
     }),
   );
@@ -292,6 +319,14 @@ export async function getConversation(
       connectedAt: row.created_at,
       endedAt: row.ended_at,
       lastMessage: null,
+      /*
+       * False on the conversation screen, always.
+       *
+       * Opening it is what marks it read, so by the time anything renders this
+       * there is nothing unread left in it. The field exists for the list,
+       * which is the only place the distinction does any work.
+       */
+      unread: false,
     },
     messages,
   };
@@ -339,5 +374,56 @@ export async function getProfileCompleteness(): Promise<{
     done: checks.filter((c) => c.done).length,
     total: checks.length,
     missing: checks.filter((c) => !c.done).map((c) => c.label),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Activity indicators
+// ---------------------------------------------------------------------------
+
+export type ActivitySummary = {
+  /** Connections made since this member last opened the Connections list. */
+  newConnections: number;
+  /** Conversations with something unread. Conversations, never messages. */
+  unreadConversations: number;
+  /**
+   * The union of the two, without double-counting a new connection that has
+   * already said something.
+   *
+   * The web has four destinations and conversations live inside Connections, so
+   * one badge has to speak for both kinds of thing -- see `nav.ts` on why there
+   * is no Messages tab here. The app, which has both tabs, uses the two numbers
+   * above and ignores this one.
+   */
+  connectionsNeedingAttention: number;
+};
+
+const NO_ACTIVITY: ActivitySummary = {
+  newConnections: 0,
+  unreadConversations: 0,
+  connectionsNeedingAttention: 0,
+};
+
+/**
+ * What is waiting for this member, as three integers.
+ *
+ * Zero on any failure, deliberately. A badge is a hint, and the honest
+ * behaviour when the hint cannot be fetched is to show nothing -- an error
+ * state on the navigation of every page would be a far larger wrong than a
+ * badge that appears a moment later, and a stale non-zero count would send
+ * somebody to a screen with nothing on it.
+ */
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("activity_summary");
+  const row = Array.isArray(data) ? data[0] : null;
+
+  if (error || !row) return NO_ACTIVITY;
+
+  return {
+    newConnections: row.new_connections ?? 0,
+    unreadConversations: row.unread_conversations ?? 0,
+    connectionsNeedingAttention: row.connections_needing_attention ?? 0,
   };
 }

@@ -738,6 +738,7 @@ export type Database = {
         Row: {
           about: string | null
           city_id: string | null
+          connections_seen_at: string | null
           created_at: string
           date_of_birth: string | null
           first_name: string | null
@@ -765,6 +766,7 @@ export type Database = {
         Insert: {
           about?: string | null
           city_id?: string | null
+          connections_seen_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name?: string | null
@@ -792,6 +794,7 @@ export type Database = {
         Update: {
           about?: string | null
           city_id?: string | null
+          connections_seen_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           first_name?: string | null
@@ -930,6 +933,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activity_summary: {
+        Args: never
+        Returns: {
+          connections_needing_attention: number
+          new_connections: number
+          unread_conversations: number
+        }[]
+      }
       admin_dismiss_report: {
         Args: { p_note?: string; p_report: string }
         Returns: undefined
@@ -1053,6 +1064,7 @@ export type Database = {
       intro_offer_used: { Args: { p_profile: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_suspended: { Args: { p_profile?: string }; Returns: boolean }
+      mark_connections_seen: { Args: never; Returns: undefined }
       mark_conversation_read: {
         Args: { connection_id: string }
         Returns: undefined

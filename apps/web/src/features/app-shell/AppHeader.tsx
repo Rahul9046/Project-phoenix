@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AccountMenu } from "@/features/app-shell/AccountMenu";
 import { AppNavLink } from "@/features/app-shell/AppNavLink";
+import type { NavActivity } from "@/features/app-shell/activity";
 import { appRoutes, primaryNav } from "@/features/app-shell/nav";
 import { LanguageSwitch } from "@/features/i18n/LanguageSwitch";
 import { Logo } from "@/shared/brand/Logo";
@@ -18,10 +19,13 @@ export function AppHeader({
   name,
   email,
   photoUrl,
+  activity,
 }: {
   name: string | null;
   email: string | null;
   photoUrl: string | null;
+  /** What is waiting, and where. Null when there is nothing to show. */
+  activity: NavActivity | null;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/95 backdrop-blur">
@@ -39,7 +43,15 @@ export function AppHeader({
             <ul className="flex items-center gap-1">
               {primaryNav.map((item) => (
                 <li key={item.href}>
-                  <AppNavLink href={item.href}>{item.label}</AppNavLink>
+                  <AppNavLink
+                    href={item.href}
+                    badge={activity?.href === item.href ? activity.count : 0}
+                    badgeLabel={
+                      activity?.href === item.href ? activity.label : undefined
+                    }
+                  >
+                    {item.label}
+                  </AppNavLink>
                 </li>
               ))}
             </ul>

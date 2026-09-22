@@ -50,6 +50,12 @@ export const hi: Translations = {
     navConnections: "संबंध",
     navMessages: "संदेश",
     navAccount: "खाता",
+
+    activityNewConnectionsOne: "1 नया जुड़ाव",
+    activityNewConnectionsMany: "{count} नए जुड़ाव",
+    activityUnreadOne: "1 बातचीत में बिना पढ़े संदेश",
+    activityUnreadMany: "{count} बातचीत में बिना पढ़े संदेश",
+    activityBoth: "{connections}, और {messages}",
   },
 
   auth: {
@@ -338,6 +344,7 @@ export const hi: Translations = {
       "संबंध तभी खुलता है जब रुचि दोनों ओर से हो — इसलिए कोई भी आपको अचानक नहीं लिख सकता।",
     openConversation: "खोलें",
     noMessages: "अभी कोई संदेश नहीं",
+    unreadMark: "बिना पढ़े संदेश",
     ended: "यह संबंध समाप्त हो चुका है",
     seeWhoIsHere: "देखें कौन यहाँ है",
   },

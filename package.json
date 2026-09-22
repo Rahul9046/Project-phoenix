@@ -28,6 +28,7 @@
     "moderation:probe": "node scripts/moderation-probe.mjs",
     "photos:sweep": "node scripts/photo-sweep.mjs",
     "analytics:probe": "node scripts/analytics-probe.mjs",
+    "activity:probe": "node scripts/activity-probe.mjs",
     "age:check": "node --no-warnings scripts/age-eligibility-check.mjs"
   }
 }
