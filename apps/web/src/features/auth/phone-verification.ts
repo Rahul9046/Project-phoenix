@@ -35,24 +35,51 @@ export function toE164(phone: PhoneNumber): string {
   return `${phone.countryCode}${phone.nationalNumber}`.replace(/[^\d+]/g, "");
 }
 
+/*
+ * What a status with no sentence of its own falls back to, and the sentence
+ * the vague ones deliberately share. Declared before the tables because they
+ * are read while the tables are being built.
+ */
+const SEND_FALLBACK =
+  "We could not send your code just now. Please try again shortly.";
+const VERIFY_FALLBACK =
+  "We could not check that code just now. Please try again shortly.";
+
 /**
  * A category becomes a sentence here.
  *
- * The server answers with a word — `cooldown`, `expired`, `unavailable` — and
- * never with the provider's prose. Two are deliberately vague: a number that
- * already belongs to another member, and a capacity limit, both arrive as
- * `unavailable`. Answering the first truthfully would turn this screen into a
- * way of asking whether a stranger is a member; the second is not something
- * anybody signing up can act on.
+ * The server answers with a word — `cooldown`, `number_taken`, `daily_cap` —
+ * and never with the provider's prose. Every word it can answer with needs a
+ * line in these tables: a status with no entry falls through to the fallback,
+ * which says an outage happened, and that is a lie for most of them.
+ *
+ * The distinction that matters most here is whether trying again can help.
+ * `cooldown` and the daily caps are waits, and say so. `daily_cap`,
+ * `capacity_exhausted` and `unavailable` are Eraya's own limits or a fault at
+ * our end: they share one deliberately vague sentence, because a member cannot
+ * act on our budget and should not be shown it, and trying again later is
+ * genuinely the right advice. `number_taken` is the opposite of all of them --
+ * nothing changes by waiting -- so it is the one refusal named outright. See
+ * `phone-widget-begin` for the privacy trade that naming it cost.
  */
 const SEND_MESSAGES: Record<string, string> = {
   invalid_number:
     "That does not look like a mobile number we can reach. Check the digits and try again.",
+  /*
+   * The one refusal on this screen that retrying cannot fix. It has to say so:
+   * a person who is told to try again shortly will, and will get the same
+   * answer every time, because the number is not going to become free.
+   */
+  number_taken:
+    "This phone number is already linked to another Eraya account. Please use a different number.",
   cooldown: "Please wait a little before asking for another code.",
   user_daily_cap:
     "That is several codes in a short time. Please try again a little later.",
   number_daily_cap:
     "That is several codes in a short time. Please try again a little later.",
+  daily_cap: SEND_FALLBACK,
+  capacity_exhausted: SEND_FALLBACK,
+  unavailable: SEND_FALLBACK,
   unauthenticated: "Your session has expired. Please sign in again.",
 };
 
@@ -69,13 +96,10 @@ const VERIFY_MESSAGES: Record<string, string> = {
   too_many_attempts:
     "That is too many tries for one code. Ask for a new one and take it slowly.",
   no_request: "Ask for a code first, then enter it here.",
+  // MSG91 itself being unreachable or misconfigured. Ours to fix, not theirs.
+  unavailable: VERIFY_FALLBACK,
   unauthenticated: "Your session has expired. Please sign in again.",
 };
-
-const SEND_FALLBACK =
-  "We could not send your code just now. Please try again shortly.";
-const VERIFY_FALLBACK =
-  "We could not check that code just now. Please try again shortly.";
 
 type FunctionReply = { status?: string; retryAfter?: number };
 
