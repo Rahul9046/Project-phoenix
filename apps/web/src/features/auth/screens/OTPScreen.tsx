@@ -19,6 +19,11 @@ import { getCodeSentAt } from "@/features/auth/pending-phone";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { AuthError, maskPhone } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
+import {
+  CAPTCHA_CONTAINER_ID,
+  ensureWidget,
+  widgetConfig,
+} from "@/features/auth/msg91-widget";
 
 /** Long enough to register as confirmation, short enough not to be a wait. */
 const SUCCESS_PAUSE_MS = 1100;
@@ -65,6 +70,29 @@ export function OTPScreen() {
     return () => {
       if (timeout.current) clearTimeout(timeout.current);
     };
+  }, []);
+
+  /*
+   * The widget, ready before the button is.
+   *
+   * Asking for another code is a *send*, and MSG91 puts a captcha in front of
+   * every send. Initialising inside the click is what made the very first send
+   * fail on the phone screen -- the challenge appeared and the send was
+   * attempted in the same breath -- and a resend has exactly the same shape.
+   * Doing it on arrival means the challenge is on screen, and solved, while
+   * the countdown is still running.
+   *
+   * It also covers arriving here directly: a reload on this screen leaves a
+   * document where the script was never loaded and `initSendOTP` never ran.
+   *
+   * Silent on failure, as on the phone screen. There is nothing useful to say
+   * about a button that has not been pressed, and the resend path reports it
+   * properly when it is.
+   */
+  useEffect(() => {
+    const config = widgetConfig();
+    if (!config) return;
+    void ensureWidget(config).catch(() => {});
   }, []);
 
   /*
@@ -193,6 +221,24 @@ export function OTPScreen() {
           invalid={Boolean(error)}
           disabled={pending || verified}
         />
+
+        {/*
+          Where MSG91 draws its captcha when asked for another code.
+
+          The same container as the phone screen, on the same terms: it must
+          exist before the widget is asked to send, and it cannot be hidden,
+          because a captcha cannot measure or draw itself inside a
+          `display: none` element and fails rather than saying so.
+
+          Its absence here is what broke resend in production. Verification
+          worked from this screen throughout -- checking a code sends nothing
+          and needs no captcha -- so only the one operation that sends a
+          message had nowhere to draw, and failed as a generic outage.
+
+          An empty div occupies no height, so it costs nothing on the screens
+          and in the moments where MSG91 draws nothing.
+        */}
+        <div id={CAPTCHA_CONTAINER_ID} />
 
         {/*
           The way out of a code that never arrived.
