@@ -138,11 +138,24 @@ export type AuthErrorKind =
 
 export class AuthError extends Error {
   readonly kind: AuthErrorKind;
+  /**
+   * How long the *server* says to wait, when it says so.
+   *
+   * Only a cooldown carries one. It exists so a countdown on screen can be
+   * corrected by the authority rather than guessing: the client's own timer is
+   * a courtesy, and when the two disagree this is the one that is true.
+   */
+  readonly retryAfterSeconds?: number;
 
-  constructor(kind: AuthErrorKind, message: string) {
+  constructor(
+    kind: AuthErrorKind,
+    message: string,
+    retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "AuthError";
     this.kind = kind;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -161,7 +174,15 @@ export interface AuthClient {
   signInWithEmail(email: string): Promise<void>;
   /** Checks that code and, on success, establishes the session. */
   verifyEmailCode(email: string, code: string): Promise<void>;
-  sendVerificationCode(phone: PhoneNumber): Promise<void>;
+  /**
+   * `resend` picks the provider call, not a different rule. MSG91's widget
+   * distinguishes the first send from a retry; every limit that governs either
+   * is enforced server-side before the widget is opened at all.
+   */
+  sendVerificationCode(
+    phone: PhoneNumber,
+    options?: { resend?: boolean },
+  ): Promise<void>;
   verifyCode(phone: PhoneNumber, code: string): Promise<void>;
   signOut(): Promise<void>;
 }

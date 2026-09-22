@@ -152,8 +152,8 @@ export const supabaseAuthClient: AuthClient = {
     recordAuthEvent("email_auth_success", { identifier });
   },
 
-  async sendVerificationCode(phone: PhoneNumber) {
-    await sendPhoneCode(phone);
+  async sendVerificationCode(phone: PhoneNumber, options?: { resend?: boolean }) {
+    await sendPhoneCode(phone, options);
   },
 
   async verifyCode(phone: PhoneNumber, code: string) {

@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   clearPendingPhone,
   getPendingPhone,
+  markCodeSent,
   getPendingPhoneServerSnapshot,
   pendingPhoneHydration,
   setPendingPhone,
@@ -124,21 +125,31 @@ export function AuthSessionProvider({
     async (phone: PhoneNumber) => {
       await client.sendVerificationCode(phone);
       setPendingPhone(phone);
+      // After the await, so a refusal never starts a countdown for a message
+      // that was not sent.
+      markCodeSent();
     },
     [client],
   );
 
   /*
-   * No caller while phone verification is mocked -- the OTP screen dropped its
-   * resend control rather than offer a button that sends nothing. Kept because
-   * it is one half of the SMS seam described in
-   * features/auth/phone-verification.ts, and deleting it would only mean
-   * writing it again.
+   * Asking again for the number already being verified.
+   *
+   * The number comes from the pending store rather than from the caller: the
+   * code screen never holds it as state, and letting a screen pass one in
+   * would make it possible to resend to a different number than the one the
+   * request was opened for.
+   *
+   * `resend: true` reaches MSG91's `retryOtp` instead of `sendOtp`. Eraya's
+   * own gate runs first either way, so a refusal costs no message.
    */
   const resendVerificationCode = useCallback(async () => {
     const phone = getPendingPhone();
-    if (!phone) return;
-    await client.sendVerificationCode(phone);
+    if (!phone) {
+      throw new Error("No phone number is awaiting verification.");
+    }
+    await client.sendVerificationCode(phone, { resend: true });
+    markCodeSent();
   }, [client]);
 
   const verifyCode = useCallback(

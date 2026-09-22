@@ -164,6 +164,8 @@ export async function sendPhoneCode(
     throw new AuthError(
       reply.status === "cooldown" ? "rate_limited" : "generic",
       SEND_MESSAGES[reply.status ?? ""] ?? SEND_FALLBACK,
+      // Only a cooldown carries one, and only the server knows it.
+      reply.retryAfter,
     );
   }
 

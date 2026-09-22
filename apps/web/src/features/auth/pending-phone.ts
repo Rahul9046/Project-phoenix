@@ -18,6 +18,21 @@ import type { PhoneNumber } from "@/features/auth/types";
 
 const STORAGE_KEY = "eraya.pending-phone.v1";
 
+/**
+ * When a code was last actually sent, so the resend countdown survives a
+ * reload.
+ *
+ * It is a convenience and nothing more. Clearing it, editing it or running
+ * with storage disabled changes what the screen offers and changes nothing
+ * about what the server allows: `begin_phone_otp` holds the cooldown, the
+ * per-user and per-number daily caps and the account ceiling, and answers
+ * `cooldown` with the seconds remaining however the button got pressed.
+ *
+ * Kept beside the number because it belongs to the same single attempt, and
+ * cleared with it for the same reason.
+ */
+const SENT_AT_KEY = "eraya.pending-phone.sent-at.v1";
+
 let cache: PhoneNumber | null = null;
 let hasRead = false;
 
@@ -76,11 +91,35 @@ export function setPendingPhone(phone: PhoneNumber): void {
   emit();
 }
 
+/** Records that a code has just gone out. Called only after the server agreed. */
+export function markCodeSent(): void {
+  try {
+    sessionStorage.setItem(SENT_AT_KEY, String(Date.now()));
+  } catch {
+    // The countdown starts from zero on the next render instead, and the
+    // server refuses an early resend on its own.
+  }
+}
+
+/** Epoch milliseconds of the last accepted send, or null if unknown. */
+export function getCodeSentAt(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SENT_AT_KEY);
+    if (!raw) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 export function clearPendingPhone(): void {
   cache = null;
   hasRead = true;
   try {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(SENT_AT_KEY);
   } catch {
     // Nothing useful to do.
   }
