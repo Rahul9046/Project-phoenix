@@ -1,6 +1,6 @@
 import type { TranslationKey } from "@eraya/i18n";
 
-import type { Gender, RelationshipStatus } from "@/features/auth/types";
+import type { Gender, Religion, RelationshipStatus } from "@/features/auth/types";
 
 /**
  * What the auth flow needs that is not a translated sentence.
@@ -107,6 +107,49 @@ export const relationshipOptions: readonly {
     descriptionKey: "onboarding.relationship.widowedBody",
   },
 ];
+
+/**
+ * Religion, as the member states it.
+ *
+ * The order is the order on the screen, and `prefer_not_to_say` is last because
+ * it is the way past the question rather than one of its answers -- though it
+ * is stored exactly as the others are, and a member who chooses it has answered.
+ *
+ * Nothing infers a value from anywhere else. Not a name, not a city, not a
+ * language. There is no caste, community, sub-caste or denomination here and
+ * none is coming: that absence is what keeps this a profile question rather
+ * than a biodata form.
+ *
+ * The `Religion` annotation ties this list to the database enum, so it cannot
+ * drift from it without failing the build -- the lesson `genderOptions` records
+ * above, where a hyphen cost a fortnight.
+ */
+export const religionOptions: readonly {
+  value: Religion;
+  labelKey: TranslationKey;
+}[] = [
+  { value: "hindu", labelKey: "onboarding.religion.hindu" },
+  { value: "muslim", labelKey: "onboarding.religion.muslim" },
+  { value: "christian", labelKey: "onboarding.religion.christian" },
+  { value: "sikh", labelKey: "onboarding.religion.sikh" },
+  { value: "buddhist", labelKey: "onboarding.religion.buddhist" },
+  { value: "jain", labelKey: "onboarding.religion.jain" },
+  { value: "other", labelKey: "onboarding.religion.other" },
+  { value: "prefer_not_to_say", labelKey: "onboarding.religion.preferNotToSay" },
+];
+
+/**
+ * The ones a member can be filtered by.
+ *
+ * `prefer_not_to_say` is deliberately absent, for the same reason it is absent
+ * from `seekingOptions`: it is a reasonable answer about yourself and an
+ * unusable one as a preference. Offering it would turn a filter into a way of
+ * finding precisely the members who asked not to be found this way -- and the
+ * database refuses it independently, matching on the disclosed value only.
+ */
+export const religionFilterOptions = religionOptions.filter(
+  (option) => option.value !== "prefer_not_to_say",
+);
 
 export const languageOptions = [
   "English",

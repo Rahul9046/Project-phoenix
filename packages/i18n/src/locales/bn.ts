@@ -246,6 +246,20 @@ export const bn: Translations = {
       widowedBody: "আমি আমার সঙ্গীকে হারিয়েছি।",
       trustNote: "Eraya এটি যাচাই করে না। এটি বিশ্বাসের উপরেই নেওয়া হয়, যেমন আপনিও এখানে বাকি সবাইকে বিশ্বাস করছেন।",
     },
+    religion: {
+      title: "আপনার ধর্ম কী?",
+      lede: "যতটুকুতে আপনি স্বচ্ছন্দ, ততটুকুই জানান। না বলার সুযোগও আছে।",
+      error: "এগিয়ে যেতে একটি বিকল্প বেছে নিন।",
+      hindu: "হিন্দু",
+      muslim: "মুসলিম",
+      christian: "খ্রিস্টান",
+      sikh: "শিখ",
+      buddhist: "বৌদ্ধ",
+      jain: "জৈন",
+      other: "অন্য",
+      preferNotToSay: "বলতে চাই না",
+      privacyNote: "আপনি যে কোনও সময় এটি বদলাতে পারেন, বা জানানো বন্ধ করতে পারেন। এরায়া আপনার নাম, শহর বা ভাষা দেখে আপনার ধর্ম কখনও অনুমান করে না।",
+    },
     languages: {
       title: "আপনি কোন কোন ভাষায় কথা বলেন?",
       lede: "যত খুশি বেছে নিন। যে ভাষায় আপনি স্বচ্ছন্দ, সে ভাষায় কথা বলা সহজ হয়।",
@@ -338,6 +352,7 @@ export const bn: Translations = {
     undoPass: "আগের সিদ্ধান্তটি ফিরিয়ে আনুন",
     readMore: "আরও পড়ুন",
     filters: "ছাঁকনি",
+    filterReligion: "ধর্ম",
   },
 
   connections: {
@@ -477,6 +492,7 @@ export const bn: Translations = {
     labelCity: "শহর",
     labelRelationship: "অধ্যায়",
     labelLanguages: "ভাষা",
+    labelReligion: "ধর্ম",
     labelEmail: "ইমেল",
     labelPhone: "ফোন",
     labelSignInMethod: "সাইন-ইনের উপায়",

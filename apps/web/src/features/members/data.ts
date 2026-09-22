@@ -15,6 +15,8 @@ import type { Database } from "@/lib/supabase/database.types";
 export type RelationshipStatus =
   Database["public"]["Enums"]["relationship_status"];
 
+export type Religion = Database["public"]["Enums"]["religion"];
+
 export type MemberCard = {
   id: string;
   firstName: string;
@@ -23,6 +25,13 @@ export type MemberCard = {
   state: string | null;
   relationshipStatus: RelationshipStatus | null;
   gender: string | null;
+  /**
+   * Null when they have not said, and null when they said they would rather
+   * not -- the database collapses both before this leaves it, so there is no
+   * "prefer not to say" here to render and no way to render it by mistake.
+   * See `disclosed_religion()`.
+   */
+  religion: Religion | null;
   languages: string[];
   /** Only states the system can actually stand behind. */
   phoneVerified: boolean;
@@ -49,6 +58,7 @@ type RawCard = {
   state: string | null;
   relationship_status: RelationshipStatus | null;
   gender: string | null;
+  religion: Religion | null;
   languages: string[] | null;
   phone_verified: boolean | null;
   email_verified: boolean | null;
@@ -65,6 +75,7 @@ function toCard(row: RawCard): MemberCard {
     state: row.state,
     relationshipStatus: row.relationship_status,
     gender: row.gender,
+    religion: row.religion ?? null,
     languages: row.languages ?? [],
     phoneVerified: Boolean(row.phone_verified),
     emailVerified: Boolean(row.email_verified),
@@ -129,10 +140,28 @@ async function toCards(
  * extra steps, and refreshing until something better appears is exactly the
  * behaviour Eraya is trying not to produce.
  */
-export async function getIntroductions(count = 3): Promise<MemberCard[]> {
+export async function getIntroductions(
+  count = 3,
+  /**
+   * Disclosed religions to narrow to, or none for no constraint.
+   *
+   * The web's first discovery filter. It is passed straight through to
+   * `discover_members`, which decides what "no filter" means -- an empty list
+   * is omitted rather than sent, so the function's own default applies and the
+   * rule lives in SQL once, exactly as the app does it.
+   *
+   * Free, like every filter in the app. For a great many of Eraya's members
+   * religion decides whether meeting somebody is practical at all, which puts
+   * it in the same category as age and city; behind a subscription it would
+   * make the free product deliberately worse rather than the paid one better.
+   * Nothing here consults `entitlements`, and nothing should.
+   */
+  religions: Religion[] = [],
+): Promise<MemberCard[]> {
   const supabase = await createClient();
   const { data } = await supabase.rpc("discover_members", {
     max_results: count,
+    ...(religions.length > 0 ? { religions } : {}),
   });
 
   /*

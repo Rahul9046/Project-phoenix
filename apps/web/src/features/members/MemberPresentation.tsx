@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import type { TFunction } from "@eraya/i18n";
 
-import { relationshipOptions } from "@/features/auth/content";
+import { relationshipOptions, religionOptions } from "@/features/auth/content";
 import { useT } from "@/features/i18n/LocaleProvider";
 import type { MemberCard } from "@/features/members/data";
 
@@ -140,6 +140,29 @@ export function chapterLabel(
   return key ? t(key) : null;
 }
 
+/**
+ * Their religion, when they disclosed one.
+ *
+ * Null covers both "never answered" and "would rather not say": the database
+ * collapses them before the card is built, so there is nothing here to
+ * distinguish and nothing to leak. The two mean the same thing to a reader --
+ * you do not get to know -- and printing "Prefer not to say" would announce
+ * that the question was asked and point at the one person who declined.
+ *
+ * The label comes from the same option table the onboarding screen uses, so the
+ * words a member chose and the words another member reads are the same words,
+ * in whichever of the six languages each of them is using.
+ */
+export function religionLabel(
+  member: MemberCard,
+  t: TFunction,
+): string | null {
+  if (!member.religion) return null;
+
+  const key = religionOptions.find((o) => o.value === member.religion)?.labelKey;
+  return key ? t(key) : null;
+}
+
 export function placeLabel(member: MemberCard): string | null {
   if (!member.city) return null;
   return member.state ? `${member.city}, ${member.state}` : member.city;
@@ -155,10 +178,20 @@ export function placeLabel(member: MemberCard): string | null {
 export function MemberSummary({ member }: { member: MemberCard }) {
   const t = useT();
 
+  /*
+   * Religion sits in the same line as age, place and chapter, separated by the
+   * same dot. That placement is the decision: it is profile context and it gets
+   * exactly the weight the other context has -- no heading of its own, no chip,
+   * no icon, nothing that would read as a credential or a badge.
+   *
+   * Last, because it is the one a member may not have disclosed, and a list
+   * that sometimes ends early reads better than one with a gap in the middle.
+   */
   const parts = [
     member.age ? `${member.age}` : null,
     placeLabel(member),
     chapterLabel(member, t),
+    religionLabel(member, t),
   ].filter(Boolean);
 
   return (
