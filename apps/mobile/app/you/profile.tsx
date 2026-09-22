@@ -105,8 +105,14 @@ export default function MyProfile() {
         </Text>
       </View>
 
+      {/*
+        Their own profile, shown the way another member sees it -- so the same
+        rule applies: the phone mark needs a real SMS behind it, which is what
+        `phoneVerified` carries and what `phoneVerifiedAt` alone does not.
+      */}
       <TrustMarks
         emailVerified={Boolean(profile?.emailVerified)}
+        phoneVerified={Boolean(profile?.phoneVerified)}
         style={{ marginTop: space.md }}
       />
 

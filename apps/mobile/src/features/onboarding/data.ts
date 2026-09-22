@@ -1,7 +1,12 @@
 import { LEGAL_VERSION } from "@eraya/legal";
 
 import { supabase } from "@/lib/supabase/client";
-import type { Gender, RelationshipStatus } from "@/features/auth/types";
+import {
+  stageAtLeast,
+  type Gender,
+  type OnboardingStage,
+  type RelationshipStatus,
+} from "@/features/auth/types";
 
 /**
  * Writing the answers.
@@ -175,15 +180,6 @@ export async function saveLanguages(
   return patch({ languages_undisclosed: undisclosed });
 }
 
-/**
- * Recording that the phone step was completed.
- *
- * Named for what it is. Nothing has been verified -- no SMS is sent and any six
- * digits are accepted -- so this writes the timestamp the stage machine needs
- * and claims nothing more. When an SMS provider is connected, Supabase sets
- * `auth.users.phone_confirmed_at` and a trigger mirrors it, and this function
- * goes away rather than being quietly repurposed.
- */
 /*
  * There is no `completePhoneStep` any more, deliberately.
  *
@@ -193,6 +189,40 @@ export async function saveLanguages(
  * now, holding the service role, and a trigger on `profiles` refuses that column
  * to every client -- so this cannot be reintroduced by accident.
  */
+
+/**
+ * Recording that the phone step is behind them.
+ *
+ * Written from both answers: by the code screen once a number is verified, and
+ * by "Skip for now" when it is declined. That is the point -- what this records
+ * is that the question was asked and answered, which is equally true either
+ * way, and it is the only thing the routing needs in order to stop asking.
+ *
+ * It writes the stage and nothing else. No number, no timestamp, no status: a
+ * member who declines leaves with exactly the verification state they arrived
+ * with, and the trigger on `profiles` would refuse this client any of those
+ * columns even if somebody added them here by mistake.
+ *
+ * The stage's own value is `phone_verified`, which predates the step being
+ * optional and has always meant position rather than proof -- see the comment
+ * on `stageOrder` and the 2026-09-22 migration.
+ */
+export function recordPhoneStepComplete(
+  /**
+   * Where they are now, so this can never move somebody backwards.
+   *
+   * `patch` upserts whatever it is handed, and both entry points are reachable
+   * from the account area by a member who finished onboarding long ago -- so
+   * writing unconditionally would demote `onboarding_completed` to
+   * `phone_verified` and drop them back into the questions. The web's
+   * `advanceStage` refuses the same thing by reading the row first; this takes
+   * the stage it already has rather than paying for a round trip to learn it.
+   */
+  current: OnboardingStage,
+): Promise<SaveResult> {
+  if (stageAtLeast(current, "phone_verified")) return Promise.resolve({ ok: true });
+  return patch({ onboarding_stage: "phone_verified" });
+}
 
 /**
  * Marks onboarding finished, once every question has an answer.

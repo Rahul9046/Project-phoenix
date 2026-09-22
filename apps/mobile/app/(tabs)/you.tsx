@@ -105,7 +105,19 @@ export default function You() {
         <Row
           icon="shield-checkmark-outline"
           label={t("account.navVerification")}
-          hint={profile?.emailVerified ? "Email verified" : "Not yet verified"}
+          /*
+            Counts what has actually been checked rather than naming one of
+            them. Phone is optional, so "Email verified" alone would read as a
+            verdict on the phone as well -- and the member who deliberately
+            skipped it would see a summary that looks like a reproach.
+          */
+          hint={
+            profile?.phoneVerified
+              ? `${t("common.emailVerified")} · ${t("common.phoneVerified")}`
+              : profile?.emailVerified
+                ? t("common.emailVerified")
+                : t("account.navVerificationDescription")
+          }
           onPress={() => router.push("/you/verification")}
         />
       </Group>

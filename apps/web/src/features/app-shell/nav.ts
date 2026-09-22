@@ -10,10 +10,13 @@ export const appRoutes = {
   connections: "/connections",
   account: "/account",
   membership: "/account/membership",
+  verification: "/account/verification",
   privacy: "/account/privacy",
   settings: "/account/settings",
   logout: "/logout",
 } as const;
+
+export type AppRoute = (typeof appRoutes)[keyof typeof appRoutes];
 
 /**
  * Primary navigation, in header order.
@@ -41,6 +44,11 @@ export const accountNav = [
     href: appRoutes.membership,
     label: "Membership",
     description: "Your plan and what it includes",
+  },
+  {
+    href: appRoutes.verification,
+    label: "Verification",
+    description: "What Eraya has checked, and what it has not",
   },
   {
     href: appRoutes.privacy,

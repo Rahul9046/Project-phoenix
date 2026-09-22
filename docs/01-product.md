@@ -97,12 +97,13 @@ the plans are priced, and the screen says plainly that it cannot be bought
 because no payment provider is connected.
 
 **Not built:** payments, push notifications, moderation tooling, identity or
-relationship verification, real phone verification, Apple sign-in, and legal
-privacy/terms documents.
+relationship verification, Apple sign-in, and legal privacy/terms documents.
 
 **The rule that governs all of it:** nothing in the product claims a feature or a
-process that does not exist. Phone verification is mocked, so no member is ever
-shown a "phone verified" badge. There is no moderation team, so reporting says
+process that does not exist. Phone verification is real now, so the mark is
+shown -- but only to accounts where MSG91 actually delivered a message, never to
+the ones the old stand-in marked, and it is optional, so its absence is never
+presented as a fault. There is no moderation team, so reporting says
 the report is recorded and promises no review. Premium cannot be bought, so the
 button says so rather than opening a flow. Empty screens say they are empty
 rather than being padded with invented activity.

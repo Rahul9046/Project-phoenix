@@ -70,7 +70,7 @@ function timeoutSignal(ms: number): AbortSignal {
 }
 
 const PROFILE_COLUMNS =
-  "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, onboarding_stage";
+  "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at, phone_verified_via, onboarding_stage";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -194,6 +194,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           languagesUndisclosed: false,
           languageIds: [],
           phoneVerifiedAt: null,
+          phoneVerified: false,
           emailVerified: Boolean(activeSession.user.email_confirmed_at),
           stage: "authenticated",
         };
@@ -214,6 +215,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         languagesUndisclosed: row.languages_undisclosed,
         languageIds: (languageRows ?? []).map((l) => l.language_id),
         phoneVerifiedAt: row.phone_verified_at,
+        // Both columns. The stand-in set the timestamp on accounts nobody ever
+        // texted, and `msg91` is what tells those apart from the real thing.
+        phoneVerified:
+          row.phone_verified_at !== null && row.phone_verified_via === "msg91",
         emailVerified: Boolean(activeSession.user.email_confirmed_at),
         stage: row.onboarding_stage as OnboardingStage,
       };

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { legal } from "@/features/auth/content";
+import type { AppRoute } from "@/features/app-shell/nav";
 import type { AuthRoute } from "@/features/auth/flow";
 import { LanguageSwitch } from "@/features/i18n/LanguageSwitch";
 import { useT } from "@/features/i18n/LocaleProvider";
@@ -27,7 +28,14 @@ export function AuthLayout({
   children: React.ReactNode;
   /** Renders a back link. Explicit routes beat `history.back()` — a person who
    *  deep-links into a screen still gets a working, predictable way out. */
-  backHref?: AuthRoute | "/";
+  /**
+   * Widened to the signed-in routes as well.
+   *
+   * The phone screen is reachable from Account -> Verification now that
+   * verification can be done late, and the way back from it is a page in the
+   * product rather than another step in the sign-up road.
+   */
+  backHref?: AuthRoute | AppRoute | "/";
   backLabel?: string;
   progress?: React.ReactNode;
   footer?: React.ReactNode;

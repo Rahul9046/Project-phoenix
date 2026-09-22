@@ -39,10 +39,15 @@ sender. The captcha is the only control left once the send happens client-side.
 **The app still cannot verify a phone number.** It uses MSG91's OTP API rather
 than the widget, which is a browser SDK; that path needs a DLT-approved SMS
 template before MSG91 will deliver anything in India, and it has not been run
-end to end. Until the template exists, somebody signing up in the app reaches
-the phone step and cannot get past it -- phone verification gates onboarding on
-both clients. `MSG91_TEMPLATE_ID` is the only configuration missing; no code
+end to end. `MSG91_TEMPLATE_ID` is the only configuration missing; no code
 changes when it arrives.
+
+It no longer blocks anybody, which is the change of 2026-09-22: phone
+verification is optional on both clients. Somebody signing up in the app may
+decline the step and finish onboarding, and come back to it from Account →
+Verification whenever the template exists. Nothing was faked to achieve that --
+the app still asks MSG91 for a real code and still fails truthfully if MSG91
+will not send one. What changed is that the failure is no longer a dead end.
 
 **Privacy policy, terms and guidelines — written.** All three now exist as real
 documents in `packages/legal`, shared by both clients and published at

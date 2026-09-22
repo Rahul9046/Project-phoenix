@@ -104,7 +104,11 @@ export function DeckCard({
             ) : null}
           </Text>
 
-          <TrustMarks emailVerified={member.emailVerified} onDark />
+          <TrustMarks
+            emailVerified={member.emailVerified}
+            phoneVerified={member.phoneVerified}
+            onDark
+          />
         </View>
 
         {member.city ? (

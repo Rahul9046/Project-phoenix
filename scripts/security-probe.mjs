@@ -604,15 +604,63 @@ for (const fn of [
   );
 }
 
+/*
+ * `member_id`, and it matters.
+ *
+ * This called `member_profile(target_id => ...)` until 2026-09-22 and had been
+ * passing on nothing: PostgREST dispatches on argument *name*, the parameter was
+ * renamed back to `member_id` in 20260830160600, and the call had been answering
+ * 404 with a PGRST202 body ever since. A body that says "no matches were found"
+ * contains no phone number, so the assertion was true of an error and told
+ * nobody anything -- the exact failure a probe is supposed to catch, in the
+ * probe. Both checks below now run against a real card.
+ */
 {
-  const { body } = await request(meera.token, "rpc/member_profile", {
+  const { status, body } = await request(meera.token, "rpc/member_profile", {
     method: "POST",
-    body: JSON.stringify({ target_id: sanjay.id }),
+    body: JSON.stringify({ member_id: sanjay.id }),
   });
+
+  const card = status === 200 ? (JSON.parse(body)[0] ?? null) : null;
+
+  check(
+    "a member profile can be read at all",
+    card !== null && card.id === sanjay.id,
+    `status ${status}: ${body.slice(0, 140)}`,
+  );
+
   check(
     "a member profile does not carry a phone number",
-    !/phone_number/i.test(body),
+    card !== null && !/phone_number/i.test(body) && !/"\+\d{8,}"/.test(body),
     body.slice(0, 140),
+  );
+
+  check(
+    "a member profile does not carry an email address",
+    card !== null && !/@/.test(body),
+    body.slice(0, 140),
+  );
+
+  /*
+   * The mark must mean an SMS was answered, and nothing else.
+   *
+   * Sanjay is a demo member, verified by the pre-launch stand-in and carrying
+   * `phone_verified_via = 'mock'`. Nothing about that proves anybody ever held
+   * that phone, so it must not reach another member as a trust mark -- which is
+   * what `phone_is_verified()` enforces from 20260922100100. Before that
+   * migration this check fails, and it is supposed to: until it is applied,
+   * production hands out a phone mark for a verification that never happened.
+   */
+  check(
+    "a mock verification earns no phone mark on another member's card",
+    card !== null && card.phone_verified === false,
+    `phone_verified=${card ? card.phone_verified : "no card"} (sanjay is verified_via=mock)`,
+  );
+
+  check(
+    "an email-confirmed member does carry the email mark",
+    card !== null && card.email_verified === true,
+    `email_verified=${card ? card.email_verified : "no card"}`,
   );
 }
 

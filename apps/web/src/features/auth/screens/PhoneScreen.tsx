@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
+import { recordPhoneStepComplete } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
@@ -14,9 +15,10 @@ import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
 import { useAuth } from "@/features/auth/AuthSessionProvider";
 import { describePhoneError } from "@/features/auth/describeAuthError";
-import { authRoutes } from "@/features/auth/flow";
+import { authRoutes, nextRoute } from "@/features/auth/flow";
+import { appRoutes } from "@/features/app-shell/nav";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
-import type { PhoneNumber } from "@/features/auth/types";
+import { stageAtLeast, type AuthSession } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { ensureWidget, widgetConfig } from "@/features/auth/msg91-widget";
 
@@ -26,10 +28,21 @@ const MIN_DIGITS = 6;
 export function PhoneScreen() {
   const { session, allowed } = useAuthGuard(authRoutes.phone);
   if (!allowed) return <AuthLoading />;
-  return <PhoneForm stored={session.phone} />;
+  return <PhoneForm session={session} />;
 }
 
-function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
+/**
+ * Two people arrive here and the screen owes them different exits.
+ *
+ * Somebody in the middle of signing up, for whom this is one question among
+ * several and declining means moving to the next one; and a member who finished
+ * onboarding weeks ago, skipped this, and has come back from the account area
+ * to do it -- for whom declining means going back where they came from, with
+ * nothing to record because their stage is long past this point.
+ */
+function PhoneForm({ session }: { session: AuthSession }) {
+  const stored = session.phone;
+  const duringOnboarding = !stageAtLeast(session.stage, "onboardingCompleted");
   const t = useT();
   const router = useRouter();
   const { sendVerificationCode } = useAuth();
@@ -44,6 +57,7 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [skipping, setSkipping] = useState(false);
 
   /*
    * Load the widget when the screen opens, not when somebody presses Continue.
@@ -96,8 +110,47 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
     }
   }
 
+  /**
+   * Declining, which costs nothing and sends nothing.
+   *
+   * No provider call is made here -- not a send, not a retry. MSG91 learns
+   * nothing about this member, which is the whole point: a step somebody can
+   * decline must be free to decline, or the invitation is a formality.
+   *
+   * What it writes is the stage, and only the stage. The number, the timestamp
+   * and the status are all untouched, so nothing downstream can read this as a
+   * verification that happened.
+   *
+   * Offered during signup only. A member who arrived from Account ->
+   * Verification came here on purpose to do this, and "Skip for now" would be
+   * answering a question nobody asked them -- worse, it reads as though
+   * declining were being recorded, when their stage passed this point long ago.
+   * They get the back control instead, which is what the app does too.
+   */
+  async function handleSkip() {
+    if (pending || skipping) return;
+
+    setFormError(null);
+    setSkipping(true);
+
+    const saved = await recordPhoneStepComplete();
+    if (!saved.ok) {
+      setFormError(saved.message);
+      setSkipping(false);
+      return;
+    }
+
+    router.push(nextRoute({ ...session, stage: "phoneStepDone" }));
+  }
+
   return (
-    <AuthLayout showLegal>
+    <AuthLayout
+      showLegal
+      // Only for the member who came from the account area; during signup there
+      // is nowhere behind this screen worth returning to.
+      backHref={duringOnboarding ? undefined : appRoutes.verification}
+      backLabel={duringOnboarding ? undefined : t("account.verification.title")}
+    >
       <AuthHeader title={t("auth.phone.title")} lede={t("auth.phone.lede")} />
 
       <form onSubmit={handleSubmit} noValidate className="mt-9">
@@ -136,16 +189,51 @@ function PhoneForm({ stored }: { stored: PhoneNumber | null }) {
         >
           {t("auth.phone.cta")}
         </PrimaryButton>
+
+        {/*
+          The way past this question.
+
+          Under the primary button rather than beside it: this is a real choice
+          and not a hidden one, but it is the second of the two. The sentence
+          above it says the step is optional before either button is read,
+          because a skip discovered only after somebody has given up on the form
+          is a skip that arrived too late to have been a decision.
+        */}
+        {duringOnboarding ? (
+          <>
+            <p className="mt-5 text-center text-[0.95rem] leading-relaxed text-ink-muted">
+              {t("auth.phone.optional")}
+            </p>
+
+            <p className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={() => void handleSkip()}
+                disabled={pending || skipping}
+                className="rounded-full font-medium text-ember-text underline underline-offset-4 transition-colors hover:text-ember-strong disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {skipping ? t("auth.phone.skipping") : t("auth.phone.skip")}
+              </button>
+            </p>
+          </>
+        ) : null}
       </form>
 
       {/*
-        There is no "back" from here that makes sense — they are signed in, and
-        the entry screens would only send them straight back. Starting over is
-        the honest alternative.
+        There is no "back" from here that makes sense during signup — they are
+        signed in, and the entry screens would only send them straight back.
+        Starting over is the honest alternative.
+
+        It is withheld from a member who came from the account area to verify
+        late. For them this is one screen in a settings flow, and offering to
+        destroy the session is not a proportionate second option; "Skip for now"
+        already takes them back.
       */}
-      <p className="mt-8 text-center text-[0.95rem] text-ink-muted">
-        <StartOverLink />
-      </p>
+      {duringOnboarding ? (
+        <p className="mt-8 text-center text-[0.95rem] text-ink-muted">
+          <StartOverLink />
+        </p>
+      ) : null}
     </AuthLayout>
   );
 }
