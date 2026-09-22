@@ -16,18 +16,28 @@ export type AuthProviderId = SocialProviderId | "email";
 /**
  * The five states the application needs to distinguish. They are ordered — a
  * later stage implies every earlier one has been reached.
+ *
+ * `phoneStepDone` is a position in the questions and not a claim about anybody.
+ * It means the phone step is behind them: they were offered verification and
+ * answered, either by verifying or by declining. Whether a number was actually
+ * checked is `AuthSession.phoneVerified`, which is read from the profile and is
+ * the only thing that may put a mark on a profile.
+ *
+ * The two were the same thing while the step was compulsory. Keeping the names
+ * apart is what stops a skipped step from being read as a verified number the
+ * next time somebody reaches for the stage.
  */
 export type AuthStage =
   | "unauthenticated"
   | "authenticated"
-  | "phoneVerified"
+  | "phoneStepDone"
   | "onboardingStarted"
   | "onboardingCompleted";
 
 export const AUTH_STAGE_ORDER: readonly AuthStage[] = [
   "unauthenticated",
   "authenticated",
-  "phoneVerified",
+  "phoneStepDone",
   "onboardingStarted",
   "onboardingCompleted",
 ];
@@ -101,6 +111,16 @@ export type AuthSession = {
    * stored column. See `lib/auth/pending-phone.ts`.
    */
   phone: PhoneNumber | null;
+  /**
+   * Whether an SMS was actually answered on this member's number.
+   *
+   * Read from `phone_verified_at` *and* `phone_verified_via`, because only the
+   * second separates a real message from the pre-launch stand-in. Deliberately
+   * not derived from `stage`: a member who declined the step has passed it
+   * without anything being checked, and the day those two are conflated is the
+   * day somebody who skipped is shown a verified mark.
+   */
+  phoneVerified: boolean;
   profile: OnboardingProfile;
 };
 
@@ -120,6 +140,7 @@ export const anonymousSession: AuthSession = {
   stage: "unauthenticated",
   user: null,
   phone: null,
+  phoneVerified: false,
   profile: emptyProfile,
 };
 
@@ -196,8 +217,10 @@ export function stageFromDatabase(
       return "onboardingCompleted";
     case "onboarding_started":
       return "onboardingStarted";
+    // The database value is unchanged: it has always recorded the step rather
+    // than the check. Only the name on this side says so now.
     case "phone_verified":
-      return "phoneVerified";
+      return "phoneStepDone";
     case "authenticated":
       return "authenticated";
     default:
@@ -216,7 +239,7 @@ export function stageToDatabase(
   switch (stage) {
     case "authenticated":
       return "authenticated";
-    case "phoneVerified":
+    case "phoneStepDone":
       return "phone_verified";
     case "onboardingStarted":
       return "onboarding_started";

@@ -313,7 +313,7 @@ export async function getProfileCompleteness(): Promise<{
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "first_name, date_of_birth, gender, city_id, other_city, relationship_status, languages_undisclosed, phone_verified_at",
+      "first_name, date_of_birth, gender, city_id, other_city, relationship_status, languages_undisclosed",
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -332,7 +332,17 @@ export async function getProfileCompleteness(): Promise<{
       label: "Languages",
       done: Boolean(profile?.languages_undisclosed) || (languages?.length ?? 0) > 0,
     },
-    { label: "Phone number added", done: Boolean(profile?.phone_verified_at) },
+    /*
+     * The phone is deliberately not counted.
+     *
+     * It was, while verification was compulsory and "not added" meant somebody
+     * had not finished. It is optional now, so counting it would tell a member
+     * who weighed the choice and declined that their profile is incomplete --
+     * a nudge toward something they have already decided about, dressed up as a
+     * missing answer. A choice is not an omission.
+     *
+     * A photo is absent from this list for the same reason and always has been.
+     */
   ];
 
   return {

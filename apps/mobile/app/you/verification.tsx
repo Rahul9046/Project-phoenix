@@ -1,9 +1,11 @@
 import { View } from "react-native";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
-import { phoneVerificationIsLive } from "@/features/onboarding/phone";
+import { useT } from "@/features/i18n/LocaleProvider";
 import { colors, iconSize, space } from "@/theme/tokens";
+import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Card, Divider } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
@@ -11,61 +13,88 @@ import { Text } from "@/ui/Text";
 /**
  * What Eraya has actually checked.
  *
- * The important rule on this screen is that nothing claims a check that has not
- * happened. Phone shows as "added", not "verified", because no SMS is sent and
- * any six digits are accepted -- and no other member is shown a phone badge at
- * all. Identity and relationship-status verification do not exist, so they are
+ * The rule this screen exists to keep is that nothing claims a check that has
+ * not happened. Phone now can be genuinely checked -- MSG91 sends a real
+ * message and an edge function holding the service role records the answer --
+ * so it appears as verified, but only on `phoneVerified`, which requires
+ * `phone_verified_via = 'msg91'`. The accounts the pre-launch stand-in marked
+ * have the timestamp and not the provider, and they do not appear here as
+ * verified, because nothing about them is evidence that anybody held a phone.
+ *
+ * Identity and relationship-status verification do not exist, so they are
  * listed as not available rather than as pending, which would imply a queue.
  *
- * A verification badge for something unverified is the worst thing this product
- * could ship: the person relying on it is a stranger deciding whether to meet
- * someone.
+ * The unverified phone row is an invitation and not a warning. Verification is
+ * optional: declining withholds nothing -- not discovery, not interest, not
+ * connections, not messages -- so there is no risk to warn anybody about, and
+ * wording that implied a lapse would be pressure applied on behalf of a benefit
+ * the member has already weighed.
+ *
+ * "Verify phone" opens the ordinary phone step rather than anything of its own.
+ * That screen owns the provider call and every server-side limit behind it; a
+ * second way in would be a second implementation of both, and the one that
+ * eventually drifts is the one nobody is looking at.
  */
 type Line = {
   label: string;
-  state: "done" | "partial" | "absent";
+  state: "done" | "absent";
   detail: string;
+  action?: { label: string; onPress: () => void };
 };
 
 export default function Verification() {
   const { profile } = useSession();
+  const t = useT();
 
   const lines: Line[] = [
     {
-      label: "Email address",
+      label: t("account.verification.emailLabel"),
       state: profile?.emailVerified ? "done" : "absent",
       detail: profile?.emailVerified
-        ? "Confirmed. Other members can see this."
-        : "Enter the code we sent to confirm your address.",
+        ? t("account.verification.emailDone")
+        : t("account.verification.emailAbsent"),
     },
+    profile?.phoneVerified
+      ? {
+          label: t("common.phoneVerified"),
+          state: "done",
+          detail: t("account.verification.phoneDone"),
+        }
+      : {
+          label: t("account.verification.phoneLabel"),
+          state: "absent",
+          detail: t("account.verification.phoneAbsent"),
+          action: {
+            label: t("account.verification.phoneCta"),
+            /*
+             * `from` is what tells that screen it is being used as a setting
+             * rather than as question one of nine: it drops the progress bar,
+             * drops "Skip for now", restores the back control, and hands the
+             * member back here afterwards instead of into onboarding.
+             */
+            onPress: () =>
+              router.push({
+                pathname: "/onboarding/phone",
+                params: { from: "account" },
+              }),
+          },
+        },
     {
-      label: "Phone number",
-      state: profile?.phoneVerifiedAt
-        ? phoneVerificationIsLive
-          ? "done"
-          : "partial"
-        : "absent",
-      detail: phoneVerificationIsLive
-        ? "Confirmed by SMS."
-        : "Added, but not verified — checking numbers by SMS is not switched on yet. No member is told your number is verified.",
-    },
-    {
-      label: "Identity",
+      label: t("account.verification.identityLabel"),
       state: "absent",
-      detail: "Eraya does not verify identity documents. Nobody here has been checked against one.",
+      detail: t("account.verification.identityDetail"),
     },
     {
-      label: "Relationship status",
+      label: t("account.verification.relationshipLabel"),
       state: "absent",
-      detail: "Taken on trust, from you and from everyone else. There is no way for us to confirm it.",
+      detail: t("account.verification.relationshipDetail"),
     },
   ];
 
   return (
     <Screen>
       <Text variant="body" tone="muted">
-        Eraya only shows a badge for something it has genuinely checked. Where it
-        has not, it says so.
+        {t("account.verification.lede")}
       </Text>
 
       <Card style={{ marginTop: space.xl }} padded={false}>
@@ -84,17 +113,11 @@ export default function Verification() {
                 name={
                   line.state === "done"
                     ? "shield-checkmark"
-                    : line.state === "partial"
-                      ? "shield-outline"
-                      : "ellipse-outline"
+                    : "ellipse-outline"
                 }
                 size={iconSize.lg}
                 color={
-                  line.state === "done"
-                    ? colors.positive
-                    : line.state === "partial"
-                      ? colors.inkMuted
-                      : colors.lineStrong
+                  line.state === "done" ? colors.positive : colors.lineStrong
                 }
               />
               <View style={{ flex: 1 }}>
@@ -106,6 +129,22 @@ export default function Verification() {
                 >
                   {line.detail}
                 </Text>
+
+                {/*
+                  No number is shown, verified or not. A member knows their own
+                  number, and putting it on a screen buys nothing in exchange
+                  for a thing that can be read over a shoulder.
+                */}
+                {line.action ? (
+                  <Button
+                    label={line.action.label}
+                    variant="secondary"
+                    size="md"
+                    block={false}
+                    onPress={line.action.onPress}
+                    style={{ marginTop: space.lg, alignSelf: "flex-start" }}
+                  />
+                ) : null}
               </View>
             </View>
           </View>

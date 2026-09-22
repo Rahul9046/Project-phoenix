@@ -51,6 +51,7 @@ export function Step({
   error,
   secondary,
   canGoBack = true,
+  progress = true,
 }: {
   step: OnboardingStepName;
   title: string;
@@ -66,6 +67,15 @@ export function Step({
   /** A quiet alternative under the primary button, e.g. "I'd rather not say". */
   secondary?: ReactNode;
   canGoBack?: boolean;
+  /**
+   * Set false when the screen is being shown outside onboarding.
+   *
+   * The phone step is reachable from the account area now that verification can
+   * be done late, and "step 1 of 9" is a lie told to somebody who finished all
+   * nine months ago -- it says there are eight questions left when there are
+   * none. The frame is still the right one; only the progress is wrong.
+   */
+  progress?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const t = useT();
@@ -111,7 +121,13 @@ export function Step({
           ) : null}
         </View>
 
-        <Progress index={index} total={onboardingSteps.length} />
+        {progress ? (
+          <Progress index={index} total={onboardingSteps.length} />
+        ) : (
+          // The bar's slot, kept so the language control stays where it is and
+          // the row does not reflow between the two uses of this screen.
+          <View style={{ flex: 1 }} />
+        )}
 
         {/*
           The slot on the right was an empty 44pt spacer, kept so the progress

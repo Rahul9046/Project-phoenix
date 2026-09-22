@@ -527,6 +527,7 @@ export type Database = {
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
           other_city: string | null
           phone_verified_at: string | null
+          phone_verified_via: string | null
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -549,6 +550,7 @@ export type Database = {
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_verified_at?: string | null
+          phone_verified_via?: string | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
@@ -571,6 +573,7 @@ export type Database = {
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_verified_at?: string | null
+          phone_verified_via?: string | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null

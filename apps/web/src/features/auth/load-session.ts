@@ -63,7 +63,7 @@ export async function loadAuthSession(
       // One string literal, deliberately: Supabase infers the row type from
       // the select at compile time, and a concatenated expression defeats it.
       .select(
-        "first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, onboarding_stage, phone_verified_at",
+        "first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, languages_undisclosed, onboarding_stage, phone_verified_at, phone_verified_via",
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -81,6 +81,7 @@ export async function loadAuthSession(
       stage: "authenticated",
       user: authUser,
       phone: null,
+      phoneVerified: false,
       profile: emptyProfile,
     };
   }
@@ -103,6 +104,22 @@ export async function loadAuthSession(
     // The number being verified is transient client state, not a stored
     // column â€” see lib/auth/pending-phone.ts.
     phone: null,
+    /*
+     * Both columns, not only the timestamp.
+     *
+     * `phone_verified_at` is set for every account the pre-launch stand-in
+     * "verified", and nothing about those proves anybody ever held a phone. The
+     * 2026-09-05 migration marked them `mock` precisely so they could not be
+     * mistaken for the real thing, and a screen reading the timestamp alone is
+     * exactly how they would be.
+     *
+     * Separate from `stage` on purpose. A member who was offered verification
+     * and declined has passed the step with nothing checked, so the stage
+     * cannot answer this and must never be asked to.
+     */
+    phoneVerified:
+      profile.phone_verified_at !== null &&
+      profile.phone_verified_via === "msg91",
     profile: {
       firstName: profile.first_name,
       dateOfBirth: profile.date_of_birth,
