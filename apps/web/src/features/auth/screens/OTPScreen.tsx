@@ -19,11 +19,7 @@ import { getCodeSentAt } from "@/features/auth/pending-phone";
 import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { AuthError, maskPhone } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
-import {
-  CAPTCHA_CONTAINER_ID,
-  ensureWidget,
-  widgetConfig,
-} from "@/features/auth/msg91-widget";
+import { ensureWidget, widgetConfig } from "@/features/auth/msg91-widget";
 
 /** Long enough to register as confirmation, short enough not to be a wait. */
 const SUCCESS_PAUSE_MS = 1100;
@@ -221,24 +217,6 @@ export function OTPScreen() {
           invalid={Boolean(error)}
           disabled={pending || verified}
         />
-
-        {/*
-          Where MSG91 draws its captcha when asked for another code.
-
-          The same container as the phone screen, on the same terms: it must
-          exist before the widget is asked to send, and it cannot be hidden,
-          because a captcha cannot measure or draw itself inside a
-          `display: none` element and fails rather than saying so.
-
-          Its absence here is what broke resend in production. Verification
-          worked from this screen throughout -- checking a code sends nothing
-          and needs no captcha -- so only the one operation that sends a
-          message had nowhere to draw, and failed as a generic outage.
-
-          An empty div occupies no height, so it costs nothing on the screens
-          and in the moments where MSG91 draws nothing.
-        */}
-        <div id={CAPTCHA_CONTAINER_ID} />
 
         {/*
           The way out of a code that never arrived.
