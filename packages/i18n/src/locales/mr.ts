@@ -119,6 +119,7 @@ export const mr: Translations = {
     },
     otp: {
       title: "तुमचा नंबर नक्की करा.",
+      lede: "{phone} वर पाठवलेला सहा आकड्यांचा कोड टाका.",
       ledePrefix:
         "SMS ने कोड तपासणे अजून सुरू झालेले नाही, त्यामुळे सध्या कोणतेही सहा आकडे चालतील. तुमचा नंबर आहे",
       label: "६ आकड्यांचा कोड",
@@ -127,7 +128,8 @@ export const mr: Translations = {
       invalidError: "इथे सहा आकडे हवेत. तपासून पुन्हा प्रयत्न करा.",
       changeCta: "फोन नंबर बदला",
       success: "फोन नंबर जतन झाला.",
-      resendIn: "तुम्ही {seconds} सेकंदांनी दुसरा कोड मागू शकता.",
+      resendIn: "{seconds} सेकंदांनी कोड पुन्हा पाठवा",
+      resend: "कोड पुन्हा पाठवा",
       resendSent: "नवा कोड पाठवला जात आहे.",
     },
     providers: {
