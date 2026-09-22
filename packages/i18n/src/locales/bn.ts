@@ -51,6 +51,12 @@ export const bn: Translations = {
     navConnections: "যোগাযোগ",
     navMessages: "বার্তা",
     navAccount: "অ্যাকাউন্ট",
+
+    activityNewConnectionsOne: "1টি নতুন যোগাযোগ",
+    activityNewConnectionsMany: "{count}টি নতুন যোগাযোগ",
+    activityUnreadOne: "1টি কথোপকথনে না-পড়া বার্তা",
+    activityUnreadMany: "{count}টি কথোপকথনে না-পড়া বার্তা",
+    activityBoth: "{connections}, এবং {messages}",
   },
 
   auth: {
@@ -342,6 +348,7 @@ export const bn: Translations = {
       "আগ্রহ দু'দিক থেকে হলে তবেই যোগাযোগ খোলে — তাই কেউ হঠাৎ করে আপনাকে লিখতে পারেন না।",
     openConversation: "খুলুন",
     noMessages: "এখনও কোনও বার্তা নেই",
+    unreadMark: "না-পড়া বার্তা",
     ended: "এই যোগাযোগটি শেষ হয়েছে",
     seeWhoIsHere: "দেখুন কারা আছেন",
   },

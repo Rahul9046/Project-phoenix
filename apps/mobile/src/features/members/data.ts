@@ -485,3 +485,55 @@ export async function getHomeSummary(): Promise<HomeSummary> {
     interestsReceived: row.interests_received ?? 0,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Activity indicators
+// ---------------------------------------------------------------------------
+
+export type ActivitySummary = {
+  /** Connections made since this member last opened the Connections tab. */
+  newConnections: number;
+  /** Conversations with something unread. Conversations, never messages. */
+  unreadConversations: number;
+};
+
+const NO_ACTIVITY: ActivitySummary = {
+  newConnections: 0,
+  unreadConversations: 0,
+};
+
+/**
+ * What is waiting, for the tab badges.
+ *
+ * Zero on any failure. A badge is a hint, and the honest behaviour when the
+ * hint cannot be fetched is to show nothing -- a stale number would send
+ * somebody to a tab with nothing on it, and an error state on the tab bar of
+ * every screen would be a far larger wrong than a badge that arrives a moment
+ * late.
+ *
+ * `connections_needing_attention` is ignored here. It exists for the web, which
+ * has no Messages destination and needs one badge to speak for both; the app
+ * has both tabs and each says its own thing.
+ */
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const { data, error } = await supabase.rpc("activity_summary");
+
+  const row = Array.isArray(data) ? data[0] : null;
+  if (error || !row) return NO_ACTIVITY;
+
+  return {
+    newConnections: row.new_connections ?? 0,
+    unreadConversations: row.unread_conversations ?? 0,
+  };
+}
+
+/**
+ * Records that the caller has opened their Connections list.
+ *
+ * The timestamp is the server's. A client sending its own can send one from
+ * next year, and a watermark in the future switches the badge off for every
+ * connection they make afterwards -- see the migration.
+ */
+export async function markConnectionsSeen(): Promise<void> {
+  await supabase.rpc("mark_connections_seen");
+}

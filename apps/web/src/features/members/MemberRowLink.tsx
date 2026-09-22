@@ -25,6 +25,8 @@ export function MemberRowLink({
   photoUrl,
   children,
   muted = false,
+  unread = false,
+  unreadLabel,
 }: {
   href: string;
   name: string;
@@ -34,6 +36,18 @@ export function MemberRowLink({
   children: ReactNode;
   /** For ended connections, which stay reachable but are not current. */
   muted?: boolean;
+  /**
+   * Something on this row the member has not read.
+   *
+   * A dot rather than a count. How many messages are waiting inside is not a
+   * number anybody acts on -- they are going to open it either way -- and a
+   * growing number beside a person's name turns a conversation into a debt.
+   * The count belongs on the navigation, where it answers "is there anything",
+   * and this answers "where".
+   */
+  unread?: boolean;
+  /** What the dot means, for a reader who cannot see it. */
+  unreadLabel?: string;
 }) {
   return (
     <Link
@@ -46,11 +60,18 @@ export function MemberRowLink({
         <MemberAvatar name={name} photoUrl={photoUrl} />
         <span className="min-w-0 flex-1">
           <span
-            className={`block text-name ${
+            className={`flex items-center gap-2 text-name ${
               muted ? "text-ink-muted" : "text-ink"
             }`}
           >
             {name}
+            {unread ? (
+              <span
+                role="img"
+                aria-label={unreadLabel}
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-ember"
+              />
+            ) : null}
           </span>
           {children}
         </span>

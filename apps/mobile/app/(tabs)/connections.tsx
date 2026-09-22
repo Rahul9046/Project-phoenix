@@ -6,7 +6,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { relationshipLabelKeys } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { ScreenTitle } from "@/ui/ScreenTitle";
-import { getConversations, withPhotoUrls } from "@/features/members/data";
+import { useActivity } from "@/features/activity/ActivityProvider";
+import {
+  getConversations,
+  markConnectionsSeen,
+  withPhotoUrls,
+} from "@/features/members/data";
 import type { Conversation } from "@/features/members/types";
 import { colors, iconSize, space } from "@/theme/tokens";
 import { Avatar, PersonSummary } from "@/ui/Person";
@@ -32,6 +37,7 @@ type Loaded = Conversation & { photoUrl: string | null };
 
 export default function Connections() {
   const t = useT();
+  const { refresh: refreshActivity } = useActivity();
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -59,13 +65,30 @@ export default function Connections() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
       void load().then(() => {
         if (active) setLoading(false);
       });
+
+      /*
+       * Opening this tab is what makes these connections no longer new.
+       *
+       * All of them at once, because the screen shows them all at once -- there
+       * is no per-connection state, only a watermark on the member's own row.
+       * Marked on focus rather than on mount so that coming back to the tab
+       * after connecting with somebody clears it too.
+       *
+       * The refresh afterwards is what takes the number off the tab bar; the
+       * badge is read from the database and nothing else would tell it.
+       */
+      void markConnectionsSeen().then(() => {
+        if (active) void refreshActivity();
+      });
+
       return () => {
         active = false;
       };
-    }, [load]),
+    }, [load, refreshActivity]),
   );
 
   async function refresh() {

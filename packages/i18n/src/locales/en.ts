@@ -77,6 +77,27 @@ export const en = {
     navConnections: "Connections",
     navMessages: "Messages",
     navAccount: "Account",
+
+    /*
+     * What a badge means, said out loud.
+     *
+     * A number in a coloured circle is invisible to a screen reader and
+     * ambiguous to everybody else -- "Connections, 2" could be two connections
+     * in total. These are the labels the navigation actually announces, so the
+     * count always arrives with the noun it is counting.
+     *
+     * Separate one/many keys because `t` substitutes placeholders and does not
+     * pluralise, and because "1 new connections" is the kind of small wrongness
+     * that makes a product feel unattended. Same pattern as `home.introductions`.
+     *
+     * `activityBoth` is the web's, where conversations live inside Connections
+     * and one badge has to speak for two kinds of thing.
+     */
+    activityNewConnectionsOne: "1 new connection",
+    activityNewConnectionsMany: "{count} new connections",
+    activityUnreadOne: "1 conversation with unread messages",
+    activityUnreadMany: "{count} conversations with unread messages",
+    activityBoth: "{connections}, and {messages}",
   },
 
   auth: {
@@ -446,6 +467,7 @@ export const en = {
       "A connection opens only when interest is mutual — so nobody can write to you out of the blue.",
     openConversation: "Open",
     noMessages: "No messages yet",
+    unreadMark: "Unread messages",
     ended: "This connection has ended",
     seeWhoIsHere: "See who is here",
   },

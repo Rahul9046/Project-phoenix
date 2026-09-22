@@ -3,6 +3,7 @@ import { FlatList, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useActivity } from "@/features/activity/ActivityProvider";
 import { getConversations, withPhotoUrls } from "@/features/members/data";
 import type { Conversation } from "@/features/members/types";
 import { colors, layout, radius, space } from "@/theme/tokens";
@@ -30,6 +31,7 @@ type Loaded = Conversation & { photoUrl: string | null };
 
 export default function Messages() {
   const t = useT();
+  const { refresh: refreshActivity } = useActivity();
   const insets = useSafeAreaInsets();
   const [conversations, setConversations] = useState<Loaded[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,13 +59,20 @@ export default function Messages() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
       void load().then(() => {
         if (active) setLoading(false);
       });
+
+      // Coming back from a conversation is the usual way onto this screen, and
+      // that conversation has just stopped being unread. Asking again here
+      // keeps the badge and the list telling the same story.
+      void refreshActivity();
+
       return () => {
         active = false;
       };
-    }, [load]),
+    }, [load, refreshActivity]),
   );
 
   async function refresh() {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { LinkPending } from "@/shared/ui/LinkPending";
 import { usePathname } from "next/navigation";
 
+import type { NavActivity } from "@/features/app-shell/activity";
+import { NavBadge } from "@/features/app-shell/NavBadge";
 import { primaryNav } from "@/features/app-shell/nav";
 
 /**
@@ -15,7 +17,12 @@ import { primaryNav } from "@/features/app-shell/nav";
  * tall screen is genuinely hard to hit. Hidden from `sm` up, where the header
  * nav is visible instead.
  */
-export function MobileTabBar() {
+export function MobileTabBar({
+  activity,
+}: {
+  /** The same object the header gets, so the two can never disagree. */
+  activity: NavActivity | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -27,18 +34,23 @@ export function MobileTabBar() {
         {primaryNav.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const badge = activity?.href === item.href ? activity.count : 0;
 
           return (
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                // Replaces the link text for a reader, so it carries the noun
+                // as well as the count. See AppNavLink.
+                aria-label={badge > 0 ? activity?.label : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[0.85rem] transition-colors ${
                   active ? "font-medium text-ember-text" : "text-ink-muted"
                 }`}
               >
                 <span className="inline-flex items-center gap-1.5">
                   {item.label}
+                  <NavBadge count={badge} />
                   <LinkPending />
                 </span>
               </Link>

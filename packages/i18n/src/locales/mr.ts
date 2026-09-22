@@ -51,6 +51,12 @@ export const mr: Translations = {
     navConnections: "नाती",
     navMessages: "संदेश",
     navAccount: "खाते",
+
+    activityNewConnectionsOne: "1 नवीन जुळणी",
+    activityNewConnectionsMany: "{count} नवीन जुळण्या",
+    activityUnreadOne: "1 संवादात न वाचलेले संदेश",
+    activityUnreadMany: "{count} संवादांत न वाचलेले संदेश",
+    activityBoth: "{connections}, आणि {messages}",
   },
 
   auth: {
@@ -342,6 +348,7 @@ export const mr: Translations = {
       "दोन्ही बाजूंनी आवड असेल तेव्हाच नाते उघडते — त्यामुळे कोणीही अचानक तुम्हाला लिहू शकत नाही.",
     openConversation: "उघडा",
     noMessages: "अजून कोणताही संदेश नाही",
+    unreadMark: "न वाचलेले संदेश",
     ended: "हे नाते संपले आहे",
     seeWhoIsHere: "इथे कोण आहे ते पाहा",
   },

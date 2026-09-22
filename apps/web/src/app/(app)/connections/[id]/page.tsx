@@ -7,6 +7,7 @@ import { MemberSafety } from "@/features/members/MemberSafety";
 import { MemberAvatar } from "@/features/members/MemberAvatar";
 import { MemberSummary, TrustMarks } from "@/features/members/MemberPresentation";
 import { getConversation } from "@/features/members/data";
+import { MarkConversationRead } from "@/features/members/MarkSeen";
 
 export const metadata = { title: "Conversation" };
 
@@ -22,6 +23,13 @@ export default async function ConversationPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:px-8 sm:py-12 lg:px-12">
+      {/*
+        The web had never called `mark_conversation_read`, which is why an
+        unread conversation here stayed unread forever. Nothing surfaced it
+        because nothing on the web drew the unread state until now.
+      */}
+      <MarkConversationRead connectionId={connection.id} />
+
       <Link
         href={appRoutes.connections}
         className="inline-flex min-h-11 items-center gap-1.5 text-[0.95rem] text-ink-muted transition-colors hover:text-ink"

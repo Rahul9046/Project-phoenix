@@ -11,6 +11,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useActivity } from "@/features/activity/ActivityProvider";
 import { useSession } from "@/features/auth/SessionProvider";
 import { SafetyActions } from "@/features/connections/SafetyActions";
 import {
@@ -54,6 +55,7 @@ export default function ConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
+  const { refresh: refreshActivity } = useActivity();
   const toast = useToast();
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -98,13 +100,20 @@ export default function ConversationScreen() {
 
       // Opening a conversation marks it read -- for this person only. There is
       // no query, from any client, that tells the other person this happened.
-      void markConversationRead(id);
+      //
+      // The badge on the Messages tab is derived from these markers, so it has
+      // to be asked again once this one is written. Sequenced rather than fired
+      // alongside: a refresh racing the write reads the count as it was a
+      // moment ago and leaves the number up until something else moves.
+      void markConversationRead(id).then(() => {
+        if (active) void refreshActivity();
+      });
     })();
 
     return () => {
       active = false;
     };
-  }, [id, myId]);
+  }, [id, myId, refreshActivity]);
 
   async function loadOlder() {
     const oldest = messages[0];
