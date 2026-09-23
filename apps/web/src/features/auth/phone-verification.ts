@@ -77,6 +77,15 @@ const SEND_MESSAGES: Record<string, string> = {
     "That is several codes in a short time. Please try again a little later.",
   number_daily_cap:
     "That is several codes in a short time. Please try again a little later.",
+  /*
+   * Asked many times, sent few. A separate sentence from the two above and not
+   * a nicety: somebody who hits this has mostly *not* been getting codes --
+   * failed captchas, a dropped network, a widget that would not load -- and
+   * telling them they have had several codes would be describing an afternoon
+   * they did not have. The wait is the same; the reason is not.
+   */
+  user_attempt_cap:
+    "That is several attempts in a short time. Please try again a little later.",
   daily_cap: SEND_FALLBACK,
   capacity_exhausted: SEND_FALLBACK,
   unavailable: SEND_FALLBACK,
@@ -135,6 +144,7 @@ async function callFunction(
     | "phone-otp-request"
     | "phone-otp-verify"
     | "phone-widget-begin"
+    | "phone-widget-sent"
     | "phone-widget-verify",
   body: Record<string, unknown>,
 ): Promise<FunctionReply | null> {
@@ -207,7 +217,41 @@ export async function sendPhoneCode(
     // member reads is decided here, as it is for every other outcome -- but
     // the reason is now kept rather than dropped.
     logProviderFailure(options.resend === true ? "retryOtp" : "sendOtp", cause);
+    /*
+     * And the server is told, so the reservation this member spent is closed as
+     * a failure rather than left open. It costs them nothing -- `send_failed`
+     * carries no `sent_at`, so no cooldown and no spending limit counts it --
+     * which is the repair: a message MSG91 refused must not consume one of the
+     * five codes they are owed.
+     */
+    await reportSend(false);
     throw new AuthError("generic", SEND_FALLBACK);
+  }
+
+  /*
+   * MSG91 accepted it. This is the moment the server can finally count, and
+   * awaiting it is deliberate: the sixty-second cooldown is measured from the
+   * recorded send, so returning before it lands would let a fast finger reach
+   * the resend button while the server still believed nothing had been sent.
+   */
+  await reportSend(true);
+}
+
+/**
+ * Telling the server what the provider did.
+ *
+ * Failure is swallowed on purpose, and it is the one place in this file where
+ * that is right. By the time this runs the SMS is already gone; a member who is
+ * holding a code in their hand must not be shown an error because Eraya's own
+ * bookkeeping call did not land. The cost of losing one is an undercount --
+ * their next send is metered as though this one had not happened -- which errs
+ * toward the member rather than against them, and is bounded by the attempt
+ * ceiling either way.
+ */
+async function reportSend(sent: boolean): Promise<void> {
+  const reply = await callFunction("phone-widget-sent", { sent });
+  if (!reply) {
+    console.error("[eraya] send not recorded: phone-widget-sent unreachable");
   }
 }
 
