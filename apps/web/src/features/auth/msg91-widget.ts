@@ -39,6 +39,8 @@ declare global {
       success: Msg91Callback,
       failure: Msg91Callback,
     ) => void;
+    /** MSG91's own copy of the widget configuration, once initialised. */
+    getWidgetData?: () => { globalDefaultChannel?: unknown } | undefined;
     verifyOtp?: (
       otp: string,
       success: Msg91Callback,
@@ -209,12 +211,52 @@ export async function widgetSendOtp(
   );
 }
 
+/**
+ * SMS, in MSG91's numbering.
+ *
+ * The fallback rather than the answer: the channel is read from the widget's
+ * own configuration below and this is what stands in if that is unreadable.
+ * Eraya's widget has one process for sending and one for retrying and both are
+ * SMS, so a wrong guess here is not a silent change of medium -- but it is
+ * still a guess, which is why it is only reached when the real value is not.
+ */
+const SMS_CHANNEL = "11";
+
+/**
+ * Which channel a resend should be sent over.
+ *
+ * `null` was the wrong answer and cost a fortnight of wrong diagnoses, so it is
+ * worth writing down why. MSG91 has two kinds of widget. A `widgetType` of "1"
+ * ignores the channel argument entirely, which is where `null` came from and
+ * why it looked correct. Eraya's is type "2" -- "Custom", the multi-channel
+ * kind -- and for those the argument is mandatory: `validateInputData` builds
+ * an Error when the channel is missing and, uniquely among the three exposed
+ * methods, `retryOtp` calls it *without* passing the failure callback. So the
+ * widget throws synchronously instead of reporting through the callback, which
+ * is why the failure arrived instantly and carried none of MSG91's own wording.
+ *
+ * Read from `getWidgetData()` rather than hardcoded, because the value belongs
+ * to the dashboard and not to this file: a retry channel changed there should
+ * change here without a release. It is the same number `globalDefaultChannel`
+ * holds and the same one the widget's own Resend link passes.
+ */
+function retryChannel(): string {
+  const configured = window.getWidgetData?.()?.globalDefaultChannel;
+  if (typeof configured === "number" && Number.isFinite(configured)) {
+    return String(configured);
+  }
+  if (typeof configured === "string" && configured.trim()) {
+    return configured.trim();
+  }
+  return SMS_CHANNEL;
+}
+
 /** Asks MSG91 to send it again. */
 export async function widgetRetryOtp(config: WidgetConfig): Promise<void> {
   await ensureWidget(config);
   if (!window.retryOtp) throw new Error("widget unavailable");
   await promisify((success, failure) =>
-    window.retryOtp!(null, success, failure),
+    window.retryOtp!(retryChannel(), success, failure),
   );
 }
 
