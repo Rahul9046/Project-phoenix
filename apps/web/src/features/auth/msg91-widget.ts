@@ -41,6 +41,14 @@ declare global {
     ) => void;
     /** MSG91's own copy of the widget configuration, once initialised. */
     getWidgetData?: () => { globalDefaultChannel?: unknown } | undefined;
+    /**
+     * MSG91's own answer to "has the challenge been satisfied".
+     *
+     * It reads the access token the widget holds internally, which is the only
+     * thing that actually gates a send. A checked-looking box in the DOM is
+     * not that, and must never be mistaken for it.
+     */
+    isCaptchaVerified?: () => boolean;
     verifyOtp?: (
       otp: string,
       success: Msg91Callback,
@@ -64,6 +72,75 @@ export type WidgetConfig = { widgetId: string; tokenAuth: string };
  * disabled or satisfied invisibly.
  */
 export const CAPTCHA_CONTAINER_ID = "msg91-captcha";
+
+/**
+ * Where the container waits when no screen is showing it.
+ *
+ * The container cannot be unmounted between screens -- MSG91 renders the
+ * challenge once, during `initSendOTP`, and never again -- so a screen that
+ * owns the element takes the challenge down with it. It also cannot simply sit
+ * in the layout being visible, because then it appears on every screen in
+ * onboarding, including the ones that have nothing to do with a phone number.
+ *
+ * So it has a home: a parked position off-screen, outside the reading order,
+ * where the element continues to exist and the challenge inside it stays
+ * rendered. `CaptchaSlot` borrows it while a screen wants it and returns it
+ * here on the way out. One element, one initialisation, and it is only ever
+ * seen on the two screens that ask for it.
+ */
+export const CAPTCHA_HOME_ID = "msg91-captcha-home";
+
+/*
+ * Who wants to know when the challenge is satisfied.
+ *
+ * Kept in the module rather than passed through React, because the thing doing
+ * the telling is a callback MSG91 holds from the single `initSendOTP` call --
+ * there is one of it for the life of the document, and screens come and go
+ * underneath it.
+ */
+const captchaListeners = new Set<() => void>();
+
+export function subscribeCaptcha(listener: () => void): () => void {
+  captchaListeners.add(listener);
+  return () => {
+    captchaListeners.delete(listener);
+  };
+}
+
+function announceCaptcha(): void {
+  for (const listener of captchaListeners) listener();
+}
+
+/**
+ * Whether there is a challenge, and whether MSG91 considers it answered.
+ *
+ * Three answers rather than a boolean, and the third is the important one.
+ * `absent` means no challenge is rendered -- the script never loaded, or this
+ * widget has captcha validation switched off -- and a caller must treat that as
+ * "nothing to wait for" rather than as "not yet satisfied". Reading it as the
+ * latter would disable Continue permanently for anybody whose widget has no
+ * captcha, which is a far worse failure than showing a button too early.
+ *
+ * `solved` is MSG91's own `isCaptchaVerified`, which reads the access token it
+ * is holding. Nothing here inspects a checkbox, an iframe, or any DOM state
+ * that a page could be made to look like: the only question asked is of the
+ * widget, and the server asks MSG91 again regardless.
+ */
+export function captchaState(): "solved" | "unsolved" | "absent" {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return "absent";
+  }
+  if (typeof window.isCaptchaVerified !== "function") return "absent";
+
+  const container = document.getElementById(CAPTCHA_CONTAINER_ID);
+  if (!container || container.childElementCount === 0) return "absent";
+
+  try {
+    return window.isCaptchaVerified() ? "solved" : "unsolved";
+  } catch {
+    return "absent";
+  }
+}
 
 /**
  * Configuration, or null when it is absent.
@@ -114,20 +191,59 @@ function loadScript(): Promise<void> {
   return loading;
 }
 
-let initialised = false;
+let ready: Promise<void> | null = null;
 
-/** Loads and initialises the widget. Safe to call repeatedly. */
+/**
+ * Loads and initialises the widget. Safe to call repeatedly.
+ *
+ * The guard is a promise rather than a boolean, and the difference is a
+ * challenge drawn twice. MSG91 bootstraps an Angular application inside
+ * `initSendOTP` and exposes its methods on `window` when that finishes, some
+ * way after the call returns -- so a second caller arriving during that gap
+ * saw no `window.sendOtp`, concluded initialisation had not happened, and
+ * initialised again. The second run appends another embedded view into the
+ * same container and the member gets two hCaptcha boxes stacked up. React's
+ * development double-invoke made it happen every time; two screens mounting in
+ * quick succession would do it in production.
+ *
+ * Holding the promise means a second caller waits for the first initialisation
+ * instead of starting another, and still returns only once the methods it is
+ * about to use actually exist.
+ */
 export async function ensureWidget(config: WidgetConfig): Promise<void> {
   await loadScript();
+  ready ??= initialiseOnce(config);
+  return ready;
+}
 
-  if (initialised && window.sendOtp) return;
-
+async function initialiseOnce(config: WidgetConfig): Promise<void> {
   window.initSendOTP?.({
     widgetId: config.widgetId,
     tokenAuth: config.tokenAuth,
     /* Eraya keeps its own screens; MSG91 provides the transport. */
     exposeMethods: true,
+    /*
+     * The same thing again under the spelling MSG91 actually reads.
+     *
+     * Everything else in their widget tests `config.exposeMethods`; the one
+     * guard in front of the captcha callback tests `config.exposedMethods`,
+     * with a d. It looks like a slip in their source and it is load-bearing
+     * for us: without this key the `captchaVerified` callback below is never
+     * called, whatever it is set to. Both are passed because the day they fix
+     * it is the day the single-spelling version would break.
+     */
+    exposedMethods: true,
     captchaRenderId: CAPTCHA_CONTAINER_ID,
+    /*
+     * Told, rather than watched for. MSG91 calls this with true when the
+     * challenge is satisfied and false when it errors or expires, which is
+     * what lets the Continue button follow it in real time.
+     *
+     * The value handed in is deliberately ignored: `captchaState()` asks the
+     * widget itself rather than trusting an argument that arrived from a
+     * callback, and this only says "something changed, go and look".
+     */
+    captchaVerified: () => announceCaptcha(),
     /*
      * Required even though nothing here reads them.
      *
@@ -145,7 +261,23 @@ export async function ensureWidget(config: WidgetConfig): Promise<void> {
     failure: () => {},
   });
 
-  initialised = true;
+  /*
+   * Wait for the methods rather than assume them.
+   *
+   * Callers `await ensureWidget(...)` and then reach straight for
+   * `window.sendOtp`, so returning before MSG91 has finished bootstrapping
+   * would turn a slow start into "widget unavailable". Ten seconds is the same
+   * patience every provider call in this feature is given.
+   *
+   * A timeout is deliberately not retried. Retrying is what drew the second
+   * captcha; a widget that has not come up after ten seconds is reported
+   * honestly by the send path instead of being initialised again on top of
+   * itself.
+   */
+  const deadline = Date.now() + 10_000;
+  while (!window.sendOtp && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 /**

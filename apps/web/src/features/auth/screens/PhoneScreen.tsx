@@ -7,6 +7,7 @@ import { recordPhoneStepComplete } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
+import { CaptchaSlot } from "@/features/auth/components/CaptchaSlot";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { FormField } from "@/features/auth/components/FormField";
 import { PhoneInput, defaultCountryCode } from "@/features/auth/components/PhoneInput";
@@ -21,6 +22,7 @@ import { useAuthGuard } from "@/features/auth/useAuthGuard";
 import { stageAtLeast, type AuthSession } from "@/features/auth/types";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { ensureWidget, widgetConfig } from "@/features/auth/msg91-widget";
+import { useCaptchaGate } from "@/features/auth/useCaptchaGate";
 
 /** Short enough to catch a slip, loose enough to accept any real number. */
 const MIN_DIGITS = 6;
@@ -60,6 +62,17 @@ function PhoneForm({ session }: { session: AuthSession }) {
   const [skipping, setSkipping] = useState(false);
 
   /*
+   * Whether the challenge above the button has been answered.
+   *
+   * A convenience and not a control. The send is refused server-side by MSG91,
+   * which checks its own token, and by `begin_phone_otp` before that -- this
+   * only stops somebody pressing a button that was always going to fail, which
+   * is the whole of what went wrong before: the first press appeared to break
+   * the screen and the captcha showed up underneath the error it had caused.
+   */
+  const { blocking: captchaBlocking } = useCaptchaGate();
+
+  /*
    * Load the widget when the screen opens, not when somebody presses Continue.
    *
    * MSG91 renders its hCaptcha challenge as part of initialising. Doing that
@@ -87,6 +100,9 @@ function PhoneForm({ session }: { session: AuthSession }) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    // Belt and braces with the disabled attribute: a form can still be
+    // submitted by pressing Enter in the field.
+    if (captchaBlocking) return;
 
     if (!nationalNumber) {
       setFieldError(t("auth.phone.emptyError"));
@@ -181,10 +197,23 @@ function PhoneForm({ session }: { session: AuthSession }) {
           <ErrorMessage className="mt-4">{formError}</ErrorMessage>
         ) : null}
 
+        {/*
+          The challenge, immediately above the button it gates.
+
+          Here rather than anywhere else because this is the moment it is for:
+          a person reads the number they typed, meets the box, answers it, and
+          presses Continue. It is part of the form, in the form's column, and it
+          scrolls with the page like everything else -- on a narrow phone and on
+          a desktop alike. The element itself belongs to the `(auth)` layout and
+          is only borrowed for as long as this screen is open.
+        */}
+        <CaptchaSlot className="mt-7 flex justify-center overflow-x-auto empty:mt-0 [&>div:empty]:hidden" />
+
         <PrimaryButton
           type="submit"
           loading={pending}
           loadingLabel={t("common.saving")}
+          disabled={captchaBlocking}
           className="mt-7"
         >
           {t("auth.phone.cta")}
