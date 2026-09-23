@@ -7,6 +7,7 @@ import { recordPhoneStepComplete } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
+import { CaptchaSlot } from "@/features/auth/components/CaptchaSlot";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { OTPInput, OTP_LENGTH } from "@/features/auth/components/OTPInput";
 import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
@@ -250,6 +251,23 @@ export function OTPScreen() {
           without anything being focused; `off` while verified, when the screen
           is about to navigate and has nothing left to announce.
         */}
+        {/*
+          The challenge follows the member here, and is put away when they are
+          done with it.
+
+          Asking for another code is a send, and the screen should be able to
+          show a challenge if MSG91 wants one answered. It is borrowed from the
+          layout exactly as the phone screen borrows it, so this is the same
+          element and the same single initialisation -- not a second one, which
+          is a thing that has been tried here and produces an empty box.
+
+          Withheld once `verified` is true: the screen is about to navigate and
+          a captcha on a finished screen is furniture.
+        */}
+        {!verified ? (
+          <CaptchaSlot className="mt-6 flex justify-center overflow-x-auto [&>div:empty]:hidden" />
+        ) : null}
+
         {!verified && resendIn !== null ? (
           <p
             aria-live="polite"

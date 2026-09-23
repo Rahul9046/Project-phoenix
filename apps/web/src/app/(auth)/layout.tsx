@@ -1,6 +1,9 @@
 import { AuthSessionProvider } from "@/features/auth/AuthSessionProvider";
 import { loadAuthSession } from "@/features/auth/load-session";
-import { CAPTCHA_CONTAINER_ID } from "@/features/auth/msg91-widget";
+import {
+  CAPTCHA_CONTAINER_ID,
+  CAPTCHA_HOME_ID,
+} from "@/features/auth/msg91-widget";
 
 /**
  * Auth and onboarding run without the marketing header and footer. On a phone
@@ -24,55 +27,43 @@ export default async function AuthGroupLayout({
         {children}
 
         {/*
-          Where MSG91 draws its captcha, for the whole of the flow.
+          Where MSG91's captcha lives when no screen is showing it.
 
-          It lives here rather than on a screen because of what MSG91 does and
-          when. The challenge is rendered once, during `initSendOTP`, into
-          whatever element `captchaRenderId` names at that moment -- and it is
-          never rendered again, because the widget initialises once per
-          document. A screen that owns the element therefore takes the
-          challenge down with it when it unmounts, and the next screen gets an
-          empty box that nothing will ever fill.
-
-          That is exactly what broke resend. The phone screen drew the
-          challenge, the code screen destroyed it by being navigated to, and
-          asking for another code -- a send, which needs a captcha -- failed
-          with nowhere to draw. Giving the code screen its own container did
-          not help: a second empty box is still empty.
+          The element cannot be unmounted between screens and cannot be
+          re-created. MSG91 renders the challenge once, during `initSendOTP`,
+          into whatever element `captchaRenderId` names at that moment, and
+          never again -- so a screen that owns the element takes the challenge
+          down with it when it unmounts, and the next screen gets an empty box
+          that nothing will ever fill. That is what broke resend, and giving the
+          code screen a second container did not help: a second empty box is
+          still empty.
 
           This layout does not remount between `/auth/phone` and `/auth/otp`,
-          so the element MSG91 drew into survives the journey, along with the
-          challenge already satisfied in it. One element, one initialisation,
-          one solved captcha, both screens.
+          so an element it owns survives the journey. What it must not do is be
+          *seen* on every screen in the group -- a challenge has no business on
+          the name, birthday or photograph screens, and it used to be stuck to
+          the bottom of the viewport on all of them.
 
-          Rendered on every screen in the group, not only the two that verify.
-          An empty div costs no height, and the alternative -- mounting it
-          conditionally -- would reintroduce the unmount that caused this.
+          So this is a parked position rather than a display position. Off to
+          the side, out of the reading order, rendered and idle. `CaptchaSlot`
+          borrows the container while a screen wants it and returns it here on
+          the way out, which is what confines the challenge to the two screens
+          that verify a number while keeping one element and one
+          initialisation.
 
-          It is `sticky` rather than simply last in the column, and that is the
-          whole of the second problem. `AuthLayout` opens with `min-h-dvh` and
-          fills the viewport deliberately, so its next sibling begins one
-          screen below the fold -- which is where this sat when the captcha
-          "disappeared". It was drawn, correctly, out of sight.
-
-          Sticking it to the bottom of the viewport is the way to have one
-          element serve two screens. It cannot be moved into each screen's
-          column as they are shown: relocating the node would reparent the
-          iframe MSG91 drew into, browsers reload a reparented iframe, and the
-          solved challenge would be destroyed -- which is the thing this whole
-          arrangement exists to prevent. So the element stays still and the
-          viewport comes to it.
-
-          Empty, it is a zero-height box and nothing is painted: no margin, no
-          background, no shadow, because every one of those is conditioned on
-          it having content. A person on a screen that never asks for a captcha
-          sees exactly what they saw before.
+          Off-screen rather than `display: none`, and that distinction is the
+          whole reason this works: a hidden subtree has no layout, and an
+          hCaptcha asked to render into one comes back wrong or not at all. A
+          negative offset leaves it laid out and perfectly renderable, and
+          leaves nothing for a person to see or reach -- a negative `left` does
+          not extend the scrollable area.
         */}
-        <div className="pointer-events-none sticky bottom-0 z-40 mx-auto flex w-full max-w-[27rem] justify-center px-5 sm:px-8">
-          <div
-            id={CAPTCHA_CONTAINER_ID}
-            className="pointer-events-auto [&:not(:empty)]:mb-5 [&:not(:empty)]:rounded-2xl [&:not(:empty)]:bg-canvas [&:not(:empty)]:p-3 [&:not(:empty)]:shadow-lg"
-          />
+        <div
+          id={CAPTCHA_HOME_ID}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-[-9999px] top-0"
+        >
+          <div id={CAPTCHA_CONTAINER_ID} />
         </div>
       </AuthSessionProvider>
     </main>
