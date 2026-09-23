@@ -30,7 +30,7 @@ export default function NameStep() {
     const result = await saveName(name);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

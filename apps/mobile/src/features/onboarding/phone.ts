@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import type { TranslationKey } from "@eraya/i18n";
 
 /**
  * Phone verification, for real.
@@ -85,7 +86,7 @@ export const CODE_LENGTH = 6;
 
 export type PhoneResult =
   | { ok: true }
-  | { ok: false; message: string; retryAfterSeconds?: number };
+  | { ok: false; messageKey: TranslationKey; retryAfterSeconds?: number };
 
 /**
  * What a person reads.
@@ -100,46 +101,38 @@ export type PhoneResult =
  * stranger is a member, and the second because a member cannot act on our
  * budget and should not be shown it.
  */
-const SEND_UNAVAILABLE =
-  "We could not send your code just now. Please try again shortly.";
+const SEND_UNAVAILABLE: TranslationKey = "failures.sendCodeFailed";
 
-const SEND_MESSAGES: Record<string, string> = {
-  invalid_number:
-    "That does not look like a mobile number we can reach. Check the digits and try again.",
-  cooldown: "Please wait a little before asking for another code.",
-  user_daily_cap:
-    "That is several codes in a short time. Please try again a little later.",
-  number_daily_cap:
-    "That is several codes in a short time. Please try again a little later.",
+const SEND_MESSAGES: Record<string, TranslationKey> = {
+  invalid_number: "failures.invalidNumber",
+  cooldown: "failures.cooldown",
+  user_daily_cap: "failures.dailyCap",
+  number_daily_cap: "failures.dailyCap",
   /*
    * The limits live in `begin_phone_otp`, which both clients call, so a status
    * added for the web arrives here too. Without a line of its own it would fall
    * through to `SEND_UNAVAILABLE` and report an outage -- the exact failure the
    * web had until 2026-09-22, arriving by the other door.
    */
-  user_attempt_cap:
-    "That is several attempts in a short time. Please try again a little later.",
+  user_attempt_cap: "failures.attemptCap",
   daily_cap: SEND_UNAVAILABLE,
   capacity_exhausted: SEND_UNAVAILABLE,
   unavailable: SEND_UNAVAILABLE,
-  unauthenticated: "Your session has expired. Please sign in again.",
+  unauthenticated: "failures.sessionExpired",
 };
 
-const VERIFY_UNAVAILABLE =
-  "We could not check that code just now. Please try again shortly.";
+const VERIFY_UNAVAILABLE: TranslationKey = "failures.verifyFailed";
 
-const VERIFY_MESSAGES: Record<string, string> = {
-  invalid_code: "That code does not look right. Check it and try again.",
-  expired: "That code has expired. Ask for a new one.",
-  too_many_attempts:
-    "That is too many tries for one code. Ask for a new one and take it slowly.",
-  no_request: "Ask for a code first, then enter it here.",
+const VERIFY_MESSAGES: Record<string, TranslationKey> = {
+  invalid_code: "failures.invalidCode",
+  expired: "failures.codeExpired",
+  too_many_attempts: "failures.tooManyAttempts",
+  no_request: "failures.noRequest",
   unavailable: VERIFY_UNAVAILABLE,
-  unauthenticated: "Your session has expired. Please sign in again.",
+  unauthenticated: "failures.sessionExpired",
 };
 
-const NETWORK =
-  "We could not reach Eraya just now. Check your connection and try again.";
+const NETWORK: TranslationKey = "failures.network";
 
 type FunctionReply = { status?: string; retryAfter?: number };
 
@@ -174,10 +167,10 @@ export async function requestCode(
   if (!isPlausibleNumber(dialCode, national)) {
     return {
       ok: false,
-      message:
+      messageKey:
         dialCode === "+91"
-          ? "That does not look like an Indian mobile number. It should be ten digits."
-          : "That does not look like a phone number. Check the digits.",
+          ? "failures.invalidIndianNumber"
+          : "auth.phone.formatError",
     };
   }
 
@@ -187,12 +180,12 @@ export async function requestCode(
     resend: options.resend === true,
   });
 
-  if (!reply) return { ok: false, message: NETWORK };
+  if (!reply) return { ok: false, messageKey: NETWORK };
   if (reply.status === "sent") return { ok: true };
 
   return {
     ok: false,
-    message: SEND_MESSAGES[reply.status ?? ""] ?? SEND_UNAVAILABLE,
+    messageKey: SEND_MESSAGES[reply.status ?? ""] ?? SEND_UNAVAILABLE,
     retryAfterSeconds: reply.retryAfter,
   };
 }
@@ -205,17 +198,17 @@ export async function requestCode(
  */
 export async function confirmCode(code: string): Promise<PhoneResult> {
   if (!/^\d{6}$/.test(code)) {
-    return { ok: false, message: "That needs to be six digits." };
+    return { ok: false, messageKey: "failures.sixDigits" };
   }
 
   const reply = await callFunction("phone-otp-verify", { code });
 
-  if (!reply) return { ok: false, message: NETWORK };
+  if (!reply) return { ok: false, messageKey: NETWORK };
   if (reply.status === "verified") return { ok: true };
 
   return {
     ok: false,
-    message: VERIFY_MESSAGES[reply.status ?? ""] ?? VERIFY_UNAVAILABLE,
+    messageKey: VERIFY_MESSAGES[reply.status ?? ""] ?? VERIFY_UNAVAILABLE,
   };
 }
 

@@ -60,7 +60,7 @@ export default function PhotoStep() {
     // Choosing not to pick one is a decision, not a failure. Reporting it as an
     // error tells somebody off for changing their mind.
     if (!result.ok) {
-      if (!result.cancelled) setError(result.message);
+      if (!result.cancelled) setError(t(result.messageKey));
       setPending(false);
       return;
     }

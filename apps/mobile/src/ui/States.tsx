@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, motion, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * The three states every screen has besides its content.
@@ -79,8 +80,8 @@ export function EmptyState({
 }
 
 export function ErrorState({
-  title = "That did not load",
-  body = "Check your connection and try again. Nothing has been lost.",
+  title,
+  body,
   onRetry,
   style,
 }: {
@@ -89,6 +90,9 @@ export function ErrorState({
   onRetry?: () => void;
   style?: ViewStyle;
 }) {
+  const t = useT();
+  const heading = title ?? t("failures.didNotLoad");
+  const detail = body ?? t("failures.didNotLoadBody");
   return (
     <View
       style={[{ alignItems: "center", paddingVertical: space.region }, style]}
@@ -107,7 +111,7 @@ export function ErrorState({
       </View>
 
       <Text variant="headline" center style={{ marginTop: space.xl }}>
-        {title}
+        {heading}
       </Text>
       <Text
         variant="body"
@@ -115,12 +119,12 @@ export function ErrorState({
         center
         style={{ marginTop: space.sm, maxWidth: 330 }}
       >
-        {body}
+        {detail}
       </Text>
 
       {onRetry ? (
         <Button
-          label="Try again"
+          label={t("common.retry")}
           variant="secondary"
           size="md"
           block={false}

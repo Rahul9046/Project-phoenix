@@ -81,7 +81,7 @@ export default function CheckEmail() {
     const result = await verifyEmailCode(email, code);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setVerifying(false);
       return;
     }
@@ -99,7 +99,7 @@ export default function CheckEmail() {
     const result = await sendEmailSignIn(email);
 
     toast.show(
-      result.ok ? t("auth.email.resent") : result.message,
+      result.ok ? t("auth.email.resent") : t(result.messageKey),
       result.ok ? "positive" : "danger",
     );
     setResending(false);

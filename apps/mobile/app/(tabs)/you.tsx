@@ -55,7 +55,7 @@ export default function You() {
 
       <Card
         onPress={() => router.push("/you/profile")}
-        accessibilityLabel="Your profile. Opens what other members see."
+        accessibilityLabel={t("mobileAccount.profileOpens")}
         style={{ marginTop: space.xxl }}
       >
         <View
@@ -68,11 +68,11 @@ export default function You() {
           />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text variant="title" numberOfLines={1} style={{ fontSize: 21 }}>
-              {profile?.firstName ?? "Your profile"}
+              {profile?.firstName ?? t("home.profileTitle")}
             </Text>
             <Text variant="bodySm" tone="muted" numberOfLines={1}>
               {[age, details.cityName].filter(Boolean).join("  ·  ") ||
-                "Tap to see your profile"}
+                t("mobileAccount.tapToSeeProfile")}
             </Text>
           </View>
           <Ionicons
@@ -87,7 +87,7 @@ export default function You() {
         <Row
           icon="create-outline"
           label={t("account.navEditProfile")}
-          hint="Your words, city, languages"
+          hint={t("mobileAccount.wordsCityLanguages")}
           onPress={() => router.push("/you/edit")}
         />
         <Row
@@ -95,7 +95,7 @@ export default function You() {
           label={t("account.navPhotos")}
           hint={
             details.photoPaths.length === 0
-              ? "None yet — optional"
+              ? t("mobileAccount.noneYetOptional")
               : details.photoPaths.length === 1
                 ? "1 photo"
                 : `${details.photoPaths.length} photos`
@@ -125,11 +125,11 @@ export default function You() {
       <Group title={t("account.membershipTitle")}>
         <Row
           icon="star-outline"
-          label={entitlements.tier === "premium" ? "Eraya Premium" : "Membership"}
+          label={entitlements.tier === "premium" ? t("marketing.pricing.premiumName") : t("account.membershipTitle")}
           hint={
             entitlements.tier === "premium"
               ? "Active"
-              : "See what premium adds"
+              : t("mobileAccount.seePremium")
           }
           onPress={() => router.push("/you/membership")}
         />
@@ -139,7 +139,7 @@ export default function You() {
         <Row
           icon="lock-closed-outline"
           label={t("account.privacyTitle")}
-          hint="What others can see"
+          hint={t("mobileAccount.whatOthersSee")}
           onPress={() => router.push("/you/privacy")}
         />
         <Row

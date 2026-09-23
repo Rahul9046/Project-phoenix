@@ -13,6 +13,8 @@ import { ConfirmSheet } from "@/ui/Sheet";
 import { Card, Divider } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { useT } from "@/features/i18n/LocaleProvider";
+import type { TFunction } from "@eraya/i18n";
 
 /**
  * Settings, and the way out of Eraya altogether.
@@ -26,7 +28,8 @@ import { useToast } from "@/ui/Toast";
  * toggle, because someone will turn it on and then trust it.
  */
 export default function Settings() {
-  const { session, profile, signOut } = useSession();
+  const t = useT();
+  const { session, signOut } = useSession();
   const toast = useToast();
 
   const [confirming, setConfirming] = useState(false);
@@ -54,15 +57,15 @@ export default function Settings() {
         Account
       </Text>
       <Card style={{ marginTop: space.md }}>
-        <Detail label="Email" value={session?.user.email ?? "Not set"} />
+        <Detail label={t("account.labelEmail")} value={session?.user.email ?? t("common.notProvided")} />
         <Divider style={{ marginVertical: space.lg }} />
         <Detail
-          label="Signed in with"
-          value={describeProvider(session?.user.app_metadata?.provider)}
+          label={t("mobileAccount.signedInWith")}
+          value={describeProvider(session?.user.app_metadata?.provider, t)}
         />
         <Divider style={{ marginVertical: space.lg }} />
         <Detail
-          label="Member since"
+          label={t("account.labelMemberSince")}
           value={
             session?.user.created_at
               ? new Date(session.user.created_at).toLocaleDateString("en-IN", {
@@ -86,11 +89,9 @@ export default function Settings() {
             color={colors.inkMuted}
           />
           <View style={{ flex: 1 }}>
-            <Text variant="label">Not built yet</Text>
+            <Text variant="label">{t("mobileAccount.notBuiltTitle")}</Text>
             <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxs }}>
-              Eraya does not send push notifications at all, so there is nothing
-              here to turn off. We would rather show you this than a switch that
-              does nothing.
+              {t("mobileAccount.notBuiltBody")}
             </Text>
           </View>
         </View>
@@ -105,7 +106,7 @@ export default function Settings() {
       </Text>
 
       <Button
-        label="Delete my account"
+        label={t("account.dangerCta")}
         variant="danger"
         onPress={() => setConfirming(true)}
         style={{ marginTop: space.lg }}
@@ -114,16 +115,15 @@ export default function Settings() {
       <ConfirmSheet
         visible={confirming}
         onClose={() => setConfirming(false)}
-        title="Delete your account?"
-        body={`This removes everything Eraya holds about you${profile?.firstName ? `, ${profile.firstName}` : ""}. It happens immediately and cannot be undone.`}
+        title={t("account.confirmTitle")}
+        body={t("account.confirmBody")}
         points={[
-          "Your profile, your answers and your photos.",
-          "Every connection you have made.",
-          "Every conversation — including for the people you were talking to.",
-          "There is no grace period, and we cannot restore it afterwards.",
+          t("account.confirmItem1"),
+          t("account.confirmItem2"),
+          t("account.confirmItem3"),
         ]}
-        cancelLabel="Keep my account"
-        confirmLabel="Delete everything"
+        cancelLabel={t("account.confirmCancel")}
+        confirmLabel={t("account.confirmCta")}
         destructive
         pending={pending}
         onConfirm={() => void remove()}
@@ -145,17 +145,17 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function describeProvider(provider: string | undefined): string {
+function describeProvider(provider: string | undefined, t: TFunction): string {
   switch (provider) {
+    /* Brand names, and they stay themselves in every language. */
     case "google":
       return "Google";
     case "facebook":
       return "Facebook";
     case "apple":
       return "Apple";
-    case "email":
-      return "An emailed code";
     default:
-      return "An emailed code";
+      return t("mobileAccount.emailedCode");
   }
 }
+

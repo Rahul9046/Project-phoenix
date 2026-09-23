@@ -5,6 +5,8 @@ import { colors, iconSize, space } from "@/theme/tokens";
 import { Screen } from "@/ui/Screen";
 import { Card } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
+import type { TranslationKey } from "@eraya/i18n";
 
 /**
  * What other members can see.
@@ -17,17 +19,18 @@ import { Text } from "@/ui/Text";
  * When something here stops being true, this screen changes on the same day.
  */
 const POINTS = [
-  "You are introduced to a few people at a time, and appear in theirs. There is no directory and no way to search for you.",
-  "Another member sees your first name, age, city, chapter, languages, and whatever you have written about yourself.",
-  "Your exact date of birth is never shown — only your age.",
-  "Your email address and phone number are never shown to anyone.",
-  "If someone passes on your profile, you are never told. If you pass on theirs, they are never told.",
-  "Nobody can message you unless you have both expressed interest.",
-  "Nobody is told when you last opened a conversation, or whether you have read a message.",
-  "Blocking is enforced by Eraya, not just hidden from view — a blocked person cannot load your profile or your photos.",
-];
+  "account.privacyPoint1",
+  "mobileAccount.privacyPointProfileFields",
+  "account.privacyPoint3",
+  "mobileAccount.privacyPointContact",
+  "mobileAccount.privacyPointPassing",
+  "account.privacyPoint6",
+  "mobileAccount.privacyPointReceipts",
+  "mobileAccount.privacyPointBlocking",
+] as const satisfies readonly TranslationKey[];
 
 export default function Privacy() {
+  const t = useT();
   return (
     <Screen>
       <Text variant="body" tone="muted">
@@ -48,7 +51,7 @@ export default function Privacy() {
                 style={{ marginTop: 1 }}
               />
               <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
-                {point}
+                {t(point)}
               </Text>
             </View>
           ))}
@@ -56,11 +59,9 @@ export default function Privacy() {
       </Card>
 
       <Card tone="sand" style={{ marginTop: space.xl }}>
-        <Text variant="label">Still being built</Text>
+        <Text variant="label">{t("mobileAccount.stillBuildingTitle")}</Text>
         <Text variant="bodySm" tone="muted" style={{ marginTop: space.sm }}>
-          Choosing who can see your photos, and browsing without appearing in
-          anyone{"\u2019"}s viewers, are both designed and not yet built. We will
-          say so here rather than implying they already work.
+          {t("mobileAccount.stillBuildingBody")}
         </Text>
       </Card>
     </Screen>

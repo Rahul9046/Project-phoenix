@@ -47,6 +47,7 @@ import { useToast } from "@/ui/Toast";
  * rather than being buried under the things that were answered at signup.
  */
 export default function EditProfile() {
+  const t = useT();
   const { profile } = useSession();
   const { details, loading } = useMyDetails();
 
@@ -62,7 +63,7 @@ export default function EditProfile() {
   if (loading || !profile) {
     return (
       <Screen>
-        <LoadingState label="Loading your profile" />
+        <LoadingState label={t("mobileAccount.loadingProfile")} />
       </Screen>
     );
   }
@@ -160,7 +161,7 @@ function EditForm({
     for (const step of steps) {
       const result = await step();
       if (!result.ok) {
-        setError(result.message);
+        setError(t(result.messageKey));
         setPending(false);
         return;
       }
@@ -169,14 +170,14 @@ function EditForm({
     await refresh();
     await reload();
     setPending(false);
-    toast.show("Your profile is updated.", "positive");
+    toast.show(t("mobileAccount.profileUpdated"), "positive");
     router.back();
   }
 
   return (
     <Screen bottomSpace={space.region}>
       <Field
-        label="First name"
+        label={t("onboarding.name.label")}
         value={firstName}
         onChangeText={setFirstName}
         autoCapitalize="words"
@@ -184,10 +185,10 @@ function EditForm({
       />
 
       <Field
-        label="About you"
+        label={t("mobileAccount.aboutYouLabel")}
         value={about}
         onChangeText={setAbout}
-        placeholder="A few lines in your own words. What you do, what your days look like, what you are like to be around."
+        placeholder={t("mobileAccount.aboutHint")}
         multiline
         maxLength={1200}
         hint={`${about.length} of 1200 characters`}
@@ -196,10 +197,10 @@ function EditForm({
       />
 
       <Field
-        label="What you are hoping for"
+        label={t("mobileAccount.hopingForLabel")}
         value={lookingFor}
         onChangeText={setLookingFor}
-        placeholder="Optional. Nobody is matched on this — it is read by people, not by an algorithm."
+        placeholder={t("mobileAccount.hopingForHint")}
         multiline
         maxLength={600}
         hint={`${lookingFor.length} of 600 characters`}
@@ -209,7 +210,7 @@ function EditForm({
 
       <Divider style={{ marginVertical: space.section }} />
 
-      <Text variant="label">Where you live</Text>
+      <Text variant="label">{t("mobileAccount.whereYouLive")}</Text>
       <Button
         label={cityLabel}
         variant="secondary"
@@ -302,7 +303,7 @@ function EditForm({
       ) : null}
 
       <Button
-        label="Save changes"
+        label={t("mobileAccount.saveChanges")}
         loading={pending}
         disabled={firstName.trim().length < 2}
         onPress={() => void save()}
@@ -312,7 +313,7 @@ function EditForm({
       <BottomSheet
         visible={pickingCity}
         onClose={() => setPickingCity(false)}
-        title="Where do you live?"
+        title={t("mobileAccount.whereDoYouLive")}
         maxHeightRatio={0.9}
       >
         <View style={{ minHeight: 320 }}>

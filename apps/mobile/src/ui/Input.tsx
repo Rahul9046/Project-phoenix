@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, hit, iconSize, radius, space } from "@/theme/tokens";
 import { text } from "@/theme/typography";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Text entry.
@@ -150,6 +151,7 @@ export function SearchField({
   accessibilityLabel: string;
   style?: ViewStyle;
 }) {
+  const t = useT();
   return (
     <View
       style={[
@@ -188,7 +190,7 @@ export function SearchField({
         <Pressable
           onPress={() => onChangeText("")}
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t("mobileAccount.clearSearch")}
           hitSlop={space.md}
         >
           <Ionicons

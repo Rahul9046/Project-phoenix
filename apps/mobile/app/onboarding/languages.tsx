@@ -64,7 +64,7 @@ export default function LanguagesStep() {
     const result = await saveLanguages(undisclosed ? [] : selected, undisclosed);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }
