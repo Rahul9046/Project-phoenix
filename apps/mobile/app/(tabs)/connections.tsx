@@ -121,7 +121,7 @@ export default function Connections() {
       {failed ? (
         /*
          * Before the empty state, because both end with no rows and only one is
-         * true. "No connections yet" is a discouraging thing to tell somebody
+         * true. t("connections.emptyTitle") is a discouraging thing to tell somebody
          * who has connections and a bad network.
          */
         <ErrorState
@@ -133,29 +133,29 @@ export default function Connections() {
       ) : conversations.length === 0 ? (
         <EmptyState
           icon="people-outline"
-          title="No connections yet"
-          body="When you and someone else both express interest, they appear here. Nobody is told you were interested unless they feel the same."
-          actionLabel="See who is here"
+          title={t("connections.emptyTitle")}
+          body={t("mobileMessages.noConnectionsBody")}
+          actionLabel={t("connections.seeWhoIsHere")}
           onAction={() => router.push("/(tabs)/discover")}
         />
       ) : null}
 
       {fresh.length > 0 ? (
         <Group
-          title="New"
-          lede="You chose each other. Nothing has been said yet."
+          title={t("mobileMessages.groupNew")}
+          lede={t("home.waitingLedeMany")}
           conversations={fresh}
         />
       ) : null}
 
       {ongoing.length > 0 ? (
-        <Group title="Talking" conversations={ongoing} />
+        <Group title={t("mobileMessages.groupTalking")} conversations={ongoing} />
       ) : null}
 
       {ended.length > 0 ? (
         <Group
-          title="Ended"
-          lede="Still readable. Nothing further can be sent."
+          title={t("mobileMessages.groupEnded")}
+          lede={t("mobileMessages.stillReadable")}
           conversations={ended}
           muted
         />

@@ -43,8 +43,8 @@ export default function YouLayout() {
       <Stack.Screen name="profile" options={{ title: "Your profile" }} />
       <Stack.Screen name="edit" options={{ title: "Edit profile" }} />
       <Stack.Screen name="photos" options={{ title: "Photos" }} />
-      <Stack.Screen name="verification" options={{ title: "Verification" }} />
-      <Stack.Screen name="membership" options={{ title: "Membership" }} />
+      <Stack.Screen name="verification" options={{ title: t("account.navVerification") }} />
+      <Stack.Screen name="membership" options={{ title: t("account.membershipTitle") }} />
       <Stack.Screen name="privacy" options={{ title: "Privacy" }} />
       <Stack.Screen name="blocked" options={{ title: "Blocked" }} />
       <Stack.Screen name="help" options={{ title: "Safety and help" }} />

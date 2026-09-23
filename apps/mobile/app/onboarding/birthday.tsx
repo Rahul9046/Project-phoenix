@@ -96,7 +96,7 @@ export default function BirthdayStep() {
     const result = await saveBirthday(chosen);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

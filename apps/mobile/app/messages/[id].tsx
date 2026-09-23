@@ -32,6 +32,7 @@ import { Text } from "@/ui/Text";
 import { LoadingState } from "@/ui/States";
 import { useToast } from "@/ui/Toast";
 import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * A conversation.
@@ -52,6 +53,7 @@ import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
  * it would mean two people who chose each other cannot speak.
  */
 export default function ConversationScreen() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { session } = useSession();
@@ -134,7 +136,7 @@ export default function ConversationScreen() {
     const result = await sendMessage(id, trimmed);
 
     if (!result.ok) {
-      toast.show(result.message, "danger");
+      toast.show(t(result.messageKey), "danger");
       setSending(false);
       return;
     }
@@ -153,7 +155,7 @@ export default function ConversationScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.canvas }}>
         <View style={{ paddingTop: insets.top }} />
-        <LoadingState label="Loading conversation" />
+        <LoadingState label={t("mobileMessages.loadingConversation")} />
       </View>
     );
   }
@@ -169,7 +171,7 @@ export default function ConversationScreen() {
         }}
       >
         <IconButton
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("mobileMessages.goBack")}
           onPress={() => router.back()}
           icon={
             <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
@@ -211,7 +213,7 @@ export default function ConversationScreen() {
         }}
       >
         <IconButton
-          accessibilityLabel="Back to messages"
+          accessibilityLabel={t("mobileMessages.backToMessages")}
           onPress={() => router.back()}
           icon={
             <Ionicons name="chevron-back" size={iconSize.lg} color={colors.ink} />
@@ -238,7 +240,7 @@ export default function ConversationScreen() {
               {name}
             </Text>
             <Text variant="caption" tone="subtle">
-              {ended ? "Connection ended" : "View profile"}
+              {ended ? t("mobileMessages.connectionEndedShort") : t("mobileMessages.viewProfile")}
             </Text>
           </View>
         </Pressable>
@@ -246,7 +248,7 @@ export default function ConversationScreen() {
         <LanguageSwitcher />
 
         <IconButton
-          accessibilityLabel="Conversation options"
+          accessibilityLabel={t("mobileMessages.conversationOptions")}
           onPress={() => setMenuOpen(true)}
           icon={
             <Ionicons
@@ -283,7 +285,7 @@ export default function ConversationScreen() {
           />
         )}
         ListHeaderComponent={
-          loadingOlder ? <LoadingState label="Loading earlier messages" /> : null
+          loadingOlder ? <LoadingState label={t("mobileMessages.loadingEarlier")} /> : null
         }
         ListEmptyComponent={
           <View style={{ alignItems: "center", paddingHorizontal: space.xl }}>
@@ -363,7 +365,7 @@ export default function ConversationScreen() {
           />
 
           <IconButton
-            accessibilityLabel="Send"
+            accessibilityLabel={t("messages.send")}
             disabled={!body.trim() || sending}
             onPress={() => void send()}
             icon={
@@ -389,7 +391,7 @@ export default function ConversationScreen() {
       >
         <MenuRow
           icon="person-outline"
-          label="View profile"
+          label={t("mobileMessages.viewProfile")}
           onPress={() => {
             setMenuOpen(false);
             router.push(`/member/${conversation.member.id}`);

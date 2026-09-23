@@ -18,6 +18,7 @@ import { BottomSheet } from "@/ui/Sheet";
 import { Card } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Your photos.
@@ -31,6 +32,7 @@ import { useToast } from "@/ui/Toast";
  * rather than being whichever was uploaded first.
  */
 export default function Photos() {
+  const t = useT();
   const { details, reload } = useMyDetails();
   const toast = useToast();
 
@@ -72,13 +74,15 @@ export default function Photos() {
     setPending(false);
 
     if (!result.ok) {
-      if (!result.cancelled) toast.show(result.message, "danger");
+      if (!result.cancelled) toast.show(t(result.messageKey), "danger");
       return;
     }
 
     await reload();
     toast.show(
-      result.paths.length === 1 ? "Photo added." : `${result.paths.length} photos added.`,
+      result.paths.length === 1
+        ? t("photos.added")
+        : t("photos.addedMany", { count: String(result.paths.length) }),
       "positive",
     );
   }
@@ -90,12 +94,12 @@ export default function Photos() {
     setSelected(null);
 
     if (!ok) {
-      toast.show("That did not delete. Please try again.", "danger");
+      toast.show(t("photos.deleteFailed"), "danger");
       return;
     }
 
     await reload();
-    toast.show("Photo removed.");
+    toast.show(t("photos.removed"));
   }
 
   async function promote(path: string) {
@@ -105,12 +109,12 @@ export default function Photos() {
     setSelected(null);
 
     if (!ok) {
-      toast.show("That did not save. Please try again.", "danger");
+      toast.show(t("photos.saveFailed"), "danger");
       return;
     }
 
     await reload();
-    toast.show("That is now your first photo.", "positive");
+    toast.show(t("photos.nowFirst"), "positive");
   }
 
   const full = details.photoPaths.length >= MAX_PHOTOS;
@@ -137,7 +141,7 @@ export default function Photos() {
             accessibilityRole="button"
             accessibilityLabel={
               index === 0
-                ? "Your first photo. Tap for options."
+                ? t("photos.firstHint")
                 : `Photo ${index + 1}. Tap for options.`
             }
             onPress={() => setSelected(path)}
@@ -179,7 +183,7 @@ export default function Photos() {
         {!full ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add a photo"
+            accessibilityLabel={t("photos.add")}
             onPress={() => void add()}
             disabled={pending}
             style={({ pressed }) => ({
@@ -206,7 +210,7 @@ export default function Photos() {
 
       {details.photoPaths.length === 0 ? (
         <Button
-          label="Add your first photo"
+          label={t("photos.addFirst")}
           variant="secondary"
           loading={pending}
           onPress={() => void add()}
@@ -232,19 +236,19 @@ export default function Photos() {
       <BottomSheet
         visible={selected !== null}
         onClose={() => setSelected(null)}
-        title="This photo"
+        title={t("photos.sheetTitle")}
       >
         <View style={{ gap: space.md }}>
           {selected && details.photoPaths[0] !== selected ? (
             <Button
-              label="Make this my first photo"
+              label={t("photos.makeFirst")}
               variant="secondary"
               disabled={pending}
               onPress={() => void promote(selected)}
             />
           ) : null}
           <Button
-            label="Remove this photo"
+            label={t("photos.removeThis")}
             variant="danger"
             loading={pending}
             onPress={() => {

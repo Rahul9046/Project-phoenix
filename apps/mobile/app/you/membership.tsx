@@ -19,6 +19,8 @@ import { Screen } from "@/ui/Screen";
 import { Card, Divider } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
 import { LoadingState } from "@/ui/States";
+import { useT } from "@/features/i18n/LocaleProvider";
+import type { TFunction, TranslationKey } from "@eraya/i18n";
 
 /**
  * Membership.
@@ -44,30 +46,34 @@ import { LoadingState } from "@/ui/States";
 const PREMIUM_ADDS = [
   {
     icon: "arrow-undo-outline",
-    title: "More second chances",
-    body: "Bring back more of the people you passed on by mistake.",
+    title: "membership.addsSecondChancesTitle",
+    body: "membership.addsSecondChancesBody",
   },
   {
     icon: "eye-off-outline",
-    title: "Browse quietly",
-    body: "Look at profiles without showing up in their viewers.",
+    title: "membership.addsQuietTitle",
+    body: "membership.addsQuietBody",
   },
   {
     icon: "trending-up-outline",
-    title: "Shown earlier",
-    body: "Your profile appears sooner in other people's introductions.",
+    title: "membership.addsEarlierTitle",
+    body: "membership.addsEarlierBody",
   },
-] as const;
+] as const satisfies readonly {
+  icon: string;
+  title: TranslationKey;
+  body: TranslationKey;
+}[];
 
 const ALWAYS_FREE = [
-  "Creating an account and your profile",
-  "Being introduced to people",
-  "Every filter — age, city, language, chapter",
-  "Expressing interest",
-  "Messaging anyone you have connected with",
-  "Blocking and reporting",
-  "Deleting your account and everything in it",
-];
+  "membership.freeAccount",
+  "membership.freeIntroductions",
+  "membership.freeFilters",
+  "membership.freeInterest",
+  "membership.freeMessaging",
+  "membership.freeBlocking",
+  "membership.freeDeletion",
+] as const satisfies readonly TranslationKey[];
 
 type Outcome =
   | { kind: "idle" }
@@ -80,6 +86,7 @@ type Outcome =
   | { kind: "unconfirmed" };
 
 export default function MembershipScreen() {
+  const t = useT();
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -203,9 +210,9 @@ export default function MembershipScreen() {
             <View style={{ flexDirection: "row", gap: space.lg }}>
               <Ionicons name={item.icon} size={iconSize.lg} color={colors.emberText} />
               <View style={{ flex: 1 }}>
-                <Text variant="label">{item.title}</Text>
+                <Text variant="label">{t(item.title)}</Text>
                 <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxs }}>
-                  {item.body}
+                  {t(item.body)}
                 </Text>
               </View>
             </View>
@@ -215,11 +222,11 @@ export default function MembershipScreen() {
 
       <View style={{ marginTop: space.section }}>
         <Text variant="eyebrow" tone="subtle" style={{ marginBottom: space.md }}>
-          {premium ? "Add more time" : "Choose how long"}
+          {premium ? t("membership.addMoreTime") : t("marketing.pricing.premiumCta")}
         </Text>
 
         {plans === null ? (
-          <LoadingState label="Loading plans" />
+          <LoadingState label={t("membership.loadingPlans")} />
         ) : (
           <View style={{ gap: space.md }}>
             {plans.map((plan) => (
@@ -243,7 +250,7 @@ export default function MembershipScreen() {
         )}
 
         <Button
-          label={chosen ? `Pay ${formatPaise(chosen.pricePaise)}` : "Choose a plan"}
+          label={chosen ? `Pay ${formatPaise(chosen.pricePaise)}` : t("membership.choosePlan")}
           loading={busy}
           disabled={!chosen || busy}
           onPress={() => void buy()}
@@ -299,7 +306,7 @@ export default function MembershipScreen() {
                 style={{ marginTop: 3 }}
               />
               <Text variant="bodySm" tone="muted" style={{ flex: 1 }}>
-                {item}
+                {t(item)}
               </Text>
             </View>
           ))}
@@ -318,41 +325,42 @@ export default function MembershipScreen() {
  * charged", which nobody here is in a position to promise.
  */
 function OutcomeNote({ outcome }: { outcome: Outcome }) {
+  const t = useT();
   if (outcome.kind === "idle" || outcome.kind === "working") return null;
 
   const note = {
     paid: {
       icon: "checkmark-circle" as const,
       tone: colors.positive,
-      title: "Premium is active",
+      title: t("membership.paidTitle"),
       body:
         outcome.kind === "paid" && outcome.until
           ? `Valid until ${formatDate(outcome.until)}.`
-          : "Thank you.",
+          : t("membership.paidThanks"),
     },
     processing: {
       icon: "time-outline" as const,
       tone: colors.inkMuted,
-      title: "Confirming your payment",
-      body: "Premium will appear here as soon as the confirmation reaches us. There is nothing you need to do.",
+      title: t("membership.processingTitle"),
+      body: t("membership.processingBody"),
     },
     cancelled: {
       icon: "close-circle-outline" as const,
       tone: colors.inkMuted,
-      title: "Payment cancelled",
-      body: "You have not been charged.",
+      title: t("membership.cancelledTitle"),
+      body: t("membership.cancelledBody"),
     },
     failed: {
       icon: "alert-circle-outline" as const,
       tone: colors.danger,
-      title: "That payment did not go through",
-      body: "Please try again. If money has left your account, it will be confirmed here automatically.",
+      title: t("membership.failedTitle"),
+      body: t("membership.failedBody"),
     },
     unconfirmed: {
       icon: "help-circle-outline" as const,
       tone: colors.inkMuted,
-      title: "We could not confirm this payment",
-      body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
+      title: t("membership.unconfirmedTitle"),
+      body: t("membership.unconfirmedBody"),
     },
   }[outcome.kind];
 
@@ -434,6 +442,7 @@ function PlanRow({
 }
 
 function PaymentRow({ payment }: { payment: PaymentRecord }) {
+  const t = useT();
   const settled = payment.status === "paid";
 
   return (
@@ -458,7 +467,7 @@ function PaymentRow({ payment }: { payment: PaymentRecord }) {
           variant="caption"
           style={{ color: settled ? colors.positive : colors.inkSubtle }}
         >
-          {readableStatus(payment.status)}
+          {readableStatus(payment.status, t)}
         </Text>
       </View>
     </View>
@@ -466,19 +475,20 @@ function PaymentRow({ payment }: { payment: PaymentRecord }) {
 }
 
 /** Provider vocabulary is not member vocabulary. */
-function readableStatus(status: string): string {
-  return (
-    {
-      paid: "Paid",
-      created: "Not completed",
-      authorized: "Confirming",
-      failed: "Failed",
-      cancelled: "Cancelled",
-      refunded: "Refunded",
-      partially_refunded: "Partly refunded",
-    }[status] ?? "Unknown"
-  );
+/** Provider vocabulary is not member vocabulary. */
+function readableStatus(status: string, t: TFunction): string {
+  const key = {
+    paid: "membership.statusPaid",
+    created: "membership.statusNotCompleted",
+    authorized: "membership.statusConfirming",
+    failed: "membership.statusFailed",
+    cancelled: "membership.statusCancelled",
+    refunded: "membership.statusRefunded",
+    partially_refunded: "membership.statusPartlyRefunded",
+  }[status] as TranslationKey | undefined;
+  return key ? t(key) : t("membership.statusUnknown");
 }
+
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";

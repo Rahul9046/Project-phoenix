@@ -44,7 +44,7 @@ export default function RelationshipStep() {
     const result = await saveRelationship(value);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

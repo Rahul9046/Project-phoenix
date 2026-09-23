@@ -131,9 +131,9 @@ export default function Messages() {
           ) : (
             <EmptyState
               icon="chatbubbles-outline"
-              title="No conversations yet"
-              body="Conversations begin after you and someone else have both expressed interest. Nobody can message you before that."
-              actionLabel="See who is here"
+              title={t("messages.noConversationsTitle")}
+              body={t("messages.noConversationsBody")}
+              actionLabel={t("connections.seeWhoIsHere")}
               onAction={() => router.push("/(tabs)/discover")}
             />
           )
@@ -144,11 +144,12 @@ export default function Messages() {
 }
 
 function Row({ conversation }: { conversation: Loaded }) {
+  const t = useT();
   const preview = conversation.endedAt
-    ? "This connection has ended."
+    ? t("connections.ended")
     : conversation.lastMessage
-      ? `${conversation.lastMessageFromMe ? "You: " : ""}${conversation.lastMessage}`
-      : "Say hello when you are ready.";
+      ? `${conversation.lastMessageFromMe ? t("mobileMessages.youPrefix") : ""}${conversation.lastMessage}`
+      : t("home.sayHello");
 
   return (
     <Card
@@ -201,7 +202,7 @@ function Row({ conversation }: { conversation: Loaded }) {
 
         {conversation.unread ? (
           <View
-            accessibilityLabel="Unread"
+            accessibilityLabel={t("home.unread")}
             style={{
               width: 9,
               height: 9,

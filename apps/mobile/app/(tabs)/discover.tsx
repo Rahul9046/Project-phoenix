@@ -179,7 +179,7 @@ export default function Discover() {
     const result = await expressInterest(current.id, decision);
 
     if (!result.ok) {
-      toast.show(result.message, "danger");
+      toast.show(t(result.messageKey), "danger");
       setDeciding(null);
       return;
     }
@@ -213,13 +213,13 @@ export default function Discover() {
     if (!restored) {
       toast.show(
         reverts > 0
-          ? "There is nothing to bring back."
-          : "You have used all of today's second chances. They return tomorrow.",
+          ? t("mobileDiscovery.nothingToBringBack")
+          : t("mobileDiscovery.secondChancesUsed"),
       );
       return;
     }
 
-    toast.show("Brought back into your introductions.", "positive");
+    toast.show(t("mobileDiscovery.broughtBack"), "positive");
     setLoading(true);
     setMembers([]);
     setCursor(0);
@@ -360,16 +360,16 @@ export default function Discover() {
         ) : activeCount > 0 ? (
           <EmptyState
             icon="options-outline"
-            title="Nobody matches those filters"
-            body="Try widening the age range, or adding another city. Eraya is young, so narrow filters find fewer people than they will in a few months."
-            actionLabel="Clear filters"
+            title={t("mobileDiscovery.noMatchesTitle")}
+            body={t("mobileDiscovery.noMatchesBody")}
+            actionLabel={t("mobileDiscovery.clearFilters")}
             onAction={() => void apply(emptyFilters)}
           />
         ) : (
           <EmptyState
             icon="leaf-outline"
-            title="That is everyone for now"
-            body="You have seen everyone we have for today. New people arrive as the community grows, and a fresh set is chosen each morning."
+            title={t("mobileDiscovery.everyoneTitle")}
+            body={t("mobileDiscovery.everyoneBody")}
           />
         )}
       </View>

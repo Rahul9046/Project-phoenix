@@ -123,11 +123,11 @@ export function SafetyActions({
     close();
 
     if (!ok) {
-      toast.show("That did not go through. Please try again.", "danger");
+      toast.show(t("safety.actionFailed"), "danger");
       return;
     }
 
-    toast.show(`${memberName} is blocked.`, "positive");
+    toast.show(t("safety.blockedToast", { name: memberName }), "positive");
     onDone();
   }
 
@@ -139,11 +139,11 @@ export function SafetyActions({
     close();
 
     if (!ok) {
-      toast.show("That did not go through. Please try again.", "danger");
+      toast.show(t("safety.actionFailed"), "danger");
       return;
     }
 
-    toast.show("The connection has ended.");
+    toast.show(t("safety.connectionEnded"));
     onDone();
   }
 
@@ -161,13 +161,13 @@ export function SafetyActions({
       >
         {connectionId ? (
           <TextButton
-            label="End connection"
+            label={t("safety.endTitle")}
             tone="muted"
             onPress={() => setSheet("end")}
           />
         ) : null}
         <TextButton
-          label="Block"
+          label={t("messages.blockCta")}
           tone="muted"
           onPress={() => setSheet("block")}
         />
@@ -181,15 +181,15 @@ export function SafetyActions({
       <ConfirmSheet
         visible={sheet === "end"}
         onClose={close}
-        title={`End your connection with ${memberName}?`}
-        body="Neither of you will be able to send anything further. What has already been said stays readable to you both."
+        title={t("safety.endTitleNamed", { name: memberName })}
+        body={t("safety.endPoint1")}
         points={[
-          "This cannot be undone.",
-          `${memberName} is not told that you ended it.`,
-          "They will not appear in your introductions again.",
+          t("safety.cannotBeUndone"),
+          t("safety.endNotTold", { name: memberName }),
+          t("safety.endPoint2"),
         ]}
-        cancelLabel="Keep the connection"
-        confirmLabel="End connection"
+        cancelLabel={t("safety.keepConnection")}
+        confirmLabel={t("safety.endTitle")}
         destructive
         pending={pending}
         onConfirm={() => void submitEnd()}
@@ -198,15 +198,15 @@ export function SafetyActions({
       <ConfirmSheet
         visible={sheet === "block"}
         onClose={close}
-        title={`Block ${memberName}?`}
-        body="You will not see each other again anywhere in Eraya, and neither of you can send the other anything."
+        title={t("safety.blockTitleNamed", { name: memberName })}
+        body={t("safety.blockPoint1")}
         points={[
-          `${memberName} is not told that you blocked them.`,
-          "Any conversation between you is closed.",
-          "This is enforced by Eraya, not just hidden from view.",
+          t("safety.blockNotTold", { name: memberName }),
+          t("safety.blockPoint2"),
+          t("safety.blockPoint3"),
         ]}
-        cancelLabel="Cancel"
-        confirmLabel={`Block ${memberName}`}
+        cancelLabel={t("common.cancel")}
+        confirmLabel={t("safety.blockConfirmNamed", { name: memberName })}
         destructive
         pending={pending}
         onConfirm={() => void submitBlock()}

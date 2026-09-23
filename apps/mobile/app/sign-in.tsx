@@ -59,7 +59,7 @@ export default function SignIn() {
 
     // A cancelled sign-in is a decision, not a failure. Showing an error for it
     // tells someone off for changing their mind.
-    if (!result.ok && !result.cancelled) setError(result.message);
+    if (!result.ok && !result.cancelled) setError(t(result.messageKey));
     setPending(null);
   }
 
@@ -70,7 +70,7 @@ export default function SignIn() {
     const result = await sendEmailSignIn(email);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(null);
       return;
     }

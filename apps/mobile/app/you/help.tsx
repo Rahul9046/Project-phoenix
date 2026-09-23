@@ -6,6 +6,8 @@ import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Card } from "@/ui/Surface";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
+import type { TranslationKey } from "@eraya/i18n";
 
 /**
  * Safety and help.
@@ -21,27 +23,32 @@ import { Text } from "@/ui/Text";
 const ADVICE = [
   {
     icon: "chatbubbles-outline",
-    title: "Take your time in the conversation",
-    body: "There is no hurry here and nobody is counting. Somebody pushing to move to another app or to meet immediately is telling you something.",
+    title: "help.takeTimeTitle",
+    body: "help.takeTimeBody",
   },
   {
     icon: "cafe-outline",
-    title: "Meet somewhere public, the first few times",
-    body: "A café in the middle of the afternoon. Tell someone you trust where you are going and when you expect to be back.",
+    title: "help.meetPublicTitle",
+    body: "help.meetPublicBody",
   },
   {
     icon: "wallet-outline",
-    title: "Never send money",
-    body: "No genuine person you met here will ask. An emergency that needs a transfer today is the oldest pattern there is.",
+    title: "help.neverSendMoneyTitle",
+    body: "help.neverSendMoneyBody",
   },
   {
     icon: "hand-left-outline",
-    title: "Block without explaining yourself",
-    body: "You owe nobody a reason. Blocking is immediate, it is enforced by Eraya rather than hidden from view, and they are never told.",
+    title: "help.blockTitle",
+    body: "help.blockBody",
   },
-] as const;
+] as const satisfies readonly {
+  icon: string;
+  title: TranslationKey;
+  body: TranslationKey;
+}[];
 
 export default function Help() {
+  const t = useT();
   return (
     <Screen>
       <Text variant="title">Staying safe</Text>
@@ -56,13 +63,13 @@ export default function Help() {
                 color={colors.emberText}
               />
               <View style={{ flex: 1 }}>
-                <Text variant="label">{item.title}</Text>
+                <Text variant="label">{t(item.title)}</Text>
                 <Text
                   variant="bodySm"
                   tone="muted"
                   style={{ marginTop: space.xxs }}
                 >
-                  {item.body}
+                  {t(item.body)}
                 </Text>
               </View>
             </View>
@@ -71,12 +78,9 @@ export default function Help() {
       </View>
 
       <Card tone="sand" style={{ marginTop: space.section }}>
-        <Text variant="label">What Eraya can and cannot do</Text>
+        <Text variant="label">{t("help.limitsTitle")}</Text>
         <Text variant="bodySm" tone="muted" style={{ marginTop: space.sm }}>
-          Blocking works immediately and is enforced by the system. Reports are
-          recorded, but Eraya is small and has no moderation team yet, so we
-          cannot promise that anyone will read one or reply to you. If something
-          serious happens, please contact the police as well as us.
+          {t("help.limitsBody")}
         </Text>
       </Card>
 

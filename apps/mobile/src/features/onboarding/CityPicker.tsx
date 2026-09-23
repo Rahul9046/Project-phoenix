@@ -7,6 +7,7 @@ import { colors, hit, iconSize, radius, space } from "@/theme/tokens";
 import { SearchField } from "@/ui/Input";
 import { Text } from "@/ui/Text";
 import { LoadingState } from "@/ui/States";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Finding your city.
@@ -42,6 +43,7 @@ export function CityPicker({
   selected: { id: string; label: string } | { name: string } | null;
   onSelect: (city: { id: string; label: string } | { name: string }) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CityResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -91,8 +93,8 @@ export function CityPicker({
       <SearchField
         value={query}
         onChangeText={setQuery}
-        placeholder="Start typing your city"
-        accessibilityLabel="Search for your city"
+        placeholder={t("onboarding.city.searchPlaceholder")}
+        accessibilityLabel={t("onboarding.city.searchLabel")}
         autoFocus={selectedLabel === null}
       />
 
@@ -120,7 +122,7 @@ export function CityPicker({
       ) : null}
 
       {searching && visibleResults.length === 0 ? (
-        <LoadingState label="Searching cities" />
+        <LoadingState label={t("mobileDiscovery.searchingCities")} />
       ) : null}
 
       <View style={{ marginTop: visibleResults.length ? space.lg : 0 }}>

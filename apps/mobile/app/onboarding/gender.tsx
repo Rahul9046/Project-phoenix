@@ -37,7 +37,7 @@ export default function GenderStep() {
     const result = await saveGender(value);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }
