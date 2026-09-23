@@ -547,6 +547,14 @@ for (const fn of [
   "claim_phone_otp_attempt",
   "complete_phone_otp",
   "record_phone_event",
+  /*
+   * The send ledger, which decides a member's remaining allowance and their
+   * cooldown. Reachable from a browser it would be a way to mark somebody's
+   * own reservations spent -- pointless as sabotage, and exactly the kind of
+   * thing that is only pointless until somebody finds a use for it.
+   */
+  "confirm_phone_otp_send",
+  "record_phone_otp_send",
 ]) {
   const { status } = await request(meera.token, `rpc/${fn}`, {
     method: "POST",
