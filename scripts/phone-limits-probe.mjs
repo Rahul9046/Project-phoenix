@@ -452,6 +452,76 @@ try {
     claimRow?.phone_number === NUMBERS.app,
     `masked ${mask(String(claimRow?.phone_number ?? ""))}`,
   );
+  /*
+   * L is not about the database at all. It is here because the resend failure
+   * of 2026-09-23 was a disagreement between this repository and a setting in
+   * somebody's dashboard, and nothing in a typecheck, a lint or a build can see
+   * that kind of disagreement. The widget id and token auth are public
+   * configuration -- they are in the page already -- so the check costs
+   * nothing and no secret is read or printed.
+   */
+  console.log("\nL. The resend contract still matches the live widget");
+
+  const widgetId = env.NEXT_PUBLIC_MSG91_WIDGET_ID;
+  const tokenAuth = env.NEXT_PUBLIC_MSG91_TOKEN_AUTH;
+
+  if (!widgetId || !tokenAuth) {
+    check("widget configuration is present to check against", false, "missing widget id or token auth");
+  } else {
+    const reply = await fetch(
+      `https://control.msg91.com/api/v5/widget/getWidgetProcess?widgetId=${encodeURIComponent(widgetId)}`,
+      { headers: { tokenAuth, Accept: "application/json" } },
+    );
+    const widget = (await reply.json().catch(() => ({})))?.data ?? {};
+    const widgetType = String(widget?.widgetType?.value ?? "");
+    const retryProcess = (widget?.processes ?? []).find(
+      (p) => String(p?.processVia?.value ?? "") === "5",
+    );
+    const retryChannel = String(retryProcess?.channel?.value ?? "");
+    const globalDefault =
+      widget?.globalDefaultChannel === undefined || widget?.globalDefaultChannel === null
+        ? ""
+        : String(widget.globalDefaultChannel);
+
+    check("the widget configuration is readable", reply.status === 200 && Boolean(widgetType), `status ${reply.status}`);
+
+    /*
+     * The whole reason resend failed. On a type "2" widget `retryOtp` refuses a
+     * null channel, and refuses it by *throwing* rather than through the
+     * failure callback -- so the client must pass one. If this widget ever
+     * becomes type "1" the argument is ignored and passing it stays harmless,
+     * which is why this is a note rather than a branch in the client.
+     */
+    check(
+      "a resend channel is required by this widget, and the client sends one",
+      widgetType !== "2" || Boolean(globalDefault) || Boolean(retryChannel),
+      `widgetType=${widgetType} globalDefaultChannel=${globalDefault || "none"} retryProcessChannel=${retryChannel || "none"}`,
+    );
+
+    check(
+      "the retry process exists and is a channel the client can name",
+      Boolean(retryChannel),
+      `processes carry no RETRY entry: ${JSON.stringify((widget?.processes ?? []).map((p) => p?.processVia?.name))}`,
+    );
+
+    /*
+     * The client prefers `globalDefaultChannel` and falls back to SMS. If the
+     * dashboard's retry process ever disagrees with the global default, the
+     * resend would go out over a channel nobody chose -- so the two are
+     * required to agree rather than assumed to.
+     */
+    check(
+      "the retry channel and the global default agree, so the client cannot pick the wrong one",
+      !globalDefault || !retryChannel || globalDefault === retryChannel,
+      `globalDefaultChannel=${globalDefault} retryProcessChannel=${retryChannel}`,
+    );
+
+    check(
+      "the client's SMS fallback still matches this widget's retry channel",
+      retryChannel === "11",
+      `expected 11 (SMS), configuration says ${retryChannel || "none"} — update SMS_CHANNEL in msg91-widget.ts`,
+    );
+  }
 } finally {
   console.log("\nCleaning up");
   const ids = created.filter(Boolean);
