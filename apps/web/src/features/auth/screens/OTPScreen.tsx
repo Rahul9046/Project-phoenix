@@ -7,7 +7,6 @@ import { recordPhoneStepComplete } from "@/features/auth/actions";
 import { AuthHeader } from "@/features/auth/components/AuthHeader";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { AuthLoading } from "@/features/auth/components/AuthLoading";
-import { CaptchaSlot } from "@/features/auth/components/CaptchaSlot";
 import { ErrorMessage } from "@/features/auth/components/ErrorMessage";
 import { OTPInput, OTP_LENGTH } from "@/features/auth/components/OTPInput";
 import { SuccessMessage } from "@/features/auth/components/SuccessMessage";
@@ -53,6 +52,7 @@ export function OTPScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  const [skipping, setSkipping] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendNote, setResendNote] = useState<string | null>(null);
   /*
@@ -204,6 +204,45 @@ export function OTPScreen() {
     }
   }
 
+  /**
+   * Past the step, from the screen where somebody is most likely to be stuck.
+   *
+   * The same decision the phone screen offers, moved to where the code never
+   * arrived -- which is the moment it is actually wanted. It reuses
+   * `recordPhoneStepComplete`, so it writes the stage and nothing else: no
+   * number, no timestamp, no status, and not a word to MSG91. A member who
+   * skips is indistinguishable from one who was never asked.
+   *
+   * Two people leave by this door. Somebody in the middle of signing up moves
+   * to the next question. Somebody who came from Account -> Verification goes
+   * back where they came from, and nothing is written for them at all: their
+   * stage passed this point long ago, and recording a decision they already
+   * made would be a second source of truth about it.
+   */
+  async function skip() {
+    if (pending || resending || skipping || verified) return;
+
+    setError(null);
+
+    if (!duringOnboarding) {
+      router.push(appRoutes.verification);
+      return;
+    }
+
+    setSkipping(true);
+
+    const saved = await recordPhoneStepComplete();
+    if (!saved.ok) {
+      setError(saved.message);
+      setSkipping(false);
+      return;
+    }
+
+    router.push(nextRoute({ ...session, stage: "phoneStepDone" }));
+  }
+
+  const duringOnboarding = !stageAtLeast(session.stage, "onboardingCompleted");
+
   // Masked: they typed it one screen ago, and the last digits are enough to
   // show it went where they meant.
   const lede = session.phone
@@ -251,23 +290,6 @@ export function OTPScreen() {
           without anything being focused; `off` while verified, when the screen
           is about to navigate and has nothing left to announce.
         */}
-        {/*
-          The challenge follows the member here, and is put away when they are
-          done with it.
-
-          Asking for another code is a send, and the screen should be able to
-          show a challenge if MSG91 wants one answered. It is borrowed from the
-          layout exactly as the phone screen borrows it, so this is the same
-          element and the same single initialisation -- not a second one, which
-          is a thing that has been tried here and produces an empty box.
-
-          Withheld once `verified` is true: the screen is about to navigate and
-          a captcha on a finished screen is furniture.
-        */}
-        {!verified ? (
-          <CaptchaSlot className="mt-6 flex justify-center overflow-x-auto [&>div:empty]:hidden" />
-        ) : null}
-
         {!verified && resendIn !== null ? (
           <p
             aria-live="polite"
@@ -297,14 +319,48 @@ export function OTPScreen() {
         {verified ? (
           <SuccessMessage className="mt-7">{t("auth.otp.success")}</SuccessMessage>
         ) : (
-          <PrimaryButton
-            type="submit"
-            loading={pending}
-            loadingLabel={t("common.saving")}
-            className="mt-7"
-          >
-            {t("auth.otp.cta")}
-          </PrimaryButton>
+          <>
+            {/*
+              Held until there is a code to check.
+
+              It used to be pressable with an empty field, which spends a
+              network round trip to be told what the screen already knew, and
+              answers somebody who has typed nothing with an error about what
+              they typed. `incompleteError` still exists and still fires --
+              nothing about the server's validation has moved -- but it is now
+              for the paths that can reach it rather than the ordinary one.
+            */}
+            <PrimaryButton
+              type="submit"
+              loading={pending}
+              loadingLabel={t("common.saving")}
+              disabled={code.length !== OTP_LENGTH || skipping}
+              className="mt-7"
+            >
+              {t("auth.otp.cta")}
+            </PrimaryButton>
+
+            {/*
+              And the way past the question, on the screen where somebody is
+              most likely to want it.
+
+              The phone screen has always offered this, but the person who
+              needs it is usually here: they gave a number, the code did not
+              come, and until now the only ways out were backwards or a resend
+              that may not help either. Below Continue rather than beside it --
+              a real choice and the second of the two.
+            */}
+            <p className="mt-5 text-center">
+              <button
+                type="button"
+                onClick={() => void skip()}
+                disabled={pending || resending || skipping}
+                className="rounded-full font-medium text-ember-text underline underline-offset-4 transition-colors hover:text-ember-strong disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {skipping ? t("auth.phone.skipping") : t("auth.phone.skip")}
+              </button>
+            </p>
+          </>
         )}
       </form>
 
