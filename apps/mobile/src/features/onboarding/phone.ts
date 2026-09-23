@@ -111,6 +111,14 @@ const SEND_MESSAGES: Record<string, string> = {
     "That is several codes in a short time. Please try again a little later.",
   number_daily_cap:
     "That is several codes in a short time. Please try again a little later.",
+  /*
+   * The limits live in `begin_phone_otp`, which both clients call, so a status
+   * added for the web arrives here too. Without a line of its own it would fall
+   * through to `SEND_UNAVAILABLE` and report an outage -- the exact failure the
+   * web had until 2026-09-22, arriving by the other door.
+   */
+  user_attempt_cap:
+    "That is several attempts in a short time. Please try again a little later.",
   daily_cap: SEND_UNAVAILABLE,
   capacity_exhausted: SEND_UNAVAILABLE,
   unavailable: SEND_UNAVAILABLE,
