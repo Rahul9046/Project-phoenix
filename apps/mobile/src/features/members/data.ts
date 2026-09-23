@@ -2,6 +2,7 @@ import {
   REPORT_REASONS,
   reportNeedsDetails,
   type ReportReasonCode,
+  type TranslationKey,
 } from "@eraya/i18n";
 
 import { supabase } from "@/lib/supabase/client";
@@ -190,7 +191,7 @@ export async function getMember(id: string): Promise<Member | null> {
 
 export type InterestOutcome =
   | { ok: true; connectionId: string | null }
-  | { ok: false; message: string };
+  | { ok: false; messageKey: TranslationKey };
 
 /**
  * Expressing interest, or passing.
@@ -215,7 +216,7 @@ export async function expressInterest(
   if (error) {
     return {
       ok: false,
-      message: "That did not go through. Please try again in a moment.",
+      messageKey: "failures.actionFailedMoment",
     };
   }
 
@@ -338,20 +339,20 @@ export async function getMessages(
     .reverse();
 }
 
-export type SendResult = { ok: true } | { ok: false; message: string };
+export type SendResult = { ok: true } | { ok: false; messageKey: TranslationKey };
 
 export async function sendMessage(
   connectionId: string,
   body: string,
 ): Promise<SendResult> {
   const trimmed = body.trim();
-  if (!trimmed) return { ok: false, message: "Write something first." };
+  if (!trimmed) return { ok: false, messageKey: "failures.writeSomething" };
 
   const { data: auth } = await supabase.auth.getUser();
   const senderId = auth.user?.id;
 
   if (!senderId) {
-    return { ok: false, message: "Your session has expired. Please sign in again." };
+    return { ok: false, messageKey: "failures.sessionExpired" };
   }
 
   const { error } = await supabase
@@ -367,10 +368,10 @@ export async function sendMessage(
     if (error.code === "42501") {
       return {
         ok: false,
-        message: "This conversation has ended. Nothing further can be sent.",
+        messageKey: "failures.conversationEnded",
       };
     }
-    return { ok: false, message: "That did not send. Please try again." };
+    return { ok: false, messageKey: "failures.sendFailed" };
   }
 
   return { ok: true };

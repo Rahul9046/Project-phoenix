@@ -73,7 +73,7 @@ export default function PhoneStep() {
     const saved = await recordPhoneStepComplete(profile?.stage ?? "authenticated");
 
     if (!saved.ok) {
-      setError(saved.message);
+      setError(t(saved.messageKey));
       setSkipping(false);
       return;
     }
@@ -90,7 +90,7 @@ export default function PhoneStep() {
     const result = await requestCode(dialCode, national);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

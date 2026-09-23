@@ -4,6 +4,7 @@ import type { Provider } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
 import { maskEmail, recordAuthEvent } from "@/features/auth/events";
+import type { TranslationKey } from "@eraya/i18n";
 
 /**
  * Signing in.
@@ -75,10 +76,9 @@ export const EMAIL_LINK_REDIRECT = "eraya://auth";
 
 export type SignInResult =
   | { ok: true }
-  | { ok: false; cancelled?: boolean; message: string };
+  | { ok: false; cancelled?: boolean; messageKey: TranslationKey };
 
-const GENERIC =
-  "We could not sign you in just now. Please check your connection and try again.";
+const GENERIC: TranslationKey = "failures.signInNetwork";
 
 /**
  * Reads whatever Supabase sent back.
@@ -148,11 +148,15 @@ function claimReturnedUrl(url: string): boolean {
 
 /** Turns either shape into a session. Shared by the OAuth and link paths. */
 async function establishSession(returned: ReturnedUrl): Promise<SignInResult> {
-  if (returned.error) return { ok: false, message: returned.error };
+  if (returned.error) {
+    // The provider's own words are for whoever reads the logs, not for a member.
+    console.warn("[eraya] sign-in returned an error:", returned.error);
+    return { ok: false, messageKey: GENERIC };
+  }
 
   if (returned.code) {
     const { error } = await supabase.auth.exchangeCodeForSession(returned.code);
-    return error ? { ok: false, message: error.message } : { ok: true };
+    return error ? { ok: false, messageKey: GENERIC } : { ok: true };
   }
 
   if (returned.accessToken && returned.refreshToken) {
@@ -160,10 +164,10 @@ async function establishSession(returned: ReturnedUrl): Promise<SignInResult> {
       access_token: returned.accessToken,
       refresh_token: returned.refreshToken,
     });
-    return error ? { ok: false, message: error.message } : { ok: true };
+    return error ? { ok: false, messageKey: GENERIC } : { ok: true };
   }
 
-  return { ok: false, message: GENERIC };
+  return { ok: false, messageKey: GENERIC };
 }
 
 export async function signInWithProvider(
@@ -182,7 +186,7 @@ export async function signInWithProvider(
   });
 
   if (error || !data?.url) {
-    return { ok: false, message: error?.message ?? GENERIC };
+    return { ok: false, messageKey: GENERIC };
   }
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
@@ -193,12 +197,12 @@ export async function signInWithProvider(
   if (result.type === "cancel" || result.type === "dismiss") {
     // Changing your mind is not a failure, and counting it as one would make
     // the provider look broken in the numbers.
-    return { ok: false, cancelled: true, message: "Sign-in was cancelled." };
+    return { ok: false, cancelled: true, messageKey: "failures.signInCancelled" };
   }
 
   if (result.type !== "success") {
     recordProviderOutcome(provider, false, "browser_closed");
-    return { ok: false, message: GENERIC };
+    return { ok: false, messageKey: GENERIC };
   }
 
   if (!claimReturnedUrl(result.url)) {
@@ -237,7 +241,7 @@ export async function sendEmailSignIn(email: string): Promise<SignInResult> {
   const trimmed = email.trim().toLowerCase();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
-    return { ok: false, message: "That does not look like an email address." };
+    return { ok: false, messageKey: "failures.invalidEmail" };
   }
 
   const identifier = maskEmail(trimmed);
@@ -258,8 +262,7 @@ export async function sendEmailSignIn(email: string): Promise<SignInResult> {
       recordAuthEvent("email_auth_failure", { identifier, reason: "rate_limited" });
       return {
         ok: false,
-        message:
-          "We have sent a few codes to this address already. Please wait a little while before asking for another.",
+        messageKey: "failures.emailRateLimited",
       };
     }
 
@@ -278,8 +281,7 @@ export async function sendEmailSignIn(email: string): Promise<SignInResult> {
     });
     return {
       ok: false,
-      message:
-        "We could not send your code just now. Please check the address and try again shortly.",
+      messageKey: "failures.emailSendFailed",
     };
   }
 
@@ -311,7 +313,7 @@ export async function verifyEmailCode(
   const token = code.trim();
 
   if (!/^\d{6}$/.test(token)) {
-    return { ok: false, message: "That needs to be the six digits from the email." };
+    return { ok: false, messageKey: "failures.emailSixDigits" };
   }
 
   const { error } = await supabase.auth.verifyOtp({
@@ -329,15 +331,14 @@ export async function verifyEmailCode(
       recordAuthEvent("email_auth_failure", { identifier, reason: "invalid_code" });
       return {
         ok: false,
-        message:
-          "That code did not work. It may have expired -- ask for a new email and use the latest one.",
+        messageKey: "failures.emailCodeFailed",
       };
     }
 
     recordAuthEvent("email_auth_failure", { identifier, reason: "verify_failed" });
     return {
       ok: false,
-      message: "We could not sign you in just now. Please try again in a moment.",
+      messageKey: "failures.signInFailed",
     };
   }
 

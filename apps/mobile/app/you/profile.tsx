@@ -195,7 +195,7 @@ export default function MyProfile() {
       </View>
 
       <Button
-        label="Edit profile"
+        label={t("account.navEditProfile")}
         variant="secondary"
         onPress={() => router.push("/you/edit")}
         style={{ marginTop: space.section }}

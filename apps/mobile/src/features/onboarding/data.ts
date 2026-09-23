@@ -1,4 +1,5 @@
 import { LEGAL_VERSION } from "@eraya/legal";
+import type { TranslationKey } from "@eraya/i18n";
 
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -26,26 +27,25 @@ import {
  * your date of birth" is what the person actually needs to do next.
  */
 
-export type SaveResult = { ok: true } | { ok: false; message: string };
+export type SaveResult = { ok: true } | { ok: false; messageKey: TranslationKey };
 
-const GENERIC =
-  "We could not save that just now. Please check your connection and try again.";
+const GENERIC: TranslationKey = "failures.saveFailed";
 
-function describe(error: { code?: string; message: string }): string {
+function describe(error: { code?: string; message: string }): TranslationKey {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
   if (code === "23514" && message.includes("date_of_birth_adult")) {
-    return "Eraya is for people aged 18 and over. Please check the year in your date of birth.";
+    return "failures.underage";
   }
   if (code === "23514" && message.includes("about_length")) {
-    return "That is a little longer than we can store. Please shorten it slightly.";
+    return "failures.tooLong";
   }
   if (code === "22P02") {
-    return "One of those answers was not recognised. Please choose it again.";
+    return "failures.unrecognisedAnswer";
   }
   if (code === "PGRST301" || code === "42501") {
-    return "Your session has expired. Please sign in again.";
+    return "failures.sessionExpired";
   }
   return GENERIC;
 }
@@ -57,7 +57,7 @@ async function patch(
   const id = data.user?.id;
 
   if (!id) {
-    return { ok: false, message: "Your session has expired. Please sign in again." };
+    return { ok: false, messageKey: "failures.sessionExpired" };
   }
 
   /*
@@ -75,7 +75,7 @@ async function patch(
       code: error.code,
       message: error.message,
     });
-    return { ok: false, message: describe(error) };
+    return { ok: false, messageKey: describe(error) };
   }
 
   return { ok: true };
@@ -170,7 +170,7 @@ export async function saveLanguages(
   const id = data.user?.id;
 
   if (!id) {
-    return { ok: false, message: "Your session has expired. Please sign in again." };
+    return { ok: false, messageKey: "failures.sessionExpired" };
   }
 
   const { error: clearError } = await supabase
@@ -178,7 +178,7 @@ export async function saveLanguages(
     .delete()
     .eq("profile_id", id);
 
-  if (clearError) return { ok: false, message: describe(clearError) };
+  if (clearError) return { ok: false, messageKey: describe(clearError) };
 
   if (!undisclosed && languageIds.length > 0) {
     const { error: insertError } = await supabase
@@ -190,7 +190,7 @@ export async function saveLanguages(
         })),
       );
 
-    if (insertError) return { ok: false, message: describe(insertError) };
+    if (insertError) return { ok: false, messageKey: describe(insertError) };
   }
 
   return patch({ languages_undisclosed: undisclosed });

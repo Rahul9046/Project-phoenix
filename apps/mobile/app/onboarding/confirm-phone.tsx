@@ -79,7 +79,7 @@ export default function ConfirmPhoneStep() {
     setResending(false);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       // The server knows how long is left better than the countdown does.
       if (result.retryAfterSeconds) setSecondsLeft(result.retryAfterSeconds);
       return;
@@ -102,7 +102,7 @@ export default function ConfirmPhoneStep() {
     const checked = await confirmCode(code);
 
     if (!checked.ok) {
-      setError(checked.message);
+      setError(t(checked.messageKey));
       setPending(false);
       return;
     }

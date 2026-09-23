@@ -10,6 +10,8 @@ import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";
 import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { useT } from "@/features/i18n/LocaleProvider";
+import type { TFunction } from "@eraya/i18n";
 
 /**
  * What happened to the payment.
@@ -39,6 +41,7 @@ import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
 type State = { kind: "checking" } | { kind: "settled"; outcome: PurchaseOutcome };
 
 export default function PaymentReturn() {
+  const t = useT();
   const params = useLocalSearchParams<{ order_id?: string; status?: string }>();
   const orderId = typeof params.order_id === "string" ? params.order_id : "";
   const cancelled = params.status === "cancelled";
@@ -77,7 +80,8 @@ export default function PaymentReturn() {
    * writes after a signature check, and never by a screen.
    */
 
-  const note = state.kind === "checking" ? checking : noteFor(state.outcome);
+  const note =
+    state.kind === "checking" ? checkingNote(t) : noteFor(state.outcome, t);
 
   return (
     <Screen>
@@ -134,7 +138,7 @@ export default function PaymentReturn() {
         */}
         {state.kind === "settled" && state.outcome.status === "processing" ? (
           <Button
-            label="Check again"
+            label={t("payment.checkAgain")}
             variant="secondary"
             size="md"
             block={false}
@@ -159,14 +163,14 @@ type Note = {
   action: string;
 };
 
-const checking: Note = {
+const checkingNote = (t: TFunction): Note => ({
   icon: "hourglass-outline",
   tone: colors.inkMuted,
   tint: colors.sand,
-  title: "Checking your payment",
-  body: "Asking our server what happened. This takes a moment.",
-  action: "Back to membership",
-};
+  title: t("payment.checkingTitle"),
+  body: t("payment.checkingBody"),
+  action: t("payment.backToMembership"),
+});
 
 /**
  * The answer, in the product's own words.
@@ -178,20 +182,20 @@ const checking: Note = {
  * promise a phone is in no position to make -- and nothing here blames a bank
  * for a fault of ours, which is what `unconfirmed` exists to keep separate.
  */
-function noteFor(outcome: PurchaseOutcome): Note {
+function noteFor(outcome: PurchaseOutcome, t: TFunction): Note {
   switch (outcome.status) {
     case "paid":
       return {
         icon: "checkmark-circle",
         tone: colors.positive,
         tint: colors.positiveTint,
-        title: "Premium is active",
+        title: t("membership.paidTitle"),
         body: outcome.membership.expiresAt
           ? `Your payment went through. Premium is yours until ${formatDate(
               outcome.membership.expiresAt,
             )}.`
-          : "Your payment went through. Thank you.",
-        action: "Continue",
+          : t("payment.paidBody"),
+        action: t("common.continue"),
       };
 
     case "processing":
@@ -199,9 +203,9 @@ function noteFor(outcome: PurchaseOutcome): Note {
         icon: "time-outline",
         tone: colors.inkMuted,
         tint: colors.sand,
-        title: "Confirming your payment",
-        body: "Your bank has not finished telling us what happened. Premium appears the moment it does, and there is nothing you need to do. It is safe to close the app.",
-        action: "Back to membership",
+        title: t("membership.processingTitle"),
+        body: t("payment.processingBody"),
+        action: t("payment.backToMembership"),
       };
 
     case "cancelled":
@@ -209,9 +213,9 @@ function noteFor(outcome: PurchaseOutcome): Note {
         icon: "close-circle-outline",
         tone: colors.inkMuted,
         tint: colors.sand,
-        title: "Payment cancelled",
-        body: "You have not been charged. Nothing has changed about your account.",
-        action: "Back to membership",
+        title: t("membership.cancelledTitle"),
+        body: t("payment.cancelledBody"),
+        action: t("payment.backToMembership"),
       };
 
     /*
@@ -225,9 +229,9 @@ function noteFor(outcome: PurchaseOutcome): Note {
         icon: "alert-circle-outline",
         tone: colors.danger,
         tint: colors.dangerTint,
-        title: "That payment did not go through",
-        body: "Please try again, or use a different method. If money has left your account, it will be confirmed here automatically.",
-        action: "Try again",
+        title: t("membership.failedTitle"),
+        body: t("payment.failedBody"),
+        action: t("common.retry"),
       };
 
     /*
@@ -240,9 +244,9 @@ function noteFor(outcome: PurchaseOutcome): Note {
         icon: "help-circle-outline",
         tone: colors.inkMuted,
         tint: colors.sand,
-        title: "We could not confirm this payment",
-        body: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
-        action: "Back to membership",
+        title: t("membership.unconfirmedTitle"),
+        body: t("membership.unconfirmedBody"),
+        action: t("payment.backToMembership"),
       };
 
     /*
@@ -256,9 +260,9 @@ function noteFor(outcome: PurchaseOutcome): Note {
         icon: "cloud-offline-outline",
         tone: colors.inkMuted,
         tint: colors.sand,
-        title: "We could not check just now",
-        body: "Your connection dropped before we could confirm. Nothing is lost: open Membership when you are back online and it will show where this stands.",
-        action: "Back to membership",
+        title: t("payment.offlineTitle"),
+        body: t("payment.offlineBody"),
+        action: t("payment.backToMembership"),
       };
   }
 }

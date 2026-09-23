@@ -9,6 +9,7 @@ import { Card } from "@/ui/Surface";
 import { EmptyState, LoadingState } from "@/ui/States";
 import { Text } from "@/ui/Text";
 import { useToast } from "@/ui/Toast";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * People you have blocked.
@@ -25,6 +26,7 @@ import { useToast } from "@/ui/Toast";
 type Block = { blockedId: string; createdAt: string };
 
 export default function Blocked() {
+  const t = useT();
   const toast = useToast();
   const [blocks, setBlocks] = useState<Block[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -68,18 +70,18 @@ export default function Blocked() {
     setPending(null);
 
     if (error) {
-      toast.show("That did not go through. Please try again.", "danger");
+      toast.show(t("safety.actionFailed"), "danger");
       return;
     }
 
     setBlocks(await fetchBlocks());
-    toast.show("Unblocked. You may see each other again.");
+    toast.show(t("mobileAccount.unblocked"));
   }
 
   if (blocks === null) {
     return (
       <Screen>
-        <LoadingState label="Loading blocked people" />
+        <LoadingState label={t("mobileAccount.loadingBlocked")} />
       </Screen>
     );
   }
@@ -89,8 +91,8 @@ export default function Blocked() {
       {blocks.length === 0 ? (
         <EmptyState
           icon="hand-left-outline"
-          title="You have not blocked anyone"
-          body="If you ever need to, blocking is on every profile and in every conversation. It takes effect immediately and the other person is never told."
+          title={t("mobileAccount.noneBlockedTitle")}
+          body={t("mobileAccount.noneBlockedBody")}
         />
       ) : (
         <View>
@@ -127,7 +129,7 @@ export default function Blocked() {
                   </View>
 
                   <Button
-                    label="Unblock"
+                    label={t("mobileAccount.unblock")}
                     variant="secondary"
                     size="md"
                     block={false}

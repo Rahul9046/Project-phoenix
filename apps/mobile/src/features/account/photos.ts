@@ -3,6 +3,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { File } from "expo-file-system";
 
 import { supabase } from "@/lib/supabase/client";
+import type { TranslationKey } from "@eraya/i18n";
 
 /**
  * Profile photography.
@@ -36,7 +37,7 @@ const QUALITY = 0.82;
 
 export type PhotosResult =
   | { ok: true; paths: string[] }
-  | { ok: false; cancelled?: boolean; message: string };
+  | { ok: false; cancelled?: boolean; messageKey: TranslationKey };
 
 /**
  * Asks for photographs and uploads them.
@@ -69,8 +70,7 @@ export async function addPhotos(
   if (!permission.granted) {
     return {
       ok: false,
-      message:
-        "Eraya needs permission to open your photos. You can grant it in your phone's settings.",
+      messageKey: "photos.permission",
     };
   }
 
@@ -83,14 +83,14 @@ export async function addPhotos(
   });
 
   if (picked.canceled || picked.assets.length === 0) {
-    return { ok: false, cancelled: true, message: "No photo chosen." };
+    return { ok: false, cancelled: true, messageKey: "photos.noneChosen" };
   }
 
   const { data: auth } = await supabase.auth.getUser();
   const me = auth.user?.id;
 
   if (!me) {
-    return { ok: false, message: "Your session has expired. Please sign in again." };
+    return { ok: false, messageKey: "failures.sessionExpired" };
   }
 
   const chosen = picked.assets.slice(0, Math.max(1, limit));
@@ -141,8 +141,7 @@ export async function addPhotos(
         ? { ok: true, paths }
         : {
             ok: false,
-            message:
-              "That photo did not upload. Please check your connection and try again.",
+            messageKey: "photos.uploadFailed",
           };
     }
 
@@ -157,7 +156,7 @@ export async function addPhotos(
       await supabase.storage.from("profile-photos").remove([path]);
       return paths.length > 0
         ? { ok: true, paths }
-        : { ok: false, message: "That photo did not save. Please try again." };
+        : { ok: false, messageKey: "photos.persistFailed" };
     }
 
     paths.push(path);

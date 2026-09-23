@@ -40,7 +40,7 @@ import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
  * expressed here, after their own words have been read.
  *
  * The two actions are stacked rather than paired. Two buttons of equal weight is
- * the shape of a swipe decision; a full-width primary with a quiet "Not for me"
+ * the shape of a swipe decision; a full-width primary with a quiet t("discovery.pass")
  * beneath it says the right thing instead -- passing is an ordinary choice, it is
  * private, and the other person is never told.
  *
@@ -109,7 +109,7 @@ export default function MemberProfile() {
     const result = await expressInterest(member.id, decision);
 
     if (!result.ok) {
-      toast.show(result.message, "danger");
+      toast.show(t(result.messageKey), "danger");
       setDeciding(null);
       return;
     }
@@ -118,7 +118,7 @@ export default function MemberProfile() {
     setDecided(true);
 
     if (decision === "passed") {
-      toast.show("Kept to yourself. They are never told.");
+      toast.show(t("memberView.interestPrivate"));
       router.back();
       return;
     }
@@ -153,8 +153,8 @@ export default function MemberProfile() {
       <Screen topInset>
         <BackRow />
         <ErrorState
-          title="This profile is not available"
-          body="They may have left Eraya, or you are no longer able to see each other."
+          title={t("memberView.unavailableTitle")}
+          body={t("memberView.unavailableBody")}
           onRetry={() => router.back()}
         />
       </Screen>
@@ -229,7 +229,7 @@ export default function MemberProfile() {
         ) : null}
 
         {member.about ? (
-          <Section title="About">
+          <Section title={t("memberView.aboutTitle")}>
             <Text variant="body" tone="muted">
               {member.about}
             </Text>
@@ -237,18 +237,18 @@ export default function MemberProfile() {
         ) : null}
 
         {member.lookingFor ? (
-          <Section title="What they are hoping for">
+          <Section title={t("memberView.theirHopes")}>
             <Text variant="body" tone="muted">
               {member.lookingFor}
             </Text>
           </Section>
         ) : null}
 
-        <Section title="Details">
+        <Section title={t("memberView.detailsTitle")}>
           <View style={{ gap: space.lg }}>
             {member.relationshipStatus ? (
               <Detail
-                label="Chapter"
+                label={t("account.labelRelationship")}
                 value={t(relationshipLabelKeys[member.relationshipStatus])}
               />
             ) : null}
@@ -320,20 +320,20 @@ export default function MemberProfile() {
             Stacked, not side by side.
             
             Two buttons of equal weight is the shape of a swipe decision, and it
-            forced "I'd like to know more" into half a screen's width where it
+            forced t("discovery.interested") into half a screen's width where it
             was clipped on a small phone. Full width fixes the clipping outright
             and says the right thing besides: the positive action is the one
             being offered, and passing is an ordinary, quiet alternative rather
             than its mirror image.
           */}
           <Button
-            label="I'd like to know more"
+            label={t("discovery.interested")}
             loading={deciding === "interested"}
             disabled={deciding !== null}
             onPress={() => void decide("interested")}
           />
           <TextButton
-            label="Not for me"
+            label={t("discovery.pass")}
             tone="muted"
             disabled={deciding !== null}
             onPress={() => void decide("passed")}

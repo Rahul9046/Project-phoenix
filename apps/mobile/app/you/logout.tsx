@@ -9,6 +9,7 @@ import { colors, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Logging out.
@@ -22,6 +23,7 @@ import { Text } from "@/ui/Text";
  * everything.
  */
 export default function Logout() {
+  const t = useT();
   const { signOut } = useSession();
   const [pending, setPending] = useState(false);
 
@@ -68,13 +70,13 @@ export default function Logout() {
 
       <View style={{ marginTop: space.region, gap: space.md }}>
         <Button
-          label="Stay signed in"
+          label={t("mobileAccount.staySignedIn")}
           variant="secondary"
           disabled={pending}
           onPress={() => router.back()}
         />
         <Button
-          label="Log out"
+          label={t("shell.signOut")}
           variant="danger"
           loading={pending}
           onPress={() => void leave()}

@@ -58,7 +58,7 @@ export default function SeekingStep() {
     const result = await saveSeeking(selected);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

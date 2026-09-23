@@ -92,6 +92,12 @@ export function ErrorBoundary({
             textAlign: "center",
           }}
         >
+          {/*
+            English, deliberately. This boundary catches a failure of the tree
+            that `LocaleProvider` lives in, so a translated string here would
+            need a hook that may be exactly what has just broken -- a crash
+            inside a crash, and a blank screen instead of a message.
+          */}
           {error?.message ?? "An unexpected error."}
         </Text>
         <Pressable
@@ -224,7 +230,7 @@ function DeepLinkHandler() {
        * impossible to diagnose. The reason is logged; the token never is.
        */
       if (!result.ok) {
-        console.warn("[eraya] sign-in link could not be completed:", result.message);
+        console.warn("[eraya] sign-in link could not be completed:", result.messageKey);
       }
       // The session provider is subscribed to auth state, so a successful
       // exchange re-routes on its own.

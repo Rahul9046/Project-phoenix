@@ -55,7 +55,7 @@ export default function ReligionStep() {
     const result = await saveReligion(value);
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

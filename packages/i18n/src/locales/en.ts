@@ -911,6 +911,253 @@ export const en = {
     },
   },
 
+  membership: {
+    addsSecondChancesTitle: "More second chances",
+    addsSecondChancesBody: "Bring back more of the people you passed on by mistake.",
+    addsQuietTitle: "Browse quietly",
+    addsQuietBody: "Look at profiles without showing up in their viewers.",
+    addsEarlierTitle: "Shown earlier",
+    addsEarlierBody: "Your profile appears sooner in other people's introductions.",
+    freeAccount: "Creating an account and your profile",
+    freeIntroductions: "Being introduced to people",
+    freeFilters: "Every filter — age, city, language, chapter",
+    freeInterest: "Expressing interest",
+    freeMessaging: "Messaging anyone you have connected with",
+    freeBlocking: "Blocking and reporting",
+    freeDeletion: "Deleting your account and everything in it",
+    addMoreTime: "Add more time",
+    loadingPlans: "Loading plans",
+    choosePlan: "Choose a plan",
+    paidTitle: "Premium is active",
+    paidThanks: "Thank you.",
+    processingTitle: "Confirming your payment",
+    processingBody:
+      "Premium will appear here as soon as the confirmation reaches us. There is nothing you need to do.",
+    cancelledTitle: "Payment cancelled",
+    cancelledBody: "You have not been charged.",
+    failedTitle: "That payment did not go through",
+    failedBody:
+      "Please try again. If money has left your account, it will be confirmed here automatically.",
+    unconfirmedTitle: "We could not confirm this payment",
+    statusNotCompleted: "Not completed",
+    statusConfirming: "Confirming",
+    statusPartlyRefunded: "Partly refunded",
+      statusPaid: "Paid",
+      statusFailed: "Failed",
+      statusCancelled: "Cancelled",
+      statusRefunded: "Refunded",
+      statusUnknown: "Unknown",
+      unconfirmedBody: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
+  },
+
+  payment: {
+    checkAgain: "Check again",
+    backToMembership: "Back to membership",
+    checkingTitle: "Checking your payment",
+    checkingBody: "Asking our server what happened. This takes a moment.",
+    paidBody: "Your payment went through. Thank you.",
+    processingBody:
+      "Your bank has not finished telling us what happened. Premium appears the moment it does, and there is nothing you need to do. It is safe to close the app.",
+    cancelledBody: "You have not been charged. Nothing has changed about your account.",
+    failedBody:
+      "Please try again, or use a different method. If money has left your account, it will be confirmed here automatically.",
+    offlineTitle: "We could not check just now",
+    offlineBody:
+      "Your connection dropped before we could confirm. Nothing is lost: open Membership when you are back online and it will show where this stands.",
+  },
+
+  safety: {
+    actionFailed: "That did not go through. Please try again.",
+    connectionEnded: "The connection has ended.",
+    endTitle: "End connection",
+    endPoint1:
+      "Neither of you will be able to send anything further. What has already been said stays readable to you both.",
+    endPoint2: "They will not appear in your introductions again.",
+    cannotBeUndone: "This cannot be undone.",
+    keepConnection: "Keep the connection",
+    blockPoint1:
+      "You will not see each other again anywhere in Eraya, and neither of you can send the other anything.",
+    blockPoint2: "Any conversation between you is closed.",
+    blockPoint3: "This is enforced by Eraya, not just hidden from view.",
+      blockedToast: "{name} is blocked.",
+      endTitleNamed: "End your connection with {name}?",
+      endNotTold: "{name} is not told that you ended it.",
+      blockTitleNamed: "Block {name}?",
+      blockNotTold: "{name} is not told that you blocked them.",
+      blockConfirmNamed: "Block {name}",
+  },
+
+  photos: {
+    added: "Photo added.",
+    deleteFailed: "That did not delete. Please try again.",
+    removed: "Photo removed.",
+    saveFailed: "That did not save. Please try again.",
+    nowFirst: "That is now your first photo.",
+    firstHint: "Your first photo. Tap for options.",
+    add: "Add a photo",
+    addFirst: "Add your first photo",
+    sheetTitle: "This photo",
+    makeFirst: "Make this my first photo",
+    removeThis: "Remove this photo",
+    permission:
+      "Eraya needs permission to open your photos. You can grant it in your phone's settings.",
+    noneChosen: "No photo chosen.",
+    uploadFailed: "That photo did not upload. Please check your connection and try again.",
+    persistFailed: "That photo did not save. Please try again.",
+      addedMany: "{count} photos added.",
+  },
+
+  help: {
+    takeTimeTitle: "Take your time in the conversation",
+    takeTimeBody:
+      "There is no hurry here and nobody is counting. Somebody pushing to move to another app or to meet immediately is telling you something.",
+    meetPublicTitle: "Meet somewhere public, the first few times",
+    meetPublicBody:
+      "A café in the middle of the afternoon. Tell someone you trust where you are going and when you expect to be back.",
+    neverSendMoneyTitle: "Never send money",
+    neverSendMoneyBody:
+      "No genuine person you met here will ask. An emergency that needs a transfer today is the oldest pattern there is.",
+    blockTitle: "Block without explaining yourself",
+    blockBody:
+      "You owe nobody a reason. Blocking is immediate, it is enforced by Eraya rather than hidden from view, and they are never told.",
+      limitsTitle: "What Eraya can and cannot do",
+      limitsBody: "Blocking works immediately and is enforced by the system. Reports are recorded, but Eraya is small and has no moderation team yet, so we cannot promise that anyone will read one or reply to you. If something serious happens, please contact the police as well as us.",
+  },
+
+  failures: {
+    sessionExpired: "Your session has expired. Please sign in again.",
+    network: "We could not reach Eraya just now. Check your connection and try again.",
+    sendCodeFailed: "We could not send your code just now. Please try again shortly.",
+    invalidNumber:
+      "That does not look like a mobile number we can reach. Check the digits and try again.",
+    invalidIndianNumber:
+      "That does not look like an Indian mobile number. It should be ten digits.",
+    cooldown: "Please wait a little before asking for another code.",
+    dailyCap: "That is several codes in a short time. Please try again a little later.",
+    attemptCap: "That is several attempts in a short time. Please try again a little later.",
+    verifyFailed: "We could not check that code just now. Please try again shortly.",
+    invalidCode: "That code does not look right. Check it and try again.",
+    codeExpired: "That code has expired. Ask for a new one.",
+    tooManyAttempts:
+      "That is too many tries for one code. Ask for a new one and take it slowly.",
+    noRequest: "Ask for a code first, then enter it here.",
+    sixDigits: "That needs to be six digits.",
+    signInNetwork:
+      "We could not sign you in just now. Please check your connection and try again.",
+    signInFailed: "We could not sign you in just now. Please try again in a moment.",
+    signInCancelled: "Sign-in was cancelled.",
+    invalidEmail: "That does not look like an email address.",
+    emailRateLimited:
+      "We have sent a few codes to this address already. Please wait a little while before asking for another.",
+    emailSendFailed:
+      "We could not send your code just now. Please check the address and try again shortly.",
+    emailSixDigits: "That needs to be the six digits from the email.",
+    emailCodeFailed:
+      "That code did not work. It may have expired — ask for a new email and use the latest one.",
+    saveFailed: "We could not save that just now. Please check your connection and try again.",
+    underage:
+      "Eraya is for people aged 18 and over. Please check the year in your date of birth.",
+    tooLong: "That is a little longer than we can store. Please shorten it slightly.",
+    unrecognisedAnswer: "One of those answers was not recognised. Please choose it again.",
+    actionFailedMoment: "That did not go through. Please try again in a moment.",
+    writeSomething: "Write something first.",
+    conversationEnded: "This conversation has ended. Nothing further can be sent.",
+    sendFailed: "That did not send. Please try again.",
+    unexpected: "An unexpected error.",
+    didNotLoad: "That did not load",
+    didNotLoadBody: "Check your connection and try again. Nothing has been lost.",
+  },
+
+  mobileDiscovery: {
+    nothingToBringBack: "There is nothing to bring back.",
+    secondChancesUsed: "You have used all of today's second chances. They return tomorrow.",
+    broughtBack: "Brought back into your introductions.",
+    noMatchesTitle: "Nobody matches those filters",
+    noMatchesBody:
+      "Try widening the age range, or adding another city. Eraya is young, so narrow filters find fewer people than they will in a few months.",
+    clearFilters: "Clear filters",
+    everyoneTitle: "That is everyone for now",
+    everyoneBody:
+      "You have seen everyone we have for today. New people arrive as the community grows, and a fresh set is chosen each morning.",
+    showPeople: "Show people",
+    addCity: "Add a city",
+    searchCityToFilter: "Search for a city to filter by",
+    searchingCities: "Searching cities",
+      clearAll: "Clear all",
+      anyAge: "Any age",
+  },
+
+  memberView: {
+    interestPrivate: "Kept to yourself. They are never told.",
+    unavailableTitle: "This profile is not available",
+    unavailableBody: "They may have left Eraya, or you are no longer able to see each other.",
+    theirHopes: "What they are hoping for",
+      aboutTitle: "About",
+      detailsTitle: "Details",
+  },
+
+  mobileMessages: {
+    loadingConversation: "Loading conversation",
+    backToMessages: "Back to messages",
+    connectionEndedShort: "Connection ended",
+    viewProfile: "View profile",
+    conversationOptions: "Conversation options",
+    loadingEarlier: "Loading earlier messages",
+    stillReadable: "Still readable. Nothing further can be sent.",
+    noConnectionsBody:
+      "When you and someone else both express interest, they appear here. Nobody is told you were interested unless they feel the same.",
+      youPrefix: "You: ",
+      groupNew: "New",
+      groupTalking: "Talking",
+      groupEnded: "Ended",
+      goBack: "Go back",
+      sayHelloCta: "Say hello",
+  },
+
+  mobileAccount: {
+    profileOpens: "Your profile. Opens what other members see.",
+    tapToSeeProfile: "Tap to see your profile",
+    wordsCityLanguages: "Your words, city, languages",
+    noneYetOptional: "None yet — optional",
+    seePremium: "See what premium adds",
+    whatOthersSee: "What others can see",
+    signedInWith: "Signed in with",
+    emailedCode: "An emailed code",
+    staySignedIn: "Stay signed in",
+    loadingProfile: "Loading your profile",
+    profileUpdated: "Your profile is updated.",
+    aboutHint:
+      "A few lines in your own words. What you do, what your days look like, what you are like to be around.",
+    hopingForLabel: "What you are hoping for",
+    hopingForHint:
+      "Optional. Nobody is matched on this — it is read by people, not by an algorithm.",
+    saveChanges: "Save changes",
+    whereDoYouLive: "Where do you live?",
+    unblocked: "Unblocked. You may see each other again.",
+    loadingBlocked: "Loading blocked people",
+    noneBlockedTitle: "You have not blocked anyone",
+    noneBlockedBody:
+      "If you ever need to, blocking is on every profile and in every conversation. It takes effect immediately and the other person is never told.",
+    privacyPointProfileFields:
+      "Another member sees your first name, age, city, chapter, languages, and whatever you have written about yourself.",
+    privacyPointContact: "Your email address and phone number are never shown to anyone.",
+    privacyPointPassing:
+      "If someone passes on your profile, you are never told. If you pass on theirs, they are never told.",
+    privacyPointReceipts:
+      "Nobody is told when you last opened a conversation, or whether you have read a message.",
+    privacyPointBlocking:
+      "Blocking is enforced by Eraya, not just hidden from view — a blocked person cannot load your profile or your photos.",
+    notRightNow: "Not right now",
+    sixDigitCode: "Six digit code",
+    clearSearch: "Clear search",
+      unblock: "Unblock",
+      aboutYouLabel: "About you",
+      whereYouLive: "Where you live",
+      notBuiltTitle: "Not built yet",
+      notBuiltBody: "Eraya does not send push notifications at all, so there is nothing here to turn off. We would rather show you this than a switch that does nothing.",
+      stillBuildingTitle: "Still being built",
+      stillBuildingBody: "Choosing who can see your photos, and browsing without appearing in anyone’s viewers, are both designed and not yet built. We will say so here rather than implying they already work.",
+  },
 };
 
 /**

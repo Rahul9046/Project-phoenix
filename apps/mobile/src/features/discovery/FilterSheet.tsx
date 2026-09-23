@@ -140,13 +140,13 @@ export function FilterSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Filters"
+      title={t("discovery.filters")}
       footer={
         <View style={{ gap: space.sm, paddingBottom: space.sm }}>
-          <Button label="Show people" onPress={() => onApply(draft)} />
+          <Button label={t("mobileDiscovery.showPeople")} onPress={() => onApply(draft)} />
           <View style={{ alignItems: "center" }}>
             <TextButton
-              label="Clear all"
+              label={t("mobileDiscovery.clearAll")}
               tone="muted"
               onPress={() => {
                 setDraft(emptyFilters);
@@ -157,7 +157,7 @@ export function FilterSheet({
         </View>
       }
     >
-      <FilterSection title="Age">
+      <FilterSection title={t("account.labelAge")}>
         <AgeRange
           min={draft.minAge}
           max={draft.maxAge}
@@ -167,7 +167,7 @@ export function FilterSheet({
         />
       </FilterSection>
 
-      <FilterSection title="Chapter">
+      <FilterSection title={t("account.labelRelationship")}>
         <ChipGroup>
           {relationshipOptions.map((option) => (
             <Chip
@@ -207,7 +207,7 @@ export function FilterSheet({
         </ChipGroup>
       </FilterSection>
 
-      <FilterSection title="City">
+      <FilterSection title={t("account.labelCity")}>
         {chosenCities.length > 0 ? (
           <ChipGroup style={{ marginBottom: space.md }}>
             {chosenCities.map((city) => (
@@ -224,8 +224,8 @@ export function FilterSheet({
         <SearchField
           value={cityQuery}
           onChangeText={setCityQuery}
-          placeholder="Add a city"
-          accessibilityLabel="Search for a city to filter by"
+          placeholder={t("mobileDiscovery.addCity")}
+          accessibilityLabel={t("mobileDiscovery.searchCityToFilter")}
         />
 
         {/* Derived, not stored: an empty field shows nothing without an effect
@@ -262,7 +262,7 @@ export function FilterSheet({
         ))}
       </FilterSection>
 
-      <FilterSection title="Languages" last>
+      <FilterSection title={t("account.labelLanguages")} last>
         <ChipGroup>
           {languages.map((language) => (
             <Chip
@@ -328,10 +328,11 @@ function AgeRange({
   max: number | null;
   onChange: (min: number | null, max: number | null) => void;
 }) {
+  const t = useT();
   return (
     <ChipGroup>
       <Chip
-        label="Any age"
+        label={t("mobileDiscovery.anyAge")}
         selected={min === null && max === null}
         onPress={() => onChange(null, null)}
       />

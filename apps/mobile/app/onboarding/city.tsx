@@ -36,7 +36,7 @@ export default function CityStep() {
     );
 
     if (!result.ok) {
-      setError(result.message);
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }

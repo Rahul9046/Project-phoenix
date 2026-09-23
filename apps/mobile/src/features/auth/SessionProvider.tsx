@@ -12,6 +12,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
 import type { OnboardingStage, ProfileSnapshot } from "@/features/auth/types";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Who is signed in, and how far through onboarding they are.
@@ -73,6 +74,7 @@ const PROFILE_COLUMNS =
   "id, first_name, date_of_birth, gender, seeking, city_id, other_city, relationship_status, religion, languages_undisclosed, phone_verified_at, phone_verified_via, onboarding_stage";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
@@ -140,7 +142,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         console.warn("[eraya] could not read the profile:", cause);
         setError(
-          "We could not reach Eraya just now. Check your connection and try again.",
+          t("failures.network"),
         );
         return null;
       }
@@ -230,7 +232,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setProfile(snapshot);
       return snapshot;
     },
-    [],
+    [t],
   );
 
   useEffect(() => {

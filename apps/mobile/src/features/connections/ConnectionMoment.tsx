@@ -5,6 +5,7 @@ import { ErayaMark } from "@/brand/ErayaMark";
 import { colors, motion, space } from "@/theme/tokens";
 import { Button, TextButton } from "@/ui/Button";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * Two people chose each other.
@@ -20,7 +21,7 @@ import { Text } from "@/ui/Text";
  * the whole of this product's animation vocabulary, used only where something is
  * actually beginning.
  *
- * "Not right now" is a real option and sits as an equal. A connection that has
+ * t("mobileAccount.notRightNow") is a real option and sits as an equal. A connection that has
  * to be acted on immediately is a connection that creates pressure, and pressure
  * is the thing this product is built to remove.
  */
@@ -35,6 +36,7 @@ export function ConnectionMoment({
   onStart: () => void;
   onLater: () => void;
 }) {
+  const t = useT();
   const [opacity] = useState(() => new Animated.Value(0));
   const [lift] = useState(() => new Animated.Value(16));
 
@@ -108,8 +110,8 @@ export function ConnectionMoment({
             alignItems: "center",
           }}
         >
-          <Button label="Say hello" onPress={onStart} />
-          <TextButton label="Not right now" tone="muted" onPress={onLater} />
+          <Button label={t("mobileMessages.sayHelloCta")} onPress={onStart} />
+          <TextButton label={t("mobileAccount.notRightNow")} tone="muted" onPress={onLater} />
         </View>
       </View>
     </Modal>

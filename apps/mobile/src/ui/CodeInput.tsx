@@ -4,6 +4,7 @@ import { Pressable, TextInput, View } from "react-native";
 import { colors, hit, radius, space } from "@/theme/tokens";
 import { text } from "@/theme/typography";
 import { Text } from "@/ui/Text";
+import { useT } from "@/features/i18n/LocaleProvider";
 
 /**
  * A six-digit code.
@@ -26,7 +27,7 @@ export function CodeInput({
   onChange,
   autoFocus = true,
   disabled = false,
-  accessibilityLabel = "Six digit code",
+  accessibilityLabel,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -34,6 +35,8 @@ export function CodeInput({
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
+  const t = useT();
+  const label = accessibilityLabel ?? t("mobileAccount.sixDigitCode");
   const inputRef = useRef<TextInput>(null);
 
   return (
@@ -50,7 +53,7 @@ export function CodeInput({
         maxLength={CODE_LENGTH}
         autoFocus={autoFocus}
         editable={!disabled}
-        accessibilityLabel={accessibilityLabel}
+        accessibilityLabel={label}
         style={{
           position: "absolute",
           opacity: 0,
