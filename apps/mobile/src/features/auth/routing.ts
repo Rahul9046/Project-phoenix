@@ -1,6 +1,6 @@
 import type { Href } from "expo-router";
 
-import { stageAtLeast, type ProfileSnapshot } from "@/features/auth/types";
+import type { ProfileSnapshot } from "@/features/auth/types";
 
 /**
  * Where a person belongs right now.
@@ -31,6 +31,15 @@ export const routes = {
   religion: "/onboarding/religion",
   languages: "/onboarding/languages",
   photo: "/onboarding/photo",
+  /*
+   * Kept, and reached by nothing, for the length of the private Android beta.
+   *
+   * The screens behind these two work and are left where they are: the app
+   * cannot send an SMS while Eraya holds no DLT registration, and a question
+   * asked in order to fail is worse than a question not asked. Restoring them
+   * is a navigation, not a rebuild. The website is untouched and still verifies
+   * through MSG91's widget.
+   */
   phone: "/onboarding/phone",
   confirmPhone: "/onboarding/confirm-phone",
   welcome: "/onboarding/welcome",
@@ -63,41 +72,37 @@ export type AppRoute = Href;
  * sign-in route, which meant a signed-in person whose profile had not yet
  * arrived was redirected to sign-in, which redirected them here, which sent them
  * back -- an infinite loop that rendered as a blank screen. Callers now wait for
- * `loading` to clear instead, and the phone step is the first thing this can
+ * `loading` to clear instead, and the name step is the first thing this can
  * return.
  */
 export function nextRouteFor(profile: ProfileSnapshot | null): Href {
   // Defensive only. A caller that reaches this has not waited for `loading`,
   // and the first onboarding step is a far better answer than a redirect back
   // to a screen that will bounce them here again.
-  if (!profile) return routes.phone;
+  if (!profile) return routes.name;
 
   /*
-   * Phone comes first, and is now the one question that may be declined.
+   * The phone step used to come first, and is not asked at all in the private
+   * Android beta.
    *
-   * What this asks is whether the step has been *reached*, not whether a number
-   * was checked -- since verification became optional those are different
-   * facts, and a member who was offered it and said no has answered this
-   * question as fully as one who said yes.
+   * The app has no way to send an SMS: Eraya holds no DLT registration, so the
+   * OTP API has no template of its own to send through. What stood here asked
+   * whether the step was behind them -- `onboarding_stage` at `phone_verified`,
+   * or a `phoneVerifiedAt` from before that stage write existed -- and sent
+   * anybody else to the question. With nothing able to answer it, that was a
+   * step whose only outcome was "Skip for now".
    *
-   * Two things can settle it. `onboarding_stage` moves to `phone_verified` when
-   * the step is completed either way, which is what "Skip for now" writes. And
-   * a non-null `phoneVerifiedAt` settles it for everybody who went through the
-   * step before that stage write existed -- including the accounts the
-   * pre-launch stand-in marked, who proved nothing but did answer the question.
-   * Neither is read as evidence that a number was checked; `phoneVerified` is
-   * the only thing allowed to say that, and it is used for marks and nowhere
-   * near routing.
+   * Nothing is written in its place. `onboarding_completed` already sorts above
+   * `phone_verified`, so a member who finishes here is past this point on both
+   * clients without a stage being recorded on their behalf -- and recording one
+   * would be this app claiming a question had been put to somebody when it had
+   * not.
    *
-   * It still comes first because asking later would mean interrupting somebody
-   * who thought they had finished.
+   * None of this touches what "phone verified" means. That is `phoneVerified`,
+   * which requires `phone_verified_via = 'msg91'`, is written only by an edge
+   * function holding the service role, and is still shown wherever it was --
+   * including for a member who verified on the website, which works today.
    */
-  if (
-    !profile.phoneVerifiedAt &&
-    !stageAtLeast(profile.stage, "phone_verified")
-  ) {
-    return routes.phone;
-  }
 
   if (!profile.firstName) return routes.name;
   if (!profile.dateOfBirth) return routes.birthday;
