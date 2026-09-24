@@ -5,8 +5,8 @@ import Link from "next/link";
 import { LinkPending } from "@/shared/ui/LinkPending";
 import { usePathname } from "next/navigation";
 
-import type { NavActivity } from "@/features/app-shell/activity";
 import { NavBadge } from "@/features/app-shell/NavBadge";
+import { useNavActivity } from "@/features/app-shell/NavActivityProvider";
 import { primaryNav } from "@/features/app-shell/nav";
 
 /**
@@ -17,13 +17,14 @@ import { primaryNav } from "@/features/app-shell/nav";
  * tall screen is genuinely hard to hit. Hidden from `sm` up, where the header
  * nav is visible instead.
  */
-export function MobileTabBar({
-  activity,
-}: {
-  /** The same object the header gets, so the two can never disagree. */
-  activity: NavActivity | null;
-}) {
+export function MobileTabBar() {
   const pathname = usePathname();
+  /*
+   * The same object the header reads, from the same provider, so the two can
+   * never disagree -- and both now change when the answer does rather than
+   * only when the layout happens to be re-rendered.
+   */
+  const activity = useNavActivity();
 
   return (
     <nav

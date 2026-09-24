@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { myPhotoUrl } from "@/features/account/my-photo";
 import { navActivity } from "@/features/app-shell/activity";
+import { NavActivityProvider } from "@/features/app-shell/NavActivityProvider";
 import { AppHeader } from "@/features/app-shell/AppHeader";
 import { MobileTabBar } from "@/features/app-shell/MobileTabBar";
 import { AuthSessionProvider } from "@/features/auth/AuthSessionProvider";
@@ -69,10 +70,16 @@ export default async function AppGroupLayout({
    *
    * The activity counts are fetched here, in the layout, because that is where
    * the navigation that shows them lives -- and it is why clearing a badge
-   * revalidates the layout rather than a page. The App Router does not
-   * re-render a layout when you move between two pages inside it, so a badge
-   * refreshed any other way would still be claiming there was something new on
-   * the screen you were already looking at.
+   * revalidates the layout rather than a page.
+   *
+   * This is the first count and no longer the only one. The App Router does not
+   * re-render a layout when somebody moves between two pages inside it, which
+   * meant the number stood still for as long as they stayed in the product: a
+   * connection made while they sat on Home never appeared, and opening
+   * Connections was the only thing that refreshed it -- the very screen the
+   * badge existed to send them to. `NavActivityProvider` takes this value as
+   * the first answer and keeps asking; see the note there on which of the two
+   * wins.
    */
   const [photoUrl, summary, t] = await Promise.all([
     myPhotoUrl(),
@@ -88,20 +95,21 @@ export default async function AppGroupLayout({
 
   return (
     <AuthSessionProvider serverSession={session}>
-      <div className="flex min-h-dvh flex-col bg-canvas">
-        <AppHeader
-          name={name}
-          email={session.user.email}
-          photoUrl={photoUrl}
-          activity={activity}
-        />
+      <NavActivityProvider initial={activity}>
+        <div className="flex min-h-dvh flex-col bg-canvas">
+          <AppHeader
+            name={name}
+            email={session.user.email}
+            photoUrl={photoUrl}
+          />
 
-        <main id="main" className="flex-1">
-          {children}
-        </main>
+          <main id="main" className="flex-1">
+            {children}
+          </main>
 
-        <MobileTabBar activity={activity} />
-      </div>
+          <MobileTabBar />
+        </div>
+      </NavActivityProvider>
     </AuthSessionProvider>
   );
 }
