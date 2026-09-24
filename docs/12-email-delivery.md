@@ -174,11 +174,19 @@ refuses when a referenced `env()` variable is absent; the bare CLI pushes the
 literal text `env(NAME)` as the value and reports success. That is how the OAuth
 credentials were wiped repeatedly.
 
-**Verify first, on a throwaway branch of the config:** confirm whether the CLI
-sends defaults for keys the file omits. If it does, any future push made for an
-unrelated reason silently resets whatever the dashboard holds — which is the same
-class of bug, and the reason this value belongs in the file regardless of what
-number is chosen.
+**There is no dry run.** `scripts/supabase-config.mjs` advertised
+`--dry-run` and the CLI has never accepted it — `Unrecognized flag: --dry-run in
+command supabase config push`, checked 2026-09-24 and now corrected in that
+file's header. So a push cannot be previewed, and the question below cannot be
+answered by looking.
+
+**Still unanswered:** whether the CLI sends its own defaults for keys the file
+omits. If it does, any future push made for an unrelated reason silently resets
+whatever the dashboard holds — the same class of bug as the OAuth wipe, arriving
+by omission rather than by a missing variable. That is the argument for this
+value being in the file regardless of what number is chosen, and it is the
+reason to read the dashboard after the next push rather than trusting the exit
+code.
 
 ### 2. A resend cooldown of Eraya's own — code
 
@@ -261,14 +269,24 @@ stop, in a bucket that refills, without an invoice.
 
 ---
 
-## Recommendation
+## Recommendation, and what has been done
 
-1. **Read the current value** at Authentication → Rate Limits. It is the one fact
-   this document could not establish.
-2. **Raise it to 200/hour** and commit `[auth.rate_limit] email_sent = 200`
-   alongside `max_frequency = "1m"`, pushed with `npm run config:push`.
-3. **Add the 60-second email resend cooldown** so the shared budget is not spent
-   by one person's impatience.
+1. ~~**Read the current value** at Authentication → Rate Limits.~~ **Done
+   2026-09-24, and the reading was lost:** the field was changed and saved
+   without the previous value being written down, so what it held is now
+   unrecoverable. The 30/hour above stays an inference from `auth_events`, not a
+   reading. This is the argument for step 2 in one sentence.
+2. **Raised to 200/hour in the dashboard on 2026-09-24**, which is what actually
+   unblocks the beta — it needs no push, no deploy and no code.
+   `[auth.rate_limit] email_sent = 200` and `max_frequency = "1m"` are now in
+   `supabase/config.toml` so the number is reviewable and restorable.
+   **Not yet pushed**, and there is no hurry: the dashboard and the file agree,
+   and a push cannot be previewed.
+3. **The 60-second email resend cooldown is in** —
+   `EmailAuthForm.tsx`, reusing `auth.otp.resendIn`, which is already translated
+   into all six languages for the phone flow. It disables the control and counts
+   down rather than hiding it, because a member who cannot see the code has a
+   real problem.
 4. **Stay on Resend Free** and keep daily sends under 100, or spend $20 for the
    month a large batch is invited.
 5. **Do not remove the limit.** The cost of doing so is not the bill; it is
@@ -281,8 +299,10 @@ than a hundred people in a day.
 
 ## Open questions
 
-- The live rate-limit value. Dashboard.
-- Whether the current Supabase plan permits raising it.
+- ~~The live rate-limit value.~~ Set to 200/hour on 2026-09-24. The value it
+  replaced was overwritten before it was recorded and cannot now be recovered.
+- ~~Whether the current Supabase plan permits raising it.~~ It did — the change
+  saved without complaint.
 - Whether `supabase config push` sends defaults for omitted keys, which would
   make every future push a silent reset of this value.
 - Resend's current pricing and whether the daily cap still applies as described.
