@@ -48,15 +48,19 @@ const ActivityContext = createContext<Activity>(EMPTY);
  *
  * Every screen that can change a count calls `refresh` itself, so this is only
  * for the other person's actions -- a message arriving while the app is open.
- * A minute is slow enough to cost nothing and fast enough that somebody sitting
- * in the app is not looking at an hour-old answer.
+ *
+ * A minute was the first figure and it was too slow to read as a notification:
+ * the worst case was a full minute and the average half of one, which is long
+ * enough that a badge appearing feels unconnected to the thing that caused it.
+ * Thirty seconds halves both for two integers a request, and it is the figure
+ * the website polls on, so neither client is quietly the slower one.
  *
  * Not a realtime subscription. A socket held open for the life of the app, plus
  * the wake-ups it implies, is a large thing to introduce for two integers, and
  * the product's requirement is that the numbers are right when you arrive and
  * after you act -- both of which are already covered without one.
  */
-const POLL_MS = 60_000;
+const POLL_MS = 30_000;
 
 export function ActivityProvider({ children }: { children: ReactNode }) {
   const [summary, setSummary] = useState<ActivitySummary>({
