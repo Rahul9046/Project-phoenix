@@ -50,6 +50,43 @@ export async function updateSession(
 ): Promise<NextResponse> {
   let response = NextResponse.next({ request });
 
+  const { pathname } = request.nextUrl;
+
+  /*
+   * A visitor with no Supabase cookie cannot have a session.
+   *
+   * Without this, every anonymous view of a marketing page built a Supabase
+   * client and spent a network round trip and the JWT work that goes with it
+   * to be told what the absence of a cookie already said: there is no user.
+   *
+   * That mattered because this Worker is on Cloudflare's free plan, where the
+   * CPU budget is 10 ms an invocation rather than the 30 seconds the paid plan
+   * gives. Under a sustained walk of the site the budget is enforced, the
+   * invocation is killed at exactly 10.00 ms having done nothing, and the
+   * visitor is shown Error 1102 -- which is how somebody who had just finished
+   * signing up was greeted on 2026-09-23.
+   *
+   * `sb-` is Supabase's own cookie prefix, the same one `lib/supabase/server.ts`
+   * documents. No cookie means `getUser()` can only answer null, so the two
+   * branches below are reached with exactly the result the call would have
+   * produced -- a protected route still redirects, and everything else still
+   * passes through.
+   */
+  const hasSupabaseCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-"));
+
+  if (!hasSupabaseCookie) {
+    if (isProtected(pathname)) {
+      const redirect = request.nextUrl.clone();
+      redirect.pathname = "/login";
+      redirect.search = "";
+      return NextResponse.redirect(redirect);
+    }
+
+    return response;
+  }
+
   const config = tryGetPublicSupabaseConfig();
 
   // Misconfiguration is a deployment fault, but it should not take the whole
@@ -90,8 +127,6 @@ export async function updateSession(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
 
   if (!user && isProtected(pathname)) {
     const redirect = request.nextUrl.clone();
