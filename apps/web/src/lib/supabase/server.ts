@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -14,11 +16,24 @@ import { getPublicSupabaseConfig, getServiceRoleKey } from "@/lib/supabase/env";
  * client carries the caller's session, and sharing it across requests would
  * mean serving one member's data to another.
  *
+ * `cache` is how that rule is kept while building only one. It is React's
+ * per-request memo, not a cache in the ordinary sense: the result lives for the
+ * length of a single render and is never seen by a second request, which is
+ * exactly the guarantee the paragraph above asks for. What it removes is the
+ * repetition -- a signed-in `/home` built **twelve** of these, measured, one
+ * for each helper that needed a client, and every one of them a full PostgREST,
+ * GoTrue, Realtime and Storage surface.
+ *
+ * Twelve is not a tidiness problem. This runs in a Cloudflare Worker isolate
+ * with a 128 MB ceiling shared by every request it is serving concurrently, and
+ * on 2026-09-23 that ceiling was crossed in front of a member who had just
+ * finished signing up. See docs/06-technical.md.
+ *
  * Requests run as the signed-in member, so every query is subject to Row Level
  * Security. That is deliberate: the policies are the access-control model, not
  * a second line of defence behind application checks.
  */
-export async function createClient() {
+export const createClient = cache(async () => {
   // Awaited first, deliberately. Reading cookies is what tells Next.js this
   // route is dynamic; doing it before anything that can throw means a missing
   // environment variable surfaces at request time on a dynamic route, rather
@@ -45,7 +60,7 @@ export async function createClient() {
       },
     },
   });
-}
+});
 
 /**
  * A client that bypasses Row Level Security.
