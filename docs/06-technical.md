@@ -127,6 +127,7 @@ language on one screen.
 ```bash
 npm run locale:probe                              # a dev server on :3000
 npm run locale:probe -- --base https://eraya.app  # production
+npm run locale:probe -- --base https://eraya.app --public-only   # writes nothing
 ```
 
 Per screen and language it checks the `lang` attribute, that `--font-script`
@@ -146,7 +147,13 @@ Onboarding and signed-in screens need a member, so the probe creates one
 throwaway `@demo.eraya.invalid` account, walks it forward a step at a time so
 each gated screen is reachable in turn, and deletes it in a `finally`. Against
 `--base https://eraya.app` that account is made in -- and removed from -- the
-production database, there being no staging environment.
+production database, there being no staging environment. `--public-only` stops
+after the signed-out screens and writes nowhere at all, which is the right run
+for checking a deploy.
+
+Do not pipe it into `head` or `tail`: the closed pipe kills the process before
+its `finally`, and the throwaway account survives. It clears a leftover on the
+next run, so that recovers by itself -- but redirect to a file and read that.
 
 Two things it reports without failing: the legal pages carry a document that is
 English-only by decision, and several screens render in the browser rather than
