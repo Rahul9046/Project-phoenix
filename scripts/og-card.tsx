@@ -1,3 +1,37 @@
+/**
+ * The source of the Open Graph card, kept out of the build on purpose.
+ *
+ * This was `apps/web/src/app/opengraph-image.tsx` until 2026-09-24, where Next's
+ * file convention turned it into a route and `next/og` came with it: satori,
+ * a 1.3 MB `resvg.wasm` and a 70 KB `yoga.wasm`, imported at the top level of
+ * the Worker bundle. Cloudflare compiles a `?module` WASM import when the
+ * isolate starts, unconditionally, so every isolate serving `/home` was holding
+ * a PNG rasteriser it would never call -- against a 128 MB ceiling that was
+ * already being exceeded. See docs/07-open-questions.md on Error 1102.
+ *
+ * The card is the same image every time: no params, no request, no member data.
+ * So it is rendered once and committed as `opengraph-image.png` beside the app,
+ * which Next serves at the same URL by the same convention.
+ *
+ * This file is not compiled by anything. `tsc -p apps/web` and the web lint are
+ * both scoped to `apps/web`, and nothing imports it -- so the `@/` paths below
+ * resolve only once it is back in the app directory.
+ *
+ * To change the card:
+ *
+ *   1. cp scripts/og-card.tsx apps/web/src/app/opengraph-image.tsx
+ *   2. edit it, then: npm run dev
+ *   3. curl.exe -o apps/web/src/app/opengraph-image.png http://localhost:3000/opengraph-image
+ *   4. copy the edit back here, then delete apps/web/src/app/opengraph-image.tsx
+ *   5. update opengraph-image.alt.txt if the words changed
+ *
+ * Step 4 is the one that matters. Leaving the route behind puts the rasteriser
+ * back into every isolate, and nothing in the repository will tell you: the
+ * types pass, the lints pass, the build passes, and the card looks correct.
+ * `Select-String -Path apps/web/.open-next/server-functions/default/apps/web/handler.mjs -Pattern "resvg.wasm" -SimpleMatch`
+ * must find nothing after a build.
+ */
+
 import { ImageResponse } from "next/og";
 
 import {
