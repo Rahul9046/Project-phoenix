@@ -191,6 +191,28 @@ export function resolveRedirect(
    * it, forever.
    */
   if (route === authRoutes.photo || route === authRoutes.complete) {
+    /*
+     * Somebody who has already finished is not unfinished, whatever a column
+     * says.
+     *
+     * The checks below ask whether each question has an answer, which is the
+     * right question for a member still being onboarded and the wrong one for a
+     * member who finished before a question existed. Religion is the live
+     * example: every account made before 2026-09-22 has `religion` null and
+     * `onboarding_stage` `onboarding_completed`, and without this line signing
+     * in sent all of them here and then back to the religion screen -- a
+     * question they were never asked, in the middle of a journey they completed
+     * months ago, with no way past it but to answer.
+     *
+     * Null means "never asked", which is exactly true of them, and the right
+     * thing to do about it is nothing. They can set it whenever they like from
+     * the account area. `nextRoute` already returns early for the same reason;
+     * this is the half that was missing, and it is the guard the app has
+     * carried since the question shipped -- see `nextRouteFor` in
+     * `apps/mobile/src/features/auth/routing.ts`.
+     */
+    if (session.stage === "onboardingCompleted") return null;
+
     if (!hasBasics(session)) return authRoutes.basics;
     if (!hasSeeking(session)) return authRoutes.seeking;
     if (!hasCity(session)) return authRoutes.city;
