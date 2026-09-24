@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 
-import { createTranslator, FONT_STACKS } from "@eraya/i18n";
+import { createTranslatorFrom, FONT_STACKS, loadTranslations } from "@eraya/i18n";
 
 import { LocaleProvider } from "@/features/i18n/LocaleProvider";
 import { getLocale } from "@/features/i18n/server";
@@ -101,7 +101,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
    * tree -- is rendered already knowing the answer.
    */
   const locale = await getLocale();
-  const t = createTranslator(locale);
+  /*
+   * One dictionary, loaded once for this request and handed to the client
+   * provider below rather than imported again on the other side of the
+   * boundary. See `packages/i18n/src/index.ts` for why only one is resident.
+   */
+  const dictionary = await loadTranslations(locale);
+  const t = createTranslatorFrom(locale, dictionary);
 
   return (
     <html
@@ -148,7 +154,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           its own, which is what keeps the server markup and the first client
           render identical.
         */}
-        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <LocaleProvider locale={locale} dictionary={dictionary}>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

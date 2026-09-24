@@ -9,13 +9,18 @@ import {
 } from "react";
 
 import {
-  createTranslator,
   DEFAULT_LOCALE,
   matchLocale,
   toLocale,
   type Locale,
   type TFunction,
 } from "@eraya/i18n";
+/*
+ * Every language at once, deliberately. A phone holds all six without noticing
+ * and switching must not wait on a module load; only the website, which runs in
+ * a Worker isolate with a shared memory ceiling, loads them one at a time.
+ */
+import { createTranslator } from "@eraya/i18n/all";
 
 import { supabase } from "@/lib/supabase/client";
 import { secureSessionStorage } from "@/lib/supabase/secure-storage";

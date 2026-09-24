@@ -110,6 +110,48 @@ third-party scripts. Fonts are self-hosted and preloaded. Motion is one CSS
 keyframe. `overflow-x-hidden` on `<body>` plus a single `Container` measure
 means horizontal overflow cannot occur.
 
+## Six languages, and how they are checked
+
+Eraya's interface is written in English, Hindi, Bengali, Marathi, Telugu and
+Tamil. Two checks stand behind that, and they answer different questions.
+
+`npm run i18n:check` compares the six locale files with each other: every key
+present, nothing empty, every `{placeholder}` still matching. It reads the
+TypeScript sources directly and needs no build.
+
+`npm run locale:probe` asks a running site what it actually rendered. Every
+screen, in all six languages -- roughly two hundred renders, which is past what
+anyone will walk by hand, and the failure is always one sentence in one
+language on one screen.
+
+```bash
+npm run locale:probe                              # a dev server on :3000
+npm run locale:probe -- --base https://eraya.app  # production
+```
+
+Per screen and language it checks the `lang` attribute, that `--font-script`
+carries the right stack, that sentences from that language are in the markup,
+that no English sentence stands where its translation is absent -- and that
+**exactly one dictionary reached the browser.**
+
+That last one is the reason it exists. A Cloudflare Worker isolate holds what a
+module imports on behalf of every request it is serving, and until 2026-09-23
+all six dictionaries were held to render one. The isolate crossed its 128 MB
+ceiling in front of a member who had just finished signing up, and nothing in a
+typecheck, a lint or a build could see it. The probe can, because it counts the
+languages in the payload the browser is handed: run against the code that
+caused the incident, that check fails on every screen.
+
+Onboarding and signed-in screens need a member, so the probe creates one
+throwaway `@demo.eraya.invalid` account, walks it forward a step at a time so
+each gated screen is reachable in turn, and deletes it in a `finally`. Against
+`--base https://eraya.app` that account is made in -- and removed from -- the
+production database, there being no staging environment.
+
+Two things it reports without failing: the legal pages carry a document that is
+English-only by decision, and several screens render in the browser rather than
+on the server, so only their payload can be read.
+
 ## One domain, one application
 
 `eraya.app` is the product. Not a marketing site in front of it and not a
@@ -310,6 +352,9 @@ npm run dev     # http://localhost:3000
 npm run build   # production build
 npm start       # serve the build
 npm run lint    # eslint
+
+npm run i18n:check    # the six locale files against each other
+npm run locale:probe  # every screen in all six, against a running site
 
 # Cloudflare Workers, from apps/web
 npm run cf:build    --workspace @eraya/web   # compile the Worker

@@ -3,7 +3,8 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 
 import {
-  createTranslator,
+  createTranslatorFrom,
+  loadTranslations,
   DEFAULT_LOCALE,
   matchLocale,
   toLocale,
@@ -103,5 +104,6 @@ function suggestion(requestHeaders: Headers): Locale {
 
 /** The translator for this request. */
 export async function getT(): Promise<TFunction> {
-  return createTranslator(await getLocale());
+  const locale = await getLocale();
+  return createTranslatorFrom(locale, await loadTranslations(locale));
 }
