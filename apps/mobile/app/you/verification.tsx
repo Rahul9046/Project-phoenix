@@ -1,5 +1,4 @@
 import { View } from "react-native";
-import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/features/auth/SessionProvider";
@@ -24,16 +23,10 @@ import { Text } from "@/ui/Text";
  * Identity and relationship-status verification do not exist, so they are
  * listed as not available rather than as pending, which would imply a queue.
  *
- * The unverified phone row is an invitation and not a warning. Verification is
- * optional: declining withholds nothing -- not discovery, not interest, not
- * connections, not messages -- so there is no risk to warn anybody about, and
- * wording that implied a lapse would be pressure applied on behalf of a benefit
- * the member has already weighed.
- *
- * "Verify phone" opens the ordinary phone step rather than anything of its own.
- * That screen owns the provider call and every server-side limit behind it; a
- * second way in would be a second implementation of both, and the one that
- * eventually drifts is the one nobody is looking at.
+ * The unverified phone row, and the "Verify phone" control on it, are absent
+ * for the length of the private Android beta -- see the comment beside the
+ * line itself. Nothing else on this screen changed, and a verified number is
+ * still shown as verified on exactly the same evidence as before.
  */
 type Line = {
   label: string;
@@ -54,31 +47,33 @@ export default function Verification() {
         ? t("account.verification.emailDone")
         : t("account.verification.emailAbsent"),
     },
-    profile?.phoneVerified
-      ? {
-          label: t("common.phoneVerified"),
-          state: "done",
-          detail: t("account.verification.phoneDone"),
-        }
-      : {
-          label: t("account.verification.phoneLabel"),
-          state: "absent",
-          detail: t("account.verification.phoneAbsent"),
-          action: {
-            label: t("account.verification.phoneCta"),
-            /*
-             * `from` is what tells that screen it is being used as a setting
-             * rather than as question one of nine: it drops the progress bar,
-             * drops "Skip for now", restores the back control, and hands the
-             * member back here afterwards instead of into onboarding.
-             */
-            onPress: () =>
-              router.push({
-                pathname: "/onboarding/phone",
-                params: { from: "account" },
-              }),
+    /*
+     * The phone row appears only for somebody who has verified one, for the
+     * length of the private Android beta.
+     *
+     * A verified number is a fact about that member and is shown exactly as it
+     * always was -- including when it was verified on the website, which uses
+     * MSG91's widget and works today. What has gone is the unverified row,
+     * which invited a member to add a trust mark the app cannot currently give
+     * them: Eraya holds no DLT registration, so the OTP API has no template to
+     * send through. The row was an invitation, and the honest thing to do with
+     * an invitation you cannot honour is withdraw it rather than grey it out --
+     * a disabled control or a "coming soon" is the same promise, made worse by
+     * being unactionable.
+     *
+     * Nobody loses anything by its absence. Verification was already optional
+     * and withholds nothing: not discovery, not interest, not connections, not
+     * messages.
+     */
+    ...(profile?.phoneVerified
+      ? [
+          {
+            label: t("common.phoneVerified"),
+            state: "done" as const,
+            detail: t("account.verification.phoneDone"),
           },
-        },
+        ]
+      : []),
     {
       label: t("account.verification.identityLabel"),
       state: "absent",

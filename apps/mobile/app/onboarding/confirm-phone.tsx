@@ -152,7 +152,8 @@ export default function ConfirmPhoneStep() {
 
   return (
     <Step
-      step="phone"
+      /* No step: like the screen before it, this is not one of the questions
+         for the length of the private beta. See `onboarding/phone.tsx`. */
       title={t("auth.otp.title")}
       /*
         The live wording is not translated yet and says so: `auth.otp.ledePrefix`

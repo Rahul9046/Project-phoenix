@@ -25,8 +25,19 @@ import { Text } from "@/ui/Text";
  * with the content is a button that has to be hunted for.
  */
 
+/*
+ * The phone step is deliberately absent for the private Android beta.
+ *
+ * The app cannot send an SMS: Eraya holds no DLT registration, so the OTP API
+ * has no template to send through, and asking for a number in order to fail is
+ * worse than not asking. The screen, the provider calls and every server-side
+ * limit are untouched and still used by the website, which verifies through
+ * MSG91's widget and works today -- this is only the sequence a person walks on
+ * a phone. Putting "phone" back at the head of this list, restoring the two
+ * navigations in `features/auth/routing.ts` and the action in
+ * `app/you/verification.tsx` is the whole of the way back.
+ */
 export const onboardingSteps = [
-  "phone",
   "name",
   "birthday",
   "gender",
@@ -54,7 +65,15 @@ export function Step({
   canGoBack = true,
   progress = true,
 }: {
-  step: OnboardingStepName;
+  /**
+   * Which question this is, for the progress bar.
+   *
+   * Optional, because this frame is also used by a screen that is not one of
+   * the questions -- the phone step, which the beta does not ask and which the
+   * account area used to open on its own. Without a step there is no position
+   * to report, so the bar is left out rather than guessed at.
+   */
+  step?: OnboardingStepName;
   title: string;
   /** One line under the heading. Two at most -- this is not a page of copy. */
   lede?: string;
@@ -80,7 +99,7 @@ export function Step({
 }) {
   const insets = useSafeAreaInsets();
   const t = useT();
-  const index = onboardingSteps.indexOf(step);
+  const index = step ? onboardingSteps.indexOf(step) : -1;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.canvas }}>
@@ -122,7 +141,7 @@ export function Step({
           ) : null}
         </View>
 
-        {progress ? (
+        {progress && index >= 0 ? (
           <Progress index={index} total={onboardingSteps.length} />
         ) : (
           // The bar's slot, kept so the language control stays where it is and

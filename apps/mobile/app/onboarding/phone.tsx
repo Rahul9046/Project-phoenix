@@ -37,6 +37,21 @@ import { Text } from "@/ui/Text";
  * three, which is why it reads `from` and hands it on. Declining calls nothing
  * at MSG91: no send, no retry, no cost, and no provider anywhere learns that
  * this member exists.
+ *
+ * Reached by nothing, for the length of the private Android beta.
+ * --------------------------------------------------------------
+ *
+ * Left working rather than deleted. Eraya holds no DLT registration, so the
+ * OTP API this screen calls has no template of its own to send through and a
+ * member who filled the form in would wait for an SMS that was never sent. The
+ * two ways in -- the head of onboarding and the account area's "Verify phone"
+ * -- are the only things that were removed, so restoring this is putting those
+ * back rather than writing it again. Nothing below was changed except the
+ * progress indicator, which asked for a position in a sequence this screen is
+ * no longer part of.
+ *
+ * The website is untouched and verifies through MSG91's widget, which works in
+ * production and needs no template of Eraya's.
  */
 export default function PhoneStep() {
   const t = useT();
@@ -112,7 +127,11 @@ export default function PhoneStep() {
 
   return (
     <Step
-      step="phone"
+      /*
+       * No step, because this is no longer one of the questions -- see
+       * `features/onboarding/Step.tsx`. The frame is still right; the position
+       * in a sequence this screen is not part of is not.
+       */
       title={t("auth.phone.title")}
       lede={t("auth.phone.lede")}
       onContinue={() => void submit()}
