@@ -59,6 +59,17 @@ const flag = (name, fallback) => {
 };
 const base = flag("--base", "http://localhost:3000").replace(/\/$/, "");
 
+/*
+ * The signed-out screens only, writing nothing anywhere.
+ *
+ * The rest of the walk needs a member, and with no staging environment that
+ * member is made in the production database. That is a reasonable thing to do
+ * deliberately and a poor thing to do in passing -- and checking a fresh
+ * deploy, which is the commonest reason to point this at eraya.app, only
+ * needs the questions that can be asked without an account.
+ */
+const publicOnly = args.includes("--public-only");
+
 function readEnv() {
   const file = path.join(root, "apps/web/.env.local");
   if (!fs.existsSync(file)) {
@@ -447,10 +458,13 @@ console.log('"!n" is n English leaks, "client" is a screen that renders in the b
 
 let created = null;
 
-try {
-  console.log("Signed out\n");
-  for (const route of PUBLIC_ROUTES) await walk(route, []);
-
+/**
+ * Onboarding and the signed-in screens, which need a member to be looked at.
+ *
+ * Kept in a function of its own because this is the half that writes to the
+ * database, and `--public-only` is how a caller declines it.
+ */
+async function walkTheRest() {
   console.log("\nSetting up a throwaway member");
 
   /*
@@ -516,6 +530,18 @@ try {
   console.log("\nSigned in\n");
   await setProfile(created, { onboarding_stage: "onboarding_completed" });
   for (const route of SIGNED_IN_ROUTES) await walk(route, cookies, created);
+}
+
+try {
+  console.log("Signed out\n");
+  for (const route of PUBLIC_ROUTES) await walk(route, []);
+
+  if (publicOnly) {
+    console.log("\n--public-only: stopping here, having created nothing and written nowhere.");
+    console.log("Drop the flag to walk onboarding and the signed-in screens too.");
+  } else {
+    await walkTheRest();
+  }
 } catch (error) {
   console.error(`\n  probe stopped: ${error.message}\n`);
   results.push({ route: "(setup)", locale: "-", name: "probe ran", passed: false, detail: error.message });
