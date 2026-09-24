@@ -10,11 +10,6 @@ import {
   type Locale,
 } from "./config";
 import { en, type Translations } from "./locales/en";
-import { hi } from "./locales/hi";
-import { bn } from "./locales/bn";
-import { mr } from "./locales/mr";
-import { te } from "./locales/te";
-import { ta } from "./locales/ta";
 import type { TFunction, TranslationKey, TranslationVars } from "./types";
 import {
   OTHER_REASON,
@@ -32,12 +27,29 @@ import {
  * until somebody who reads Bengali notices that the app and the website disagree
  * about what Eraya promised them.
  *
- * Everything is bundled rather than fetched. The whole of `en` is a few
- * kilobytes of text; a network request to find out what a button says is a
- * blank button on a slow connection, which is exactly the audience Eraya has.
+ * Nothing is fetched over the network. A request to find out what a button says
+ * is a blank button on a slow connection, which is exactly the audience Eraya
+ * has -- so every dictionary ships inside the bundle, and the only question is
+ * which of them a given runtime has to hold in memory at once.
+ *
+ * This entry point holds English and nothing else.
+ *
+ * English is the floor every other language falls back to, so it is always
+ * needed and is always here. The other five are reachable through
+ * `loadTranslations`, which a bundler splits into one chunk apiece, or all at
+ * once through `@eraya/i18n/all` for a client that wants them resident.
+ *
+ * The reason is the website's runtime rather than a preference for lazy
+ * loading. It is a Cloudflare Worker, where one isolate serves many requests
+ * out of a shared memory ceiling, so anything this module imports is held
+ * whether a page uses it or not -- and because fifteen files import a type or a
+ * helper from here, all six dictionaries were being held by all of them, in two
+ * separate 507 KB chunks. That Worker was killed for exceeding its resources on
+ * 2026-09-23, in front of somebody who had just finished signing up. All six
+ * languages are still shipped, still complete and still chosen the same way;
+ * what changed is how many of them one isolate keeps in memory to render a page
+ * in one of them.
  */
-
-export const translations: Record<Locale, Translations> = { en, hi, bn, mr, te, ta };
 
 /**
  * Walks a dotted path. Returns a string, or undefined if the path does not
@@ -74,11 +86,14 @@ function fill(template: string, vars?: TranslationVars): string {
  * `Translations` -- so the fallback exists for the case the types cannot see:
  * a stale bundle, a hand-edited locale, a key added while a translation lags.
  */
-export function createTranslator(locale: Locale): TFunction {
-  const active = translations[locale] ?? translations[FALLBACK_LOCALE];
+export function createTranslatorFrom(
+  locale: Locale,
+  dictionary: Translations,
+): TFunction {
+  const active = dictionary ?? en;
 
   return (key: TranslationKey, vars?: TranslationVars) => {
-    const found = lookup(active, key) ?? lookup(translations[FALLBACK_LOCALE], key);
+    const found = lookup(active, key) ?? lookup(en, key);
 
     if (found === undefined) {
       /*
@@ -103,6 +118,37 @@ export function createTranslator(locale: Locale): TFunction {
 
     return fill(found, vars);
   };
+}
+
+/**
+ * One language's words, loaded on demand.
+ *
+ * A bundler turns each branch into a chunk of its own, so a runtime that
+ * renders a Hindi page reads Hindi and English and never touches the other
+ * four. English returns without awaiting anything: it is already here, being
+ * the fallback, and a page in English should not pay for a module load to
+ * discover that.
+ *
+ * The branches are written out rather than built from a template literal
+ * because a bundler can only split what it can see. `import(\`./locales/${x}\`)`
+ * is a runtime path, which Turbopack and Metro both answer by bundling every
+ * file that could match -- which is the thing this exists to avoid.
+ */
+export async function loadTranslations(locale: Locale): Promise<Translations> {
+  switch (locale) {
+    case "hi":
+      return (await import("./locales/hi")).hi;
+    case "bn":
+      return (await import("./locales/bn")).bn;
+    case "mr":
+      return (await import("./locales/mr")).mr;
+    case "te":
+      return (await import("./locales/te")).te;
+    case "ta":
+      return (await import("./locales/ta")).ta;
+    default:
+      return en;
+  }
 }
 
 /**
@@ -143,6 +189,14 @@ export const FONT_STACKS: Record<Locale, string> = {
 };
 
 export {
+  /**
+   * English, the floor under every other language.
+   *
+   * Exported so a caller that needs a dictionary without awaiting one -- a
+   * component rendered outside its provider, say -- has the same fallback the
+   * translator uses rather than inventing another.
+   */
+  en,
   DEFAULT_LOCALE,
   FALLBACK_LOCALE,
   LOCALES,

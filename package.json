@@ -17,6 +17,7 @@
     "mobile:lint": "npm run lint --workspace @eraya/mobile",
     "typecheck": "npm run typecheck --workspace @eraya/mobile && tsc --noEmit -p apps/web",
     "i18n:check": "node packages/i18n/scripts/check-locales.mjs",
+    "locale:probe": "node scripts/locale-probe.mjs",
     "demo:seed": "node scripts/demo-seed.mjs",
     "demo:remove": "node scripts/demo-seed.mjs --remove",
     "security": "node scripts/security-probe.mjs",
