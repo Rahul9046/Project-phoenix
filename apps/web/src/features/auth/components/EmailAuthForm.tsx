@@ -57,20 +57,29 @@ export function EmailAuthForm() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [resendIn, setResendIn] = useState(0);
-
-  /*
-   * Counted down here rather than stored, because this screen holds the whole
-   * exchange: the address, the code field and the resend control are one
-   * component, and a member who leaves it has abandoned the sign-in rather than
-   * paused it. The phone flow keeps its timestamp because its two halves are
-   * separate screens and a refresh between them must not reset the wait.
+  /**
+   * When the wait ends, not how much of it is left.
+   *
+   * A timestamp compared against the clock, which is what the phone flow does
+   * and for a reason worth writing down: the first version of this counted
+   * ticks -- one interval, one second subtracted -- and lost roughly twenty
+   * seconds a minute. Browsers clamp timers in a tab that is not in front, so a
+   * countdown made of ticks runs as slowly as the tab is throttled and the
+   * member is told to wait far longer than a minute. Reading the clock is
+   * immune to that: however often the tick actually fires, the number it
+   * renders is the truth, and it reaches zero on time.
    */
+  const [resendAt, setResendAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const resendIn =
+    resendAt === null ? 0 : Math.max(0, Math.ceil((resendAt - now) / 1000));
+
   useEffect(() => {
-    if (resendIn <= 0) return;
-    const id = setInterval(() => setResendIn((left) => Math.max(0, left - 1)), 1000);
+    if (resendAt === null) return;
+    const id = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(id);
-  }, [resendIn]);
+  }, [resendAt]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +102,7 @@ export function EmailAuthForm() {
     try {
       await signInWithEmail(trimmed);
       setSentTo(trimmed);
-      setResendIn(RESEND_AFTER_SECONDS);
+      setResendAt(Date.now() + RESEND_AFTER_SECONDS * 1000);
     } catch (cause) {
       setFormError(describeAuthError(cause));
     } finally {
@@ -139,7 +148,7 @@ export function EmailAuthForm() {
       await signInWithEmail(sentTo);
       setResent(true);
       setCode("");
-      setResendIn(RESEND_AFTER_SECONDS);
+      setResendAt(Date.now() + RESEND_AFTER_SECONDS * 1000);
     } catch (cause) {
       setFormError(describeAuthError(cause));
     } finally {
