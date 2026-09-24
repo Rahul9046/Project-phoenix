@@ -23,7 +23,19 @@
  * Use this instead of `supabase config push`:
  *
  *   npm run config:push
- *   npm run config:push -- --dry-run
+ *
+ * There is no dry run. This file used to advertise `--dry-run`, and the CLI has
+ * never accepted it -- `Unrecognized flag: --dry-run in command supabase config
+ * push`, checked on 2026-09-24. So a push cannot be previewed, which is worth
+ * knowing before making one: the only way to see what it did is to read the
+ * dashboard afterwards.
+ *
+ * Unanswered, and it matters: whether the CLI sends its own defaults for keys
+ * this file omits. If it does, a push made for one reason silently resets every
+ * setting nobody thought to write down -- the same shape as the OAuth wipe
+ * above, arriving by omission rather than by a missing variable. The email rate
+ * limit is in `config.toml` partly for this reason. See
+ * docs/12-email-delivery.md.
  */
 
 import { spawnSync } from "node:child_process";

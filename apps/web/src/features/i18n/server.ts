@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { cookies, headers } from "next/headers";
 
 import {
@@ -44,7 +46,7 @@ export const LOCALE_COOKIE = "eraya_locale";
  */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-export async function getLocale(): Promise<Locale> {
+export const getLocale = cache(async (): Promise<Locale> => {
   const store = await cookies();
   const saved = store.get(LOCALE_COOKIE)?.value;
 
@@ -88,7 +90,7 @@ export async function getLocale(): Promise<Locale> {
 
   if (saved) return toLocale(saved);
   return suggestion(await headers());
-}
+});
 
 /**
  * What the browser says it reads, and only for somebody who has never chosen.
@@ -103,7 +105,7 @@ function suggestion(requestHeaders: Headers): Locale {
 }
 
 /** The translator for this request. */
-export async function getT(): Promise<TFunction> {
+export const getT = cache(async (): Promise<TFunction> => {
   const locale = await getLocale();
   return createTranslatorFrom(locale, await loadTranslations(locale));
-}
+});

@@ -1,5 +1,7 @@
 ﻿import "server-only";
 
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import {
   anonymousSession,
@@ -30,12 +32,26 @@ function providerOf(raw: string | undefined): AuthProviderId {
   }
 }
 
-export async function loadAuthSession(
+/*
+ * Memoised per request, because the shell and the page both need it.
+ *
+ * `getUser()` validates the token with Supabase over the network, and a
+ * signed-in `/home` was doing that three times to render one page -- the
+ * layout, the page, and the language lookup, each asking the same question of
+ * the same cookie and waiting for the same answer. React's `cache` collapses
+ * them into one for the length of the render and shares nothing beyond it.
+ *
+ * The optional client is keyed on like any other argument. That is correct
+ * rather than incidental: `createClient` is memoised too, so the no-argument
+ * callers and the route handlers that pass their own end up on the same
+ * instance and therefore the same entry.
+ */
+export const loadAuthSession = cache(async (
   // The route handlers that establish a session pass their own client. Reusing
   // it matters: they have just written the auth cookies, and a client built
   // before those writes land would read the request as still signed out.
   client?: Awaited<ReturnType<typeof createClient>>,
-): Promise<AuthSession> {
+): Promise<AuthSession> => {
   const supabase = client ?? (await createClient());
 
   // `getUser` validates the token with Supabase rather than trusting the
@@ -137,4 +153,4 @@ export async function loadAuthSession(
       languagesUndisclosed: profile.languages_undisclosed ?? false,
     },
   };
-}
+});

@@ -69,10 +69,39 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
 
+# How many sign-in emails may be sent, and how often one person may ask.
+#
+# In this file rather than only in the dashboard, which is where it lived until
+# 2026-09-24 -- unreviewable, unrestorable, and unreadable without opening a
+# browser. The value it replaced could not be recovered: it was overwritten
+# before anyone wrote it down, which is the argument for this section in one
+# sentence.
+#
+# `email_sent` is account-wide and hourly, not per member. Supabase's default
+# alongside custom SMTP is 30, which is the wrong shape for a beta: monthly
+# volume is a non-issue at a couple of sign-ins a day, but testers invited
+# together arrive together, and the people a shared hourly cap turns away are
+# the new ones, on their first contact with the product. 200 absorbs a batch of
+# a hundred and fifty with room for their retries, and still stops a script
+# long before a spam run could damage the sending domain -- which is the cost
+# that matters, because Resend suspending eraya.app ends sign-in for everybody
+# and is not fixed by paying.
+#
+# See docs/12-email-delivery.md for the evidence, the costing and the four
+# things it could not establish.
+[auth.rate_limit]
+email_sent = 200
+
 [auth.email]
 enable_signup = true
 # Eraya has no passwords: members receive a link or a code.
 enable_confirmations = true
+# The gap between two emails to the same address. The default, stated out loud,
+# because this is the limit that stops one member spending the account-wide
+# budget above -- the phone flow's 60-second cooldown by another name. The web
+# sign-in form enforces the same minute in the browser as a courtesy; this is
+# the one that is actually enforced.
+max_frequency = "1m"
 
 # Custom SMTP.
 #
