@@ -137,7 +137,9 @@ that no English sentence stands where its translation is absent -- and that
 
 That last one is the reason it exists. A Cloudflare Worker isolate holds what a
 module imports on behalf of every request it is serving, and until 2026-09-23
-all six dictionaries were held to render one. The isolate crossed its 128 MB
+all six dictionaries were held to render one. (Superseded 2026-09-24: the 1102 is `exceededCpu`
+against the Workers free plan's 10 ms CPU budget, not the 128 MB memory ceiling -- `wrangler tail`
+names the outcome, GraphQL analytics cannot.) The isolate was read as crossing its 128 MB
 ceiling in front of a member who had just finished signing up, and nothing in a
 typecheck, a lint or a build could see it. The probe can, because it counts the
 languages in the payload the browser is handed: run against the code that
