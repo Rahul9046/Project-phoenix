@@ -44,6 +44,13 @@ import {
   FRAME_WIDTH,
   MAX_ZOOM,
 } from "../apps/mobile/src/features/account/framing.ts";
+import {
+  clampTransform,
+  coverScale,
+  framingFor,
+  IDENTITY,
+  panBounds,
+} from "../apps/mobile/src/features/account/framing-gestures.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -277,6 +284,133 @@ for (const [path, pattern] of renderSites) {
 
   console.log(`  ${found.length} frame(s)  ${path}`);
 }
+
+/* -------------------------------------------------------------------------- */
+
+console.log("\nA drag and a pinch mean what the screen showed");
+
+/*
+ * The gesture layer reports a scale and a translation in frame points. What is
+ * uploaded is a rectangle in source pixels. These are the two ends of that
+ * conversion, and nothing else in the product checks that they agree -- a
+ * mistake here is the bug this feature exists to fix, reappearing silently:
+ * the member frames a face and something else is stored.
+ */
+const frames = [
+  { width: 272, height: 340, note: "phone frame" },
+  { width: 300, height: 375, note: "larger frame" },
+];
+
+const gestureFailuresBefore = failures;
+
+for (const source of sources) {
+  for (const frame of frames) {
+    const where = `${source.note} in ${frame.note}`;
+
+    /* Untouched must be the centre crop, exactly as before the framer existed. */
+    const restingCrop = cropFor(source, framingFor(source, frame, IDENTITY));
+    const centred = cropFor(source, centredFraming(source));
+
+    ok(
+      near(restingCrop.x, centred.x, 1e-6) &&
+        near(restingCrop.y, centred.y, 1e-6) &&
+        near(restingCrop.width, centred.width, 1e-6),
+      "an untouched transform is the centre crop",
+      `${where}: ${restingCrop.x},${restingCrop.y} vs ${centred.x},${centred.y}`,
+    );
+
+    /* The picture may never be dragged far enough to show a gap. */
+    for (const scale of [1, 1.5, 2, 3, MAX_ZOOM]) {
+      const limit = panBounds(source, frame, scale);
+
+      for (const [px, py] of [
+        [0, 0],
+        [9999, 9999],
+        [-9999, -9999],
+        [9999, -9999],
+        [-9999, 9999],
+        [limit.x, limit.y],
+        [-limit.x, -limit.y],
+      ]) {
+        const t = clampTransform(source, frame, { scale, x: px, y: py });
+        const crop = cropFor(source, framingFor(source, frame, t));
+        const at = `${where} @ ${scale}x (${px},${py})`;
+
+        ok(
+          Math.abs(t.x) <= limit.x + 1e-9,
+          "drag stops at the left/right edge",
+          at,
+        );
+        ok(
+          Math.abs(t.y) <= limit.y + 1e-9,
+          "drag stops at the top/bottom edge",
+          at,
+        );
+
+        /* The crop the transform means must be a real crop of this picture. */
+        ok(
+          crop.x >= -1e-6 && crop.y >= -1e-6,
+          "no empty space above or left",
+          `${at}: ${crop.x},${crop.y}`,
+        );
+        ok(
+          crop.x + crop.width <= source.width + 1e-6 &&
+            crop.y + crop.height <= source.height + 1e-6,
+          "no empty space below or right",
+          `${at}: ${crop.x + crop.width} / ${crop.y + crop.height}`,
+        );
+        ok(
+          near(crop.width / crop.height, FRAME_WIDTH / FRAME_HEIGHT, 1e-9),
+          "crop is still 4:5",
+          at,
+        );
+
+        /*
+         * The preview and the file, computed independently. The screen draws
+         * the photograph at `coverScale * scale` offset by the translation; the
+         * upload cuts `crop` out of the original. Mapping the frame's corner
+         * back through the on-screen transform must land on the pixel the crop
+         * starts at, or what was shown is not what was saved.
+         */
+        const k = coverScale(source, frame) * t.scale;
+        const shownLeft = (source.width * k) / 2 - frame.width / 2 - t.x;
+        const shownTop = (source.height * k) / 2 - frame.height / 2 - t.y;
+
+        ok(
+          near(crop.x, shownLeft / k, 1e-6) && near(crop.y, shownTop / k, 1e-6),
+          "the saved crop starts where the preview starts",
+          `${at}: crop ${crop.x},${crop.y} vs shown ${shownLeft / k},${shownTop / k}`,
+        );
+        ok(
+          near(crop.width, frame.width / k, 1e-6),
+          "the saved crop is as wide as the preview window",
+          at,
+        );
+      }
+    }
+
+    /* Zoom then drag, and drag then zoom, must agree. */
+    const zoomThenDrag = clampTransform(source, frame, {
+      ...clampTransform(source, frame, { ...IDENTITY, scale: 2 }),
+      x: 40,
+      y: -25,
+    });
+    const dragThenZoom = clampTransform(source, frame, {
+      ...clampTransform(source, frame, { scale: 1, x: 40, y: -25 }),
+      scale: 2,
+    });
+
+    ok(
+      near(zoomThenDrag.scale, dragThenZoom.scale, 1e-9),
+      "zoom-then-drag and drag-then-zoom agree on scale",
+      where,
+    );
+  }
+}
+
+console.log(
+  `  ${failures === gestureFailuresBefore ? "pass" : "fail"}  ${sources.length} shapes x ${frames.length} frames, dragged to every edge at 5 zooms`,
+);
 
 /* -------------------------------------------------------------------------- */
 
