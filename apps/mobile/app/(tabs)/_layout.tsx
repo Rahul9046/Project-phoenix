@@ -1,6 +1,7 @@
 import { Platform, View, type ColorValue } from "react-native";
 import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ActivityProvider, useActivity } from "@/features/activity/ActivityProvider";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -23,6 +24,17 @@ import { text } from "@/theme/typography";
  * visible -- a long-press or a swipe is a shortcut for people who already know
  * it is there, never the only way in.
  */
+/**
+ * The room the icon and the label need, with nothing of the system's in it.
+ *
+ * Taller than the 49pt the navigator would pick on its own, so an 11-character
+ * label under a 24pt glyph is never squeezed. It is deliberately one number for
+ * both platforms: the thing that differs between an iPhone and an Android phone
+ * is the size of the strip the system reserves underneath, and that is read from
+ * the device rather than written down here.
+ */
+const BAR_CONTENT_HEIGHT = 52;
+
 /**
  * A tab label that cannot clip.
  *
@@ -82,6 +94,32 @@ export default function TabsLayout() {
 function TabsInner() {
   const t = useT();
 
+  /*
+   * How much of the bottom of the screen belongs to the operating system.
+   *
+   * Android has drawn behind its own navigation bar since it started enforcing
+   * edge-to-edge, and Eraya targets SDK 36, where there is no longer a way to
+   * opt out. The window therefore extends underneath the back/home/recents
+   * controls, and anything laid out at the bottom of it is behind them unless it
+   * is told to move up.
+   *
+   * The number is the system's, not a guess: roughly 48dp for three-button
+   * navigation, roughly half that for the gesture pill, and 0 on a device with
+   * no on-screen controls at all. Reading it is what makes one rule fit all
+   * three -- a fixed inset large enough for the button bar would leave a gesture
+   * phone with an empty strip, and one tuned to the pill leaves the buttons on
+   * top of the tabs, which is the bug this replaces.
+   */
+  const insets = useSafeAreaInsets();
+
+  /*
+   * A floor, because zero is a legitimate inset and a cramped bar is not. When
+   * the system asks for nothing, the bar keeps the 8pt of breathing room it
+   * always had -- which makes this arithmetic collapse to exactly the 68pt bar
+   * Android used before, rather than to a new one.
+   */
+  const bottomInset = Math.max(insets.bottom, space.sm);
+
   return (
     <Tabs
       screenOptions={{
@@ -92,11 +130,24 @@ function TabsInner() {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
           borderTopWidth: 1,
-          // Taller than the default so the label is never squeezed against the
-          // home indicator on a gesture-navigation phone.
-          height: Platform.OS === "ios" ? 88 : 68,
+          /*
+           * Content, then the system's strip -- in that order, and both spelled
+           * out, because the navigator gives up on a bar that declares either.
+           *
+           * `getTabBarHeight` returns a numeric `height` from this style
+           * verbatim and skips the `+ insets.bottom` it would otherwise add, and
+           * `tabBarStyle` is merged last, so a `paddingBottom` here also wins
+           * over the `paddingBottom: insets.bottom` the navigator had set. The
+           * old fixed 68 and `space.sm` silently defeated both defences at once,
+           * which is why the tabs ended up underneath the navigation bar.
+           *
+           * Adding the inset to the height as well as to the padding is what
+           * keeps the icons and labels where they are instead of squeezing them:
+           * the bar grows by exactly the strip it has to clear.
+           */
+          height: space.sm + BAR_CONTENT_HEIGHT + bottomInset,
           paddingTop: space.sm,
-          paddingBottom: Platform.OS === "ios" ? space.xxl : space.sm,
+          paddingBottom: bottomInset,
         },
         /*
          * The label is a component rather than a style, because a point size
