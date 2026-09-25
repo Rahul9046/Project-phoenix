@@ -3,7 +3,7 @@
     "name": "Eraya",
     "slug": "eraya",
     "scheme": "eraya",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "app.eraya.mobile",
+      "versionCode": 2,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "backgroundColor": "#BD4F33",
