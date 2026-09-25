@@ -3,11 +3,15 @@ import { Pressable, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
+import { PhotoFramer } from "@/features/account/PhotoFramer";
 import {
-  addPhotos,
   makePrimary,
   MAX_PHOTOS,
+  pickPhotos,
   removePhoto,
+  uploadPhoto,
+  type Crop,
+  type PickedPhoto,
 } from "@/features/account/photos";
 import { photoUrlFor } from "@/features/members/data";
 import { useMyDetails } from "@/features/members/me";
@@ -30,6 +34,10 @@ import { useT } from "@/features/i18n/LocaleProvider";
  *
  * The first photo is the one other people see on a card, so it can be chosen
  * rather than being whichever was uploaded first.
+ *
+ * Adding one goes through the framer. Every surface here draws a photograph in
+ * a 4:5 frame, so a crop happens either way -- this is the member deciding what
+ * it keeps instead of the layout taking the middle.
  */
 export default function Photos() {
   const t = useT();
@@ -39,6 +47,15 @@ export default function Photos() {
   const [urls, setUrls] = useState<Record<string, string | null>>({});
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+
+  /*
+   * What has been chosen and not yet framed. The head of the queue is the
+   * picture on the screen; `framed` and `chosen` are only there so somebody who
+   * picked three is told which one they are looking at.
+   */
+  const [queue, setQueue] = useState<PickedPhoto[]>([]);
+  const [framed, setFramed] = useState(0);
+  const [chosen, setChosen] = useState(0);
 
   /*
    * Cancellation on unmount, and on any change that starts a newer fetch.
@@ -66,25 +83,51 @@ export default function Photos() {
 
   async function add() {
     if (pending) return;
-    setPending(true);
 
     const room = MAX_PHOTOS - details.photoPaths.length;
-    const result = await addPhotos(details.photoPaths.length, room);
-
-    setPending(false);
+    const result = await pickPhotos(room);
 
     if (!result.ok) {
       if (!result.cancelled) toast.show(t(result.messageKey), "danger");
       return;
     }
 
+    setQueue(result.photos);
+    setFramed(0);
+    setChosen(result.photos.length);
+  }
+
+  /** The member is happy with the framing: cut it, upload it, move on. */
+  async function use(crop: Crop) {
+    const photo = queue[0];
+    if (!photo || pending) return;
+
+    setPending(true);
+
+    const result = await uploadPhoto(photo, crop, details.photoPaths.length);
+
+    if (!result.ok) {
+      setPending(false);
+      toast.show(t(result.messageKey), "danger");
+      return;
+    }
+
     await reload();
-    toast.show(
-      result.paths.length === 1
-        ? t("photos.added")
-        : t("photos.addedMany", { count: String(result.paths.length) }),
-      "positive",
-    );
+    setQueue((current) => current.slice(1));
+    setFramed((current) => current + 1);
+    setPending(false);
+    toast.show(t("photos.added"), "positive");
+  }
+
+  /**
+   * Backing out abandons the rest of the batch rather than moving to the next
+   * picture. Somebody who changes their mind halfway through choosing photos of
+   * themselves means all of it.
+   */
+  function cancelFraming() {
+    if (pending) return;
+    setQueue([]);
+    setChosen(0);
   }
 
   async function remove(path: string) {
@@ -118,6 +161,7 @@ export default function Photos() {
   }
 
   const full = details.photoPaths.length >= MAX_PHOTOS;
+  const framing = queue[0];
 
   return (
     <Screen>
@@ -257,6 +301,22 @@ export default function Photos() {
           />
         </View>
       </BottomSheet>
+
+      {framing ? (
+        <PhotoFramer
+          /*
+           * Keyed on the picture, so moving to the next one in a batch starts a
+           * fresh decision rather than inheriting wherever the last one was
+           * dragged to.
+           */
+          key={framing.uri}
+          photo={framing}
+          step={{ index: framed, count: chosen }}
+          busy={pending}
+          onCancel={cancelFraming}
+          onUse={(crop) => void use(crop)}
+        />
+      ) : null}
     </Screen>
   );
 }
