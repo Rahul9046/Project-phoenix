@@ -7,7 +7,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "@/features/auth/SessionProvider";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor } from "@/features/auth/routing";
-import { addPhotos, removePhoto } from "@/features/account/photos";
+import { PhotoFramer } from "@/features/account/PhotoFramer";
+import {
+  pickPhotos,
+  removePhoto,
+  uploadPhoto,
+  type Crop,
+  type PickedPhoto,
+} from "@/features/account/photos";
 import { photoUrlFor } from "@/features/members/data";
 import { Step } from "@/features/onboarding/Step";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
@@ -33,6 +40,11 @@ import { Text } from "@/ui/Text";
  *
  * Three at most here. The account screen allows more; a first pass does not need
  * to be a photo shoot.
+ *
+ * Chosen pictures are framed one at a time and each is uploaded as it is
+ * framed. On a slow connection that is the difference between photos that
+ * appear one by one and a button that does nothing for a minute -- and if the
+ * third fails, the first two are already stored.
  */
 
 const MAX_DURING_ONBOARDING = 3;
@@ -46,37 +58,69 @@ export default function PhotoStep() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /*
+   * What has been chosen and not yet framed. The head of the queue is the
+   * picture on the screen; `framed` is only there so somebody being asked about
+   * three photographs is told which one they are looking at.
+   */
+  const [queue, setQueue] = useState<PickedPhoto[]>([]);
+  const [framed, setFramed] = useState(0);
+  const [chosen, setChosen] = useState(0);
+
   async function add() {
     if (pending || paths.length >= MAX_DURING_ONBOARDING) return;
 
-    setPending(true);
     setError(null);
 
-    const result = await addPhotos(
-      paths.length,
-      MAX_DURING_ONBOARDING - paths.length,
-    );
+    const result = await pickPhotos(MAX_DURING_ONBOARDING - paths.length);
 
     // Choosing not to pick one is a decision, not a failure. Reporting it as an
     // error tells somebody off for changing their mind.
     if (!result.ok) {
       if (!result.cancelled) setError(t(result.messageKey));
+      return;
+    }
+
+    setQueue(result.photos);
+    setFramed(0);
+    setChosen(result.photos.length);
+  }
+
+  /** The member is happy with the framing: cut it, upload it, move on. */
+  async function use(crop: Crop) {
+    const photo = queue[0];
+    if (!photo || pending) return;
+
+    setPending(true);
+    setError(null);
+
+    const result = await uploadPhoto(photo, crop, paths.length);
+
+    if (!result.ok) {
+      setError(t(result.messageKey));
       setPending(false);
       return;
     }
 
-    const signed = await Promise.all(
-      result.paths.map((path) => photoUrlFor(path)),
-    );
+    const url = await photoUrlFor(result.path);
 
-    setPaths((current) => [...current, ...result.paths]);
-    setUrls((current) => ({
-      ...current,
-      ...Object.fromEntries(
-        result.paths.map((path, index) => [path, signed[index] ?? null]),
-      ),
-    }));
+    setPaths((current) => [...current, result.path]);
+    setUrls((current) => ({ ...current, [result.path]: url ?? null }));
+    setQueue((current) => current.slice(1));
+    setFramed((current) => current + 1);
     setPending(false);
+  }
+
+  /**
+   * Backing out abandons the rest of the batch rather than moving to the next
+   * picture. Somebody who changes their mind halfway through choosing photos of
+   * themselves means all of it, and being shown the next one anyway would feel
+   * like the screen arguing.
+   */
+  function cancelFraming() {
+    if (pending) return;
+    setQueue([]);
+    setChosen(0);
   }
 
   async function remove(path: string) {
@@ -94,6 +138,8 @@ export default function PhotoStep() {
     setPaths((current) => current.filter((entry) => entry !== path));
     setPending(false);
   }
+
+  const framing = queue[0];
 
   return (
     <Step
@@ -200,6 +246,22 @@ export default function PhotoStep() {
       <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxl }}>
         {t("onboarding.photo.privacyNote")}
       </Text>
+
+      {framing ? (
+        <PhotoFramer
+          /*
+           * Keyed on the picture, so moving to the next one in a batch starts a
+           * fresh decision rather than inheriting wherever the last one was
+           * dragged to.
+           */
+          key={framing.uri}
+          photo={framing}
+          step={{ index: framed, count: chosen }}
+          busy={pending}
+          onCancel={cancelFraming}
+          onUse={(crop) => void use(crop)}
+        />
+      ) : null}
     </Step>
   );
 }

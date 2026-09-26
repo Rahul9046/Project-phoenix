@@ -1,4 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
+import {
+  FRAME_HEIGHT,
+  FRAME_WIDTH,
+  type Crop,
+} from "@/features/account/framing";
 
 /**
  * Profile photography, in the browser.
@@ -14,8 +19,17 @@ import { createClient } from "@/lib/supabase/client";
  * members are people who have had a hard few years, and some of them will not
  * want a face on a screen for a long time.
  *
- * Three things happen before a file leaves the browser, matching what the app
+ * Four things happen before a file leaves the browser, matching what the app
  * does before a file leaves the phone.
+ *
+ * It is framed. Every surface that draws a member's photograph fills a 4:5
+ * frame, so something is always cropped away; the only question is who decides
+ * what. That used to be answered by the layout, which takes the middle — and
+ * the middle of a photograph is very often not the person in it. So the member
+ * is shown the frame and can move and scale the picture inside it before it is
+ * stored. Touching nothing gives exactly what the layout would have taken, so
+ * the default is the old behaviour and the control is an offer rather than a
+ * chore.
  *
  * It is resized and re-encoded. A photo off a modern camera is several
  * megabytes, and uploading that over Indian mobile data to display it a few
@@ -43,6 +57,21 @@ const MAX_EDGE = 1400;
 const QUALITY = 0.82;
 const SIGNED_URL_TTL_SECONDS = 3600;
 
+/*
+ * The frame and the arithmetic of moving a picture inside it live in
+ * `framing.ts`, which the app has a byte-identical copy of. They are passed
+ * straight back out from here so that a screen only ever imports one module to
+ * add a photograph.
+ */
+export {
+  centredFraming,
+  cropFor,
+  FRAME_HEIGHT,
+  FRAME_WIDTH,
+  MAX_ZOOM,
+} from "@/features/account/framing";
+export type { Crop, Framing } from "@/features/account/framing";
+
 /**
  * What the picker will offer. The bucket also accepts HEIC, but no browser can
  * decode one into a canvas, so offering it would mean accepting a file that
@@ -54,39 +83,68 @@ export type PhotosResult =
   | { ok: true; paths: string[] }
   | { ok: false; message: string };
 
+/** A decoded, orientation-corrected picture, still at its original size. */
+export type SourceImage = {
+  bitmap: ImageBitmap;
+  width: number;
+  height: number;
+};
+
 /**
- * Resize, re-encode, and drop everything that is not pixels.
+ * Decodes a chosen file, and drops everything that is not pixels.
  *
  * `createImageBitmap` is asked to respect the orientation flag, because that
  * flag is part of the EXIF being thrown away — without it, a photo taken in
  * portrait on a phone arrives on its side, which looks like the product
- * mangling somebody's picture.
+ * mangling somebody's picture. It is also why the width and height here are
+ * read off the bitmap rather than off the file: once the rotation is applied
+ * they are frequently the other way round.
  */
-async function process(file: File): Promise<Blob | null> {
-  let bitmap: ImageBitmap;
-
+export async function readImage(file: File): Promise<SourceImage | null> {
   try {
-    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const bitmap = await createImageBitmap(file, {
+      imageOrientation: "from-image",
+    });
+    return { bitmap, width: bitmap.width, height: bitmap.height };
   } catch {
     return null;
   }
+}
 
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-  const width = Math.round(bitmap.width * scale);
-  const height = Math.round(bitmap.height * scale);
+/**
+ * Draws the chosen rectangle out to a JPEG.
+ *
+ * The result is always 4:5, and its long edge is whichever is smaller of the
+ * crop and the 1400px ceiling — somebody who zoomed a long way in gets a
+ * smaller file rather than an upscaled one, because inventing pixels to hit a
+ * fixed size only makes the picture look worse and weigh more.
+ */
+export async function renderCrop(
+  source: SourceImage,
+  crop: Crop,
+): Promise<Blob | null> {
+  const height = Math.max(1, Math.round(Math.min(MAX_EDGE, crop.height)));
+  const width = Math.max(1, Math.round((height * FRAME_WIDTH) / FRAME_HEIGHT));
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
 
   const context = canvas.getContext("2d");
-  if (!context) {
-    bitmap.close();
-    return null;
-  }
+  if (!context) return null;
 
-  context.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  context.imageSmoothingQuality = "high";
+  context.drawImage(
+    source.bitmap,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    width,
+    height,
+  );
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/jpeg", QUALITY);
@@ -94,14 +152,19 @@ async function process(file: File): Promise<Blob | null> {
 }
 
 /**
- * Uploads photographs and records them against the profile.
+ * Uploads framed photographs and records them against the profile.
+ *
+ * It takes finished JPEGs rather than the files that were chosen, because by
+ * the time anything is uploaded the member has already been shown what will be
+ * kept. Framing, resizing and stripping all happen in `renderCrop`; this is
+ * only the part that talks to the server.
  *
  * A partial success is a success. If the third of three fails, the first two
  * are still uploaded and returned — throwing them away because of a later
  * failure would mean choosing all three again.
  */
 export async function addPhotos(
-  files: File[],
+  bodies: Blob[],
   limit: number,
 ): Promise<PhotosResult> {
   const supabase = createClient();
@@ -137,26 +200,15 @@ export async function addPhotos(
    * actually left rather than being allowed to try and be refused.
    */
   const room = Math.min(Math.max(0, limit), MAX_PHOTOS - startPosition);
-  const chosen = files.slice(0, room);
+  const chosen = bodies.slice(0, room);
   const paths: string[] = [];
 
-  if (files.length > 0 && chosen.length === 0) {
+  if (bodies.length > 0 && chosen.length === 0) {
     return { ok: false, message: "You have reached the limit for now." };
   }
 
-  for (const [index, file] of chosen.entries()) {
+  for (const [index, body] of chosen.entries()) {
     const position = startPosition + index;
-
-    const body = await process(file);
-
-    if (!body) {
-      return paths.length > 0
-        ? { ok: true, paths }
-        : {
-            ok: false,
-            message: "That file could not be read as a photo. Try a JPEG or PNG.",
-          };
-    }
 
     /*
      * A fresh name every time rather than overwriting by position. Storage and
