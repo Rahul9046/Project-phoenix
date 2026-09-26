@@ -813,6 +813,26 @@ export const en = {
       reassurance: "Open across India. Free to join, and free to leave — you can delete your account and everything in it at any time.",
     },
 
+    /*
+     * The Android beta, on the public site and on /beta.
+     *
+     * One block for both, because the landing page an Instagram link points at
+     * and the card on the home page are the same offer written once. `{version}`
+     * is passed in from `android-beta.ts` rather than typed into six files, so
+     * bumping the build cannot leave five languages claiming the old number.
+     */
+    androidBeta: {
+      eyebrow: "Android beta",
+      title: "Eraya Android Beta",
+      lede: "Be among the first to experience Eraya.",
+      cta: "Download Android Beta",
+      version: "Beta version {version}",
+      note: "Android may ask you to allow installation from your browser. Eraya is currently in beta.",
+      /* The /beta page, which stands alone with no header or footer. */
+      pageTitle: "Your next chapter starts here.",
+      pageLede: "Eraya is a trusted community for divorced, separated and widowed people in India. The Android app is in open beta — install it, create your account, and take it at your own pace.",
+      backToSite: "Visit eraya.app",
+    },
     footer: {
       erayaTitle: "Eraya",
       about: "About",
@@ -988,6 +1008,27 @@ export const en = {
   },
 
   photos: {
+    /*
+     * Framing, which the app and the website both offer. Every surface draws a
+     * photograph in a 4:5 frame, so a crop happens either way -- these are the
+     * words for letting the member decide it instead of the layout.
+     */
+    frame: {
+      title: "Frame your photo",
+      lede: "Photos are shown in this shape everywhere in Eraya.",
+      ofBatch: "Photo {index} of {count}.",
+      hintPointer: "Drag the picture to move it, and use the slider to zoom.",
+      hintTouch: "Drag the picture to move it, and pinch to zoom.",
+      frameLabel:
+        "Photo framing. Use the arrow keys to move the picture, and plus or minus to zoom.",
+      zoom: "Zoom",
+      zoomIn: "Zoom in",
+      zoomOut: "Zoom out",
+      use: "Use this photo",
+      saving: "Saving…",
+      reset: "Centre it again",
+    },
+    frameFailed: "That photo could not be prepared. Please try another one.",
     added: "Photo added.",
     deleteFailed: "That did not delete. Please try again.",
     removed: "Photo removed.",
@@ -1004,7 +1045,6 @@ export const en = {
     noneChosen: "No photo chosen.",
     uploadFailed: "That photo did not upload. Please check your connection and try again.",
     persistFailed: "That photo did not save. Please try again.",
-      addedMany: "{count} photos added.",
   },
 
   help: {

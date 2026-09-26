@@ -27,6 +27,7 @@ import { site } from "@/features/marketing/content";
  */
 const publicPaths = [
   "", // the landing page
+  "/beta", // the Android beta, which an Instagram link points straight at
   "/pricing",
   "/safety",
   "/privacy",

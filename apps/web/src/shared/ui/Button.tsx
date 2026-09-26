@@ -28,7 +28,15 @@ type SharedProps = {
   children: ReactNode;
 };
 
-type ButtonAsLink = SharedProps & { href: string; onClick?: () => void };
+type ButtonAsLink = SharedProps & {
+  href: string;
+  onClick?: () => void;
+  /**
+   * The target is a file to save, not a page to go to. Renders a plain anchor
+   * so the browser hands the response to its downloader.
+   */
+  download?: boolean;
+};
 type ButtonAsButton = SharedProps & { href?: never } & Omit<
     ComponentProps<"button">,
     "className" | "children"
@@ -39,6 +47,11 @@ type ButtonAsButton = SharedProps & { href?: never } & Omit<
  * in-page jump should be a plain anchor, and everything else a real button —
  * so keyboard and screen-reader behaviour is correct without callers thinking
  * about it.
+ *
+ * A download is the second case rather than the first. `next/link` prefetches
+ * its target and navigates on the client, and neither means anything for a URL
+ * that answers with a file: the prefetch pulls a response the router cannot
+ * use, and the navigation has no page to render at the end of it.
  */
 export function Button({
   variant = "primary",
@@ -52,11 +65,16 @@ export function Button({
   } ${className}`.trim();
 
   if (typeof rest.href === "string") {
-    const { href, onClick } = rest as ButtonAsLink;
+    const { href, onClick, download } = rest as ButtonAsLink;
 
-    if (href.startsWith("#")) {
+    if (href.startsWith("#") || download) {
       return (
-        <a href={href} onClick={onClick} className={classes}>
+        <a
+          href={href}
+          onClick={onClick}
+          download={download}
+          className={classes}
+        >
           {children}
         </a>
       );
