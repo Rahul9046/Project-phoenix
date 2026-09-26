@@ -32,8 +32,11 @@ type ButtonAsLink = SharedProps & {
   href: string;
   onClick?: () => void;
   /**
-   * The target is a file to save, not a page to go to. Renders a plain anchor
-   * so the browser hands the response to its downloader.
+   * The target is a file to save, not a page to go to.
+   *
+   * Renders a plain anchor and nothing more. It deliberately does **not** set
+   * the HTML `download` attribute — see the note on the component below before
+   * adding it back.
    */
   download?: boolean;
 };
@@ -52,6 +55,25 @@ type ButtonAsButton = SharedProps & { href?: never } & Omit<
  * its target and navigates on the client, and neither means anything for a URL
  * that answers with a file: the prefetch pulls a response the router cannot
  * use, and the navigation has no page to render at the end of it.
+ *
+ * ## Why `download` never reaches the DOM
+ *
+ * The HTML `download` attribute tells Chrome to handle the click as a download
+ * it owns rather than as a navigation, and Chrome will only do that for a
+ * same-origin resource. `/downloads/eraya-beta.apk` *starts* same-origin and
+ * then redirects to a GitHub release asset, so Chrome aborts it the moment the
+ * redirect leaves eraya.app — with no error, no console message and no file.
+ *
+ * That was a live bug: on 2026-09-26 the beta button did nothing at all, and
+ * every extra tap counted as one more download attempt from eraya.app until
+ * Chrome asked whether the site could "download multiple files" — a prompt for
+ * downloads that had each already been discarded. Reproduced in Chrome, and
+ * fixed by removing one attribute.
+ *
+ * Without it the click is an ordinary navigation. The redirects are followed,
+ * the release CDN answers `Content-Disposition: attachment`, and the browser
+ * downloads one file named by the server. The attribute bought nothing even
+ * when it worked: a cross-origin response names its own file regardless.
  */
 export function Button({
   variant = "primary",
@@ -69,12 +91,7 @@ export function Button({
 
     if (href.startsWith("#") || download) {
       return (
-        <a
-          href={href}
-          onClick={onClick}
-          download={download}
-          className={classes}
-        >
+        <a href={href} onClick={onClick} className={classes}>
           {children}
         </a>
       );
