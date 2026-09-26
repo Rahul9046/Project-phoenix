@@ -813,6 +813,26 @@ export const en = {
       reassurance: "Open across India. Free to join, and free to leave — you can delete your account and everything in it at any time.",
     },
 
+    /*
+     * The Android beta, on the public site and on /beta.
+     *
+     * One block for both, because the landing page an Instagram link points at
+     * and the card on the home page are the same offer written once. `{version}`
+     * is passed in from `android-beta.ts` rather than typed into six files, so
+     * bumping the build cannot leave five languages claiming the old number.
+     */
+    androidBeta: {
+      eyebrow: "Android beta",
+      title: "Eraya Android Beta",
+      lede: "Be among the first to experience Eraya.",
+      cta: "Download Android Beta",
+      version: "Beta version {version}",
+      note: "Android may ask you to allow installation from your browser. Eraya is currently in beta.",
+      /* The /beta page, which stands alone with no header or footer. */
+      pageTitle: "Your next chapter starts here.",
+      pageLede: "Eraya is a trusted community for divorced, separated and widowed people in India. The Android app is in open beta — install it, create your account, and take it at your own pace.",
+      backToSite: "Visit eraya.app",
+    },
     footer: {
       erayaTitle: "Eraya",
       about: "About",
