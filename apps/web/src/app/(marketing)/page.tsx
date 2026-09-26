@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AndroidBeta } from "@/features/marketing/sections/AndroidBeta";
 import { Begin } from "@/features/marketing/sections/Begin";
 import { BuiltDifferently } from "@/features/marketing/sections/BuiltDifferently";
 import { Cities } from "@/features/marketing/sections/Cities";
@@ -32,6 +33,7 @@ export default function HomePage() {
       <HowItWorks />
       <BuiltDifferently />
       <Cities />
+      <AndroidBeta />
       <Begin />
       <FinalCta />
     </>
