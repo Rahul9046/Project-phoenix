@@ -54,6 +54,7 @@ const PUBLIC_PATHS = [
   "/contact",
   "/pricing",
   "/beta",
+  "/guides",
 ];
 
 /**
@@ -86,6 +87,16 @@ const PRIVATE_PATHS = [
   "/account/settings",
   "/checkout",
   "/admin/reports",
+  /*
+   * The first planned guide, which is not written yet.
+   *
+   * It is in this list rather than omitted so that the day it is published is a
+   * day this probe *fails* and somebody has to move the slug deliberately. The
+   * alternative -- silence until then -- is how a placeholder ships.
+   */
+  "/guides/dating-after-divorce-india",
+  /* A slug nobody will ever write. Proof the route 404s rather than renders. */
+  "/guides/this-guide-does-not-exist",
 ];
 
 /** Prefixes that must never appear in the sitemap, whatever else changes. */
@@ -760,6 +771,208 @@ async function probeStructuredData() {
   );
 }
 
+/* --------------------------------------------------------------- the guides */
+
+/**
+ * Claims a guide must never make.
+ *
+ * `author` is legitimate here and absent from this list -- an `Article` is
+ * supposed to name one -- but everything that would dress that author up as a
+ * clinician is forbidden. Eraya employs no counsellors, psychologists or
+ * doctors, and a guide about a hard subject carrying an implied professional
+ * authority is the most harmful untruth this site could publish.
+ */
+const GUIDE_FABRICATIONS = [
+  "aggregateRating",
+  "ratingValue",
+  "reviewCount",
+  "ratingCount",
+  "review",
+  "hasCredential",
+  "jobTitle",
+  "honorificPrefix",
+  "reviewedBy",
+  "award",
+  "sameAs",
+  "wordCount",
+  "interactionStatistic",
+];
+
+/**
+ * The Guides section, and every guide the sitemap claims exists.
+ *
+ * The index itself is checked with the other public pages -- it is in
+ * `PUBLIC_PATHS`, so its canonical, title, description, Open Graph tags and
+ * indexability are already asserted there. This adds what is particular to the
+ * section: that the sitemap lists it, and that every article it lists is a real,
+ * published, structured article rather than a placeholder.
+ *
+ * With nothing published yet this finds no articles and says so as a note rather
+ * than a failure. That is the correct state today: the infrastructure is built
+ * and no prose has been invented to fill it. The checks below start doing work
+ * on the day the first real guide ships, which is the day they are needed.
+ */
+async function probeGuides() {
+  console.log("\nGuides\n");
+
+  const { body: sitemapBody } = await get("/sitemap.xml");
+  const locations = [...sitemapBody.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) =>
+    m[1].trim(),
+  );
+
+  const indexListed = locations.some(
+    (location) => new URL(location).pathname.replace(/\/$/, "") === "/guides",
+  );
+  check("/guides", "the section index is in the sitemap", indexListed);
+
+  const articles = locations
+    .map((location) => new URL(location).pathname)
+    .filter((path) => path.startsWith("/guides/"));
+
+  if (articles.length === 0) {
+    note(
+      "no guides published yet: the article checks found nothing to run against, which is the expected state until the first guide ships",
+    );
+    check(
+      "/guides",
+      "the index renders without any guides published",
+      (await get("/guides")).status === 200,
+    );
+    return;
+  }
+
+  for (const path of articles) {
+    console.log(`
+  ${path}`);
+    const { status, body } = await get(path);
+
+    check(path, "HTTP 200", status === 200, `HTTP ${status}`);
+    if (status !== 200) continue;
+
+    let blocks;
+    try {
+      blocks = jsonLdBlocks(body);
+    } catch (error) {
+      check(path, "JSON-LD parses", false, error.message);
+      continue;
+    }
+
+    const nodes = blocks.flatMap(nodesOf);
+    const types = nodes.map((node) => node["@type"]);
+    const article = nodes.find((node) => node["@type"] === "Article");
+    const crumbs = nodes.find((node) => node["@type"] === "BreadcrumbList");
+
+    check(path, "JSON-LD parses", true, types.join(", "));
+    check(path, "describes an Article", Boolean(article));
+    check(path, "describes a BreadcrumbList", Boolean(crumbs));
+
+    /*
+     * The `Organization` the article names as publisher has to be a node that is
+     * actually on this page, or the reference dangles and the publisher
+     * relationship says nothing.
+     */
+    const organization = nodes.find((node) => node["@type"] === "Organization");
+    check(
+      path,
+      "the publisher reference resolves to a node on the page",
+      Boolean(organization?.["@id"]) &&
+        article?.publisher?.["@id"] === organization["@id"],
+      `${article?.publisher?.["@id"]} vs ${organization?.["@id"]}`,
+    );
+
+    if (article) {
+      const expected = `${CANONICAL_ORIGIN}${path}`;
+      check(
+        path,
+        "mainEntityOfPage matches the canonical URL",
+        article.mainEntityOfPage?.["@id"] === expected,
+        String(article.mainEntityOfPage?.["@id"]),
+      );
+      check(
+        path,
+        "the page's canonical agrees with it",
+        canonicalHref(body) === expected,
+        String(canonicalHref(body)),
+      );
+
+      /* Real dates, in the format the specification asks for. */
+      for (const field of ["datePublished", "dateModified"]) {
+        check(
+          path,
+          `${field} is an ISO date`,
+          /^\d{4}-\d{2}-\d{2}$/.test(String(article[field])),
+          String(article[field]),
+        );
+      }
+      check(
+        path,
+        "dateModified is not before datePublished",
+        String(article.dateModified) >= String(article.datePublished),
+        `${article.datePublished} -> ${article.dateModified}`,
+      );
+
+      check(path, "has a headline", Boolean(String(article.headline || "").trim()));
+      check(
+        path,
+        "has a description",
+        Boolean(String(article.description || "").trim()),
+      );
+      check(path, "names an author", Boolean(article.author));
+    }
+
+    if (crumbs) {
+      const trail = crumbs.itemListElement ?? [];
+      check(
+        path,
+        "the breadcrumb trail is Home > Guides > article",
+        trail.length === 3,
+        `${trail.length} levels`,
+      );
+      check(
+        path,
+        "the trail is numbered from 1 in order",
+        trail.every((item, index) => item.position === index + 1),
+        trail.map((item) => item.position).join(", "),
+      );
+      /*
+       * The last step is the current page and carries no `item`. Giving it one
+       * is a self-referential link, and the specification's own shape omits it.
+       */
+      check(
+        path,
+        "the last breadcrumb is the current page and carries no URL",
+        trail.length > 0 && trail[trail.length - 1].item === undefined,
+        String(trail[trail.length - 1]?.item),
+      );
+      /* And the trail must describe a path the page really shows. */
+      check(
+        path,
+        "the visible breadcrumb nav is on the page too",
+        /<nav[^>]+aria-label="[^"]*"[^>]*>[\s\S]{0,400}?\/guides/i.test(body),
+      );
+    }
+
+    /* Open Graph, which a page declaring its own `openGraph` can silently lose. */
+    for (const key of ["og:title", "og:description", "og:url", "og:site_name", "og:image"]) {
+      check(path, `has ${key}`, Boolean(meta(body, key)?.trim()));
+    }
+    check(
+      path,
+      "og:type is article",
+      meta(body, "og:type") === "article",
+      String(meta(body, "og:type")),
+    );
+
+    const invented = GUIDE_FABRICATIONS.filter((key) => everyKey(blocks).has(key));
+    check(
+      path,
+      "claims no credential, rating or review",
+      invented.length === 0,
+      invented.join(", "),
+    );
+  }
+}
+
 /* -------------------------------------------------------------------- main */
 
 console.log(`\nSEO probe -- ${BASE}`);
@@ -768,6 +981,7 @@ try {
   await probeRobotsTxt();
   await probeSitemap();
   await probePublicPages();
+  await probeGuides();
   await probePrivatePages();
   if (BASE === CANONICAL_ORIGIN) await probeCanonicalHost();
   else note("www redirect not checked: --base is not the production origin");
