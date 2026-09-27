@@ -37,11 +37,13 @@ group, so the section arrives with the site header, footer, language switch and
 site-level structured data already around it, and inherits that group's
 indexable default rather than declaring anything about robots itself.
 
-**There are no guides yet, and the registry is empty on purpose.** Everything
-below is built and exercised, and no article prose has been invented to
-demonstrate it. A set of thin AI-written guides would be worse for this site than
-no guides at all: it is what Google's helpful-content work exists to demote, and
-unlike a missing page it is hard to take back once indexed.
+**One guide is published, as of 2026-09-27:**
+`/guides/dating-after-divorce-india`. It is approved copy, transcribed rather
+than generated, and it is the only article. The rule that kept the registry
+empty still governs everything after it: a set of thin AI-written guides would be
+worse for this site than no guides at all — it is what Google's helpful-content
+work exists to demote, and unlike a missing page it is hard to take back once
+indexed. One real article is worth more than seven filled-in slugs.
 
 ### Content is data, not markup
 
@@ -148,14 +150,15 @@ emits on the same page, by `@id`, rather than describing a second Eraya.
 
 ## Planned, not written
 
-Seven slugs, as writing targets. They are not entries waiting to be switched on,
-and `/guides/dating-after-divorce-india` is in the probe's **private** list so
+Six slugs remain, as writing targets. They are not entries waiting to be switched
+on, and `/guides/this-guide-does-not-exist` holds their place in the probe's
+**private** list — the next slug somebody starts writing should join it there, so
 that the day it is published is a day the probe fails and somebody has to move it
 deliberately. Silence until then is how a placeholder ships.
 
 | Slug | Working title |
 | --- | --- |
-| `dating-after-divorce-india` | Dating After Divorce in India: A Thoughtful Guide to Starting Again |
+| ~~`dating-after-divorce-india`~~ | **Published 2026-09-27.** Category `relationships`, which the guide system gained for it |
 | `how-to-start-dating-after-divorce` | How to Start Dating Again After Divorce |
 | `when-to-date-after-divorce` | When Are You Ready to Date After Divorce? |
 | `dating-after-divorce-with-kids` | Dating After Divorce When You Have Children |
@@ -170,11 +173,10 @@ in the `(marketing)` group, added to `publicPaths` in `app/sitemap.ts` the way
 
 ## Two things for the owner to decide
 
-**`/guides` is indexable and in the sitemap with nothing on it.** That is
-deliberate — it is what lets Google find the section on the day the first guide
-lands rather than weeks later — but a section index with no articles is thin.
-Publish the first guide before requesting indexing for this URL in Search
-Console.
+**The first guide is live, so `/guides` is no longer thin.** Both URLs can now
+be submitted for indexing in Search Console:
+`https://eraya.app/guides` and `https://eraya.app/guides/dating-after-divorce-india`.
+The sitemap carries both and did not move.
 
 **The homepage hero says "Verified members."** (`marketing.hero.note`). It
 predates this work and was left alone: rewriting approved marketing copy was out

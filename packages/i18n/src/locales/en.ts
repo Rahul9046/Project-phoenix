@@ -862,6 +862,7 @@ export const en = {
       byPerson: "Written by {name}",
       relatedTitle: "Related guides",
       readGuide: "Read this guide",
+      categoryRelationships: "Relationships",
       categoryStartingAgain: "Starting again",
       categorySafety: "Safety",
       categoryCompanionship: "Companionship",

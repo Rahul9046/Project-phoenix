@@ -656,6 +656,7 @@ export const bn: Translations = {
       byPerson: "{name}-এর লেখা",
       relatedTitle: "সম্পর্কিত গাইড",
       readGuide: "এই গাইডটি পড়ুন",
+      categoryRelationships: "সম্পর্ক",
       categoryStartingAgain: "নতুন করে শুরু",
       categorySafety: "নিরাপত্তা",
       categoryCompanionship: "সঙ্গ",

@@ -55,6 +55,7 @@ const PUBLIC_PATHS = [
   "/pricing",
   "/beta",
   "/guides",
+  "/guides/dating-after-divorce-india",
 ];
 
 /**
@@ -88,14 +89,15 @@ const PRIVATE_PATHS = [
   "/checkout",
   "/admin/reports",
   /*
-   * The first planned guide, which is not written yet.
+   * A slug nobody will ever write. Proof the route 404s rather than renders.
    *
-   * It is in this list rather than omitted so that the day it is published is a
-   * day this probe *fails* and somebody has to move the slug deliberately. The
-   * alternative -- silence until then -- is how a placeholder ships.
+   * `/guides/dating-after-divorce-india` used to sit beside it, so that the day
+   * it was published would be a day this probe failed and somebody had to move
+   * the slug deliberately rather than let a placeholder ship quietly. That day
+   * was 2026-09-27: it is a real article now, it is in `PUBLIC_PATHS`, and the
+   * article checks in `probeGuides` cover it. The next planned guide can take
+   * its place here when somebody starts writing one.
    */
-  "/guides/dating-after-divorce-india",
-  /* A slug nobody will ever write. Proof the route 404s rather than renders. */
   "/guides/this-guide-does-not-exist",
 ];
 

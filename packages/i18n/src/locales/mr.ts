@@ -656,6 +656,7 @@ export const mr: Translations = {
       byPerson: "{name} यांनी लिहिलेले",
       relatedTitle: "संबंधित मार्गदर्शक",
       readGuide: "हे मार्गदर्शक वाचा",
+      categoryRelationships: "नातेसंबंध",
       categoryStartingAgain: "नव्याने सुरुवात",
       categorySafety: "सुरक्षितता",
       categoryCompanionship: "सोबत",

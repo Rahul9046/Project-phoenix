@@ -67,6 +67,7 @@ export type GuideAuthor =
  * appears in the reader's own language; the key itself never reaches a screen.
  */
 export type GuideCategory =
+  | "relationships"
   | "startingAgain"
   | "safety"
   | "companionship"
