@@ -27,6 +27,13 @@ export const navLinks: readonly {
 }[] = [
   { labelKey: "marketing.nav.howItWorks", href: "#how-it-works" },
   { labelKey: "marketing.nav.safety", href: "#trust" },
+  /*
+   * A real route among the homepage anchors, which is why it is a `/` path and
+   * the others are `#`. `SiteHeader` renders a hash as a plain anchor and a path
+   * through `next/link`, so this one works from every page and the anchors only
+   * mean anything on the homepage -- as they always did.
+   */
+  { labelKey: "marketing.guides.nav", href: "/guides" },
   { labelKey: "marketing.nav.pricing", href: "/pricing" },
   { labelKey: "marketing.nav.about", href: "#about" },
 ];
@@ -45,6 +52,7 @@ export const footer: {
         { labelKey: "marketing.footer.about", href: "#about" },
         { labelKey: "marketing.footer.howItWorks", href: "#how-it-works" },
         { labelKey: "marketing.footer.safety", href: "#trust" },
+        { labelKey: "marketing.guides.nav", href: "/guides" },
       ],
     },
     {

@@ -31,6 +31,8 @@
     "analytics:probe": "node scripts/analytics-probe.mjs",
     "activity:probe": "node scripts/activity-probe.mjs",
     "religion:probe": "node scripts/religion-probe.mjs",
+    "seo:probe": "node scripts/seo-probe.mjs",
+    "test": "node --no-warnings --test \"apps/web/src/**/*.test.ts\"",
     "framing:probe": "node --no-warnings scripts/framing-probe.mjs",
     "phone:probe": "node scripts/phone-limits-probe.mjs",
     "age:check": "node --no-warnings scripts/age-eligibility-check.mjs"

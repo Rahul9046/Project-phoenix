@@ -1,5 +1,6 @@
 import { SiteFooter } from "@/features/marketing/layout/SiteFooter";
 import { SiteHeader } from "@/features/marketing/layout/SiteHeader";
+import { StructuredData } from "@/features/marketing/StructuredData";
 import { loadAuthSession } from "@/features/auth/load-session";
 
 /**
@@ -24,6 +25,16 @@ export default async function MarketingLayout({
 
   return (
     <>
+      {/*
+        The site's own description, for a reader that parses rather than reads.
+
+        Here rather than in the root layout so it stays on the public pages: the
+        auth screens, the signed-in product and every 404 all sit outside this
+        group and have no business announcing a `WebSite` they ask not to be
+        indexed. See the note in `StructuredData` for what it does and does not
+        claim.
+      */}
+      <StructuredData />
       <SiteHeader memberName={memberName} />
       <main id="main" className="flex-1">
         {children}
