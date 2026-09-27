@@ -38,7 +38,13 @@ const readJson = (p) => {
 
 const git = (...args) => {
   try {
-    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+    /* stderr ignored: every caller treats failure as "" and a probe for a
+       commit this history does not contain is a question, not an error. */
+    return execFileSync("git", args, {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return "";
   }
@@ -1104,6 +1110,161 @@ export function environmentVariableNames() {
     mobile: [...new Set(pick("apps/mobile/.env.example"))].sort(),
     ciSecrets: [...new Set([...read(".github/workflows/deploy-web.yml").matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]))].sort(),
   };
+}
+
+/**
+ * The commits between a previous package and this one.
+ *
+ * The document already carried "the last 15 commits", which answers a question
+ * nobody asked: a reviewer reading this wants to know what moved since the copy
+ * they read last, and fifteen is neither that nor a useful approximation of it.
+ * The manifest remembers which commit the previous package described, so the
+ * answer is exactly `previous..HEAD`.
+ *
+ * Returns null when there is no previous package, and when the recorded commit
+ * is not an ancestor of HEAD -- a rebase, a force-push or a fresh clone -- in
+ * which case the honest answer is "cannot tell" rather than a diff against a
+ * commit this history no longer contains.
+ */
+export function commitsSince(sha) {
+  if (!sha) return null;
+  if (!git("cat-file", "-t", sha)) return null;
+  if (git("merge-base", "--is-ancestor", sha, "HEAD") === "" && git("rev-parse", sha) !== git("rev-parse", "HEAD")) {
+    /* `--is-ancestor` prints nothing either way; ask it as a question instead. */
+    const base = git("merge-base", sha, "HEAD");
+    if (base !== git("rev-parse", sha)) return null;
+  }
+  return git("log", `${sha}..HEAD`, "--format=%h|%cs|%s")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [short, date, ...rest] = line.split("|");
+      return { sha: short, date, subject: rest.join("|") };
+    });
+}
+
+/**
+ * Surfaces that used to change without the document noticing.
+ *
+ * Every one of these is here because it moved and section U stayed silent about
+ * it. `npm run seo:probe` and `npm test` were added and the package reported no
+ * change; `docs/13-seo.md` was written and the package reported no change; the
+ * Guides content directory went from nothing to a published article and the
+ * package reported no change. A "changes since last time" section that misses
+ * the changes is worse than none, because it is read as an all-clear.
+ */
+export function trackedSurfaces() {
+  const pkg = readJson("package.json") ?? {};
+  const webPkg = readJson("apps/web/package.json") ?? {};
+
+  const dir = (path, test) =>
+    existsSync(join(ROOT, path))
+      ? readdirSync(join(ROOT, path)).filter(test).sort()
+      : [];
+
+  /*
+   * Guides are listed by slug and publication state, read from the content
+   * files rather than from the registry, because the registry imports them and
+   * this has to stay a static read. A slug appearing here as `published` is the
+   * single most review-worthy change this repository can make: it is new public
+   * prose on an indexed URL.
+   */
+  const guides = dir("apps/web/src/features/guides/content", (f) => f.endsWith(".ts")).map(
+    (file) => {
+      const source = read(`apps/web/src/features/guides/content/${file}`);
+      const slug = source.match(/slug:\s*"([^"]+)"/)?.[1] ?? file.replace(/\.ts$/, "");
+      const published = /status:\s*"published"/.test(source);
+      return `${slug}:${published ? "published" : "draft"}`;
+    },
+  );
+
+  return {
+    npmScripts: Object.keys(pkg.scripts ?? {}).sort(),
+    docs: dir("docs", (f) => f.endsWith(".md")),
+    migrations: dir("supabase/migrations", (f) => f.endsWith(".sql")),
+    webDependencies: [
+      ...Object.keys(webPkg.dependencies ?? {}),
+      ...Object.keys(webPkg.devDependencies ?? {}),
+    ].sort(),
+    guides,
+  };
+}
+
+/**
+ * Narrative rows pointing at files that no longer exist.
+ *
+ * The hand-maintained sections cite the files they are about, and those strings
+ * are the part most likely to rot: a row survives a rename or a deletion
+ * silently, and the reviewing model has no way to tell that the evidence it is
+ * being pointed at is gone. This is the one staleness check a generator can
+ * actually perform -- it cannot know whether a sentence is still true, but it
+ * can know whether the file it names is still there.
+ *
+ * Globs are resolved loosely: `supabase/migrations/*delete_my_account*` passes
+ * if any file in that directory contains the fragment. A directory counts as
+ * present. Anything that is not a path at all is skipped rather than reported.
+ */
+export function narrativeFileRot(narrative) {
+  const missing = [];
+  const seen = new Set();
+
+  /*
+   * Only full paths from the repository root are checked.
+   *
+   * The narrative writes file lists the way a person does -- "features/auth/
+   * msg91-widget.ts, phone-verification.ts" -- where everything after the first
+   * comma is a bare filename continuing the directory before it. Checking those
+   * as paths reported nine missing files on the first run, every one of them a
+   * false alarm. A checker that cries wolf about its own input is worse than no
+   * checker, so this only looks at strings that begin at a top-level directory
+   * and skips the elided ones (`apps/*` with a Unicode ellipsis) outright.
+   */
+  const ROOTS = ["apps/", "packages/", "supabase/", "scripts/", "docs/", ".github/"];
+
+  const check = (raw, where) => {
+    /*
+     * Trailing annotations are not part of the path. The narrative writes
+     * "supabase/config.toml [auth.external.*]" and
+     * "supabase/functions/phone-otp-* (app)" -- the bracket names a section of
+     * the file and the parenthesis names which client it belongs to. Both were
+     * reported missing on the first run; both files are there.
+     */
+    const ref = raw.trim().replace(/\s+[[(].*$/, "");
+    if (!ref || seen.has(ref)) return;
+    if (!ROOTS.some((r) => ref.startsWith(r))) return;
+    if (ref.includes("…")) return;
+    seen.add(ref);
+
+    if (ref.includes("*")) {
+      const at = ref.lastIndexOf("/");
+      const folder = ref.slice(0, at);
+      const fragment = ref.slice(at + 1).replace(/\*/g, "");
+      const abs = join(ROOT, folder);
+      const hit =
+        existsSync(abs) &&
+        statSync(abs).isDirectory() &&
+        readdirSync(abs).some((f) => f.includes(fragment));
+      if (!hit) missing.push({ ref, where });
+      return;
+    }
+
+    if (!existsSync(join(ROOT, ref))) missing.push({ ref, where });
+  };
+
+  for (const [section, rows] of Object.entries(narrative)) {
+    if (!Array.isArray(rows)) continue;
+    for (const row of rows) {
+      if (!Array.isArray(row)) continue;
+      /* Every narrative shape keeps its file list in the last-but-one or last cell. */
+      for (const cell of row) {
+        if (typeof cell !== "string") continue;
+        if (!cell.includes("/") || cell.length > 400) continue;
+        if (/[A-Z]/.test(cell) && cell.split(" ").length > 12) continue;
+        for (const part of cell.split(",")) check(part, section);
+      }
+    }
+  }
+  return missing;
 }
 
 export function technicalDebt() {
