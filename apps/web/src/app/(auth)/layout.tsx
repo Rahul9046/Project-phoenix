@@ -6,6 +6,40 @@ import {
 } from "@/features/auth/msg91-widget";
 
 /**
+ * Nothing in this group is for a search engine, and the group says so once.
+ *
+ * All fourteen screens under here already declared `robots: { index: false }`
+ * for themselves, and every one of them was correct. What they could not do is
+ * cover the fifteenth, which nobody has written yet -- and that is the one that
+ * matters, because the site-wide default is `index, follow` on production now
+ * that `NEXT_PUBLIC_ALLOW_INDEXING` is set. A new onboarding step that forgets
+ * the line does not fail; it quietly becomes indexable.
+ *
+ * A layout default inverts that. Forgetting now means inheriting `noindex`,
+ * which is the safe direction for the mistake to run, and a page that wants
+ * something different still overrides it: `/login` and `/signup` deliberately
+ * say `follow: true`, because they are linked from the public site and the link
+ * equity should flow on even though the page itself is not a destination. Page
+ * metadata wins over layout metadata, so those two keep working unchanged.
+ *
+ * The per-page declarations stay. They are not redundant with this -- they are
+ * what makes each screen readable on its own, and removing fourteen correct
+ * lines to rely on one inherited one is a worse trade than keeping both.
+ *
+ * Proved rather than reasoned, because every page in this group already carries
+ * its own directive and so none of them can demonstrate what is inherited. A
+ * throwaway page was added under this layout declaring no `robots` at all, the
+ * app was built with `NEXT_PUBLIC_ALLOW_INDEXING=true` so the site-wide default
+ * was the permissive one, and it served exactly one tag: `noindex, nofollow`.
+ * `/pricing` in the same build served `index, follow`. Then the page was
+ * deleted. `npm run seo:probe` covers the standing routes; this was the one
+ * claim it structurally cannot reach.
+ */
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
+/**
  * Auth and onboarding run without the marketing header and footer. On a phone
  * the screen should feel like an app; on a desktop it becomes a centred column
  * with room around it rather than a stretched mobile view.

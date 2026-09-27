@@ -334,10 +334,12 @@ build-time `NEXT_PUBLIC_*` values. That workflow runs on pushes to `main`, so
 the production build is the only one that receives it and the setting survives
 every future deploy without anyone remembering it.
 
-**One switch, two outputs.** `NEXT_PUBLIC_ALLOW_INDEXING` gates both the `robots`
-meta tag in the root layout and the `X-Robots-Tag` header set in
-`apps/web/next.config.ts`. Setting it to `true` releases both; unset, both hold.
-There is nothing to open twice and nothing to forget.
+**One switch, three outputs.** `NEXT_PUBLIC_ALLOW_INDEXING` gates the `robots`
+meta tag in the root layout, the `X-Robots-Tag` header set in
+`apps/web/next.config.ts`, and `robots.txt` itself -- `app/robots.ts` reads the
+same variable, so a preview build cannot serve `Allow: /` while its own pages say
+`noindex`. Setting it to `true` releases all three; unset, all three hold. There
+is nothing to open twice and nothing to forget.
 
 It was briefly two independent locks — the meta tag here, the header in the
 host's own config — which sounded safer written down and was not. The host half
@@ -351,8 +353,52 @@ before a deploy rather than discovered missing after one.
 
 What does **not** change on launch day: auth, onboarding and every signed-in
 route declare their own `robots: { index: false }` per page. Those are meant to
-stay out of search permanently, and they do not depend on either lock. Opening
-the two above makes the marketing and legal pages indexable and nothing else.
+stay out of search permanently, and they do not depend on any of the three
+locks. Opening them makes the marketing and legal pages indexable and nothing
+else.
+
+Since 2026-09-27 the `(auth)` layout declares `noindex` for the whole group as
+well, the way `(app)` already did. All fourteen screens under it had their own
+correct declaration; what none of them could cover is the fifteenth, which
+nobody has written yet -- and with the site-wide default now permissive on
+production, a new onboarding step that forgets the line does not fail, it
+quietly becomes indexable. The default inverts that, and the per-page lines stay
+because they are what makes each screen readable on its own.
+
+### Asking the site rather than the repository
+
+`npm run seo:probe` fetches eraya.app and asserts on what parses out of it: the
+`*` group's rules in robots.txt against the paths they are meant to cover, every
+`<loc>` in the sitemap fetched and checked for a `noindex` it should not have,
+each public page's canonical compared as a URL against the canonical origin, the
+private routes required to answer with either a redirect or a refusal, the www
+host's redirect, and the JSON-LD handed to `JSON.parse`.
+
+It exists because nothing else here can see this. `tsc` and `next build` both
+pass on a site that is entirely `noindex`, since a wrong directive is still a
+valid string, and this variable is inlined at build time from the *workflow's*
+environment -- so the repository genuinely does not know its own production
+value, and a local build proves nothing either way. That gap had a cost already:
+a hand-written row in `scripts/review-package.mjs` described this deployment as
+`noindex` for as long as it had been indexable, sitting a few sections below a
+generated table that said `ENABLED`, and nothing failed.
+
+### Structured data
+
+`features/marketing/StructuredData.tsx` renders one JSON-LD block -- an
+`Organization` and a `WebSite` that names it as publisher -- from the
+`(marketing)` layout, so it is on the public pages and only those. It is not in
+the root layout, which would also put it on the auth screens, the signed-in
+product and every 404.
+
+Every value in it is a constant from `content.ts` or a file in `public/`, and
+that is the whole test applied to it: structured data is a claim made to a
+machine that will not check it, which makes it the easiest place in a codebase
+to say something untrue and the hardest place to notice. So there is no
+`aggregateRating`, no `review`, no member count and no `foundingDate`, and
+`sameAs` is absent because `footer.social` lists three networks by *name* and
+`sameAs` takes verified profile URLs. The probe fails the build's own output if
+any of them appears.
 
 ## Commands
 
@@ -364,6 +410,7 @@ npm run lint    # eslint
 
 npm run i18n:check    # the six locale files against each other
 npm run locale:probe  # every screen in all six, against a running site
+npm run seo:probe     # what eraya.app tells a crawler, parsed and asserted
 
 # Cloudflare Workers, from apps/web
 npm run cf:build    --workspace @eraya/web   # compile the Worker

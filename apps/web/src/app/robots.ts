@@ -43,6 +43,15 @@ const indexable = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
  * everyone; writing the path here would undo that decision in the one file
  * guaranteed to be read. It is a 404 to anyone who is not a moderator and
  * declares `noindex` besides, so it needs no help from this file.
+ *
+ * `/api` is listed, and it is the one entry here that robots.txt is genuinely
+ * the right instrument for. A Route Handler answers with JSON; there is no
+ * `<head>` to carry a meta tag and `/api/activity` returns a member's own
+ * counts, so the page-level mechanism that covers everything else is simply
+ * unavailable to it. Requests without a session get nothing back, so this is
+ * crawl budget rather than a disclosure -- but a JSON body in a search result
+ * is a bad outcome cheaply avoided, and unlike the paths above there is no
+ * second mechanism to defer to.
  */
 export default function robots(): MetadataRoute.Robots {
   if (!indexable) {
@@ -57,6 +66,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         "/account",
+        "/api",
         "/connections",
         "/discovery",
         "/home",
