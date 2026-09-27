@@ -833,6 +833,46 @@ export const en = {
       pageLede: "Eraya is a trusted community for divorced, separated and widowed people in India. The Android app is in open beta — install it, create your account, and take it at your own pace.",
       backToSite: "Visit eraya.app",
     },
+    /*
+     * The Guides section. Article prose is not here and never will be.
+     *
+     * These are the section's own words -- the heading, the labels, the one
+     * closing invitation an article may end with -- so they are translated like
+     * every other screen. The guides themselves are English for now and say so
+     * in `englishOnly`, the same admission the legal documents make rather than
+     * a silent English page in a Tamil interface.
+     *
+     * The CTA copy lives here rather than in each article on purpose: an article
+     * cannot invent its own pitch, and a claim like "India's safest community"
+     * cannot appear in one guide because somebody typed it there.
+     */
+    guides: {
+      nav: "Guides",
+      eyebrow: "Guides",
+      title: "Thoughtful guides for starting again",
+      lede: "Practical, respectful guidance on relationships, companionship, safety and building a new chapter after divorce, separation or the loss of a spouse.",
+      none: "The first guides are being written, and will appear here as they are finished.",
+      englishOnly: "Guides are published in English for now. Translations will follow once they have been properly reviewed.",
+      breadcrumb: "Breadcrumb",
+      home: "Home",
+      allGuides: "All guides",
+      published: "Published {date}",
+      updated: "Updated {date}",
+      byEraya: "Written by Eraya",
+      byPerson: "Written by {name}",
+      relatedTitle: "Related guides",
+      readGuide: "Read this guide",
+      categoryStartingAgain: "Starting again",
+      categorySafety: "Safety",
+      categoryCompanionship: "Companionship",
+      categoryPractical: "Practical",
+      ctaJoinTitle: "Eraya is built for this chapter.",
+      ctaJoinBody: "A community for people who are divorced, separated or widowed, where a conversation begins only when you have both chosen it.",
+      ctaJoinAction: "Create your account",
+      ctaSafetyTitle: "Take it at your own pace.",
+      ctaSafetyBody: "Our community and safety guidelines set out what Eraya asks of its members, and what to do when someone falls short.",
+      ctaSafetyAction: "Read the guidelines",
+    },
     footer: {
       erayaTitle: "Eraya",
       about: "About",

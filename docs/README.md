@@ -22,6 +22,7 @@ aspirations — where something is undecided it is listed in
 | [10-payments.md](10-payments.md) | Prepaid Premium, pricing, and why nothing renews |
 | [11-moderation-and-analytics.md](11-moderation-and-analytics.md) | The reports queue, who may moderate, and the funnel |
 | [12-email-delivery.md](12-email-delivery.md) | The sign-in email, its rate limit, and what raising it costs |
+| [13-seo.md](13-seo.md) | Indexing, the SEO probe, and how a guide is written and published |
 | [BUILD_REVIEW_WORKFLOW.md](BUILD_REVIEW_WORKFLOW.md) | Generating the review package for an outside reviewer |
 
 ## Status
