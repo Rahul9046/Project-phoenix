@@ -1,4 +1,5 @@
 import { datingAfterDivorceIndia } from "./content/dating-after-divorce-india";
+import { howToStartDatingAfterDivorce } from "./content/how-to-start-dating-after-divorce";
 import type { Guide } from "./types";
 import {
   findPublishedGuide,
@@ -8,7 +9,7 @@ import {
 } from "./select";
 
 /**
- * Every guide Eraya has written. One, as of 2026-09-27.
+ * Every guide Eraya has written. Two, as of 2026-09-27.
  *
  * The infrastructure shipped empty on purpose and this is the first thing to go
  * into it: approved copy, transcribed rather than generated. The rule that kept
@@ -26,7 +27,7 @@ import {
  * `"published"` when it is approved. It appears in the sitemap on the next
  * deploy without anyone editing `app/sitemap.ts`.
  *
- * The six remaining slugs are planned in `docs/13-seo.md`. They are targets for
+ * The five remaining slugs are planned in `docs/13-seo.md`. They are targets for
  * writing, not entries waiting to be switched on.
  *
  * ## Why a written array rather than a directory read
@@ -37,7 +38,7 @@ import {
  * edit somebody makes on purpose and a reviewer can see in a diff. `app/sitemap.ts`
  * has the same reasoning written on it for the same reason.
  */
-const guides: readonly Guide[] = [datingAfterDivorceIndia];
+const guides: readonly Guide[] = [datingAfterDivorceIndia, howToStartDatingAfterDivorce];
 
 /** The public guides, newest first. */
 export function allPublishedGuides(): Guide[] {
