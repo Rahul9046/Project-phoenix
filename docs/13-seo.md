@@ -37,15 +37,16 @@ group, so the section arrives with the site header, footer, language switch and
 site-level structured data already around it, and inherits that group's
 indexable default rather than declaring anything about robots itself.
 
-**Two guides are published, both on 2026-09-27:**
-`/guides/dating-after-divorce-india` and
-`/guides/how-to-start-dating-after-divorce`. Both are approved copy,
-transcribed rather than generated, and they are the only articles. The rule
-that kept the registry empty still governs everything after them: a set of thin
-AI-written guides would be worse for this site than no guides at all -- it is
-what Google's helpful-content work exists to demote, and unlike a missing page
-it is hard to take back once indexed. Two real articles are worth more than
-seven filled-in slugs.
+**Three guides are published, all on 2026-09-27:**
+`/guides/dating-after-divorce-india`,
+`/guides/how-to-start-dating-after-divorce` and
+`/guides/when-to-date-after-divorce`. All three are approved copy,
+transcribed rather than generated, and they are the only articles. They read as
+a cluster rather than three separate pages: the third links to both of the
+others. The rule that kept the registry empty still governs everything after
+them -- a set of thin AI-written guides would be worse for this site than no
+guides at all, it is what Google's helpful-content work exists to demote, and
+unlike a missing page it is hard to take back once indexed.
 
 ### Content is data, not markup
 
@@ -152,7 +153,7 @@ emits on the same page, by `@id`, rather than describing a second Eraya.
 
 ## Planned, not written
 
-Five slugs remain, as writing targets. They are not entries waiting to be switched
+Four slugs remain, as writing targets. They are not entries waiting to be switched
 on, and `/guides/this-guide-does-not-exist` holds their place in the probe's
 **private** list — the next slug somebody starts writing should join it there, so
 that the day it is published is a day the probe fails and somebody has to move it
@@ -162,7 +163,7 @@ deliberately. Silence until then is how a placeholder ships.
 | --- | --- |
 | ~~`dating-after-divorce-india`~~ | **Published 2026-09-27.** Category `relationships`, which the guide system gained for it |
 | ~~`how-to-start-dating-after-divorce`~~ | **Published 2026-09-27.** First use of `seoTitle`, and the first guide to link to another |
-| `when-to-date-after-divorce` | When Are You Ready to Date After Divorce? |
+| ~~`when-to-date-after-divorce`~~ | **Published 2026-09-27.** First guide to link to two others |
 | `dating-after-divorce-with-kids` | Dating After Divorce When You Have Children |
 | `dating-after-separation-india` | Dating After Separation in India |
 | `online-dating-safety-after-divorce` | Staying Safe When Meeting Someone Online After Divorce |
