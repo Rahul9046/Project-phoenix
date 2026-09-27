@@ -209,6 +209,7 @@ const manifest = {
     tables: db.tables,
     edgeFunctions: backend.edgeFunctions.sort(),
     authProviders: auth.providers.filter((p) => p.enabled).map((p) => p.provider).sort(),
+    ...collect.trackedSurfaces(),
   },
 };
 
@@ -219,10 +220,21 @@ try {
   /* first run */
 }
 
+/*
+ * A surface the previous manifest never recorded is not 62 new migrations.
+ *
+ * Introducing a tracked surface would otherwise announce every item in it as
+ * NEW on the run after it is added -- the first run of this change reported all
+ * 62 migrations, all 17 docs and all 29 npm scripts as additions, which is both
+ * untrue and exactly the kind of noise that teaches a reader to skim the table.
+ * The honest answer for that one run is "now tracked", and real deltas begin on
+ * the run after.
+ */
 function diffSurface(key) {
   const now = manifest.surfaces[key] ?? [];
   if (!previous) return null;
-  const before = previous.surfaces?.[key] ?? [];
+  const before = previous.surfaces?.[key];
+  if (before === undefined) return { firstTracked: true, count: now.length };
   const added = now.filter((x) => !before.includes(x));
   const removed = before.filter((x) => !now.includes(x));
   return { added, removed, unchanged: now.length - added.length };
@@ -1001,7 +1013,35 @@ h2("U. Changes since the last review package");
 if (!previous) {
   w("**First package.** No previous manifest to compare against — `artifacts/review/manifest.json` has been written for next time.");
 } else {
-  w(`Comparing against commit \`${String(previous.commit).slice(0, 7)}\` generated ${previous.generatedAt}.`);
+  w(
+    `Comparing against commit \`${String(previous.commit).slice(0, 7)}\`, the state this document described when it was last generated on ${previous.generatedAt}. ` +
+      "Everything in this section is a difference between that package and this one.",
+  );
+
+  /*
+   * The commits themselves, which this document used to omit in favour of "the
+   * last 15" in section A -- a number that answers a question nobody asked. What
+   * a reviewer wants is what moved since the copy they read last, and the
+   * manifest records exactly which commit that was.
+   */
+  const since = collect.commitsSince(previous.commit);
+  h3("Commits");
+  if (since === null) {
+    w(
+      "The commit the previous package recorded is not an ancestor of `HEAD` — a rebase, a force-push, or a different clone. " +
+        "No commit range can be trusted, so none is shown. The surface deltas below are still valid, because they compare content rather than history.",
+    );
+  } else if (since.length === 0) {
+    w("None. The repository has not moved since the last package was generated.");
+  } else {
+    w(`${since.length} commit${since.length === 1 ? "" : "s"} since the last package.`);
+    table(
+      ["SHA", "Date", "Subject"],
+      since.map((c) => [c.sha, c.date, c.subject]),
+    );
+  }
+
+  h3("Surfaces");
   const labels = {
     webRoutes: "Web routes",
     mobileScreens: "Mobile screens",
@@ -1011,20 +1051,61 @@ if (!previous) {
     tables: "Database tables",
     edgeFunctions: "Edge functions",
     authProviders: "Enabled auth providers",
+    /*
+     * The five below were added on 2026-09-27, each because it moved while this
+     * section reported "unchanged": two npm scripts (`seo:probe`, `test`), a new
+     * documentation file, and the Guides content directory going from empty to a
+     * published article. A "what changed" section that misses the change is worse
+     * than none, because it is read as an all-clear.
+     */
+    guides: "Published guides",
+    npmScripts: "npm scripts",
+    docs: "Docs",
+    migrations: "Migrations",
+    webDependencies: "Web dependencies",
   };
   const rows = [];
   for (const key of Object.keys(labels)) {
     const d = diffSurface(key);
     if (!d) continue;
-    rows.push([
-      labels[key],
-      d.added.length ? `**NEW:** ${d.added.join(", ")}` : "—",
-      d.removed.length ? `**REMOVED:** ${d.removed.join(", ")}` : "—",
-      `${d.unchanged} unchanged`,
-    ]);
+    rows.push(
+      d.firstTracked
+        ? [labels[key], "—", "—", `_now tracked_ — ${d.count} recorded for next time`]
+        : [
+            labels[key],
+            d.added.length ? `**NEW:** ${d.added.join(", ")}` : "—",
+            d.removed.length ? `**REMOVED:** ${d.removed.join(", ")}` : "—",
+            `${d.unchanged} unchanged`,
+          ],
+    );
   }
   table(["Surface", "Added", "Removed", "Status"], rows);
   w("\n_Focus this review on the deltas above rather than re-reading the whole product._");
+}
+
+/*
+ * The one staleness check a generator can actually perform.
+ *
+ * It cannot know whether a hand-written sentence is still true -- that is what
+ * makes the narrative the risky half of this document, and why a row claiming
+ * "deployed but noindex" survived for as long as the site had been indexable.
+ * What it can know is whether the file a row points at still exists, which
+ * catches the common rot: a row surviving a rename or a deletion while still
+ * being cited as the evidence for itself.
+ */
+h3("Hand-maintained rows citing files that no longer exist");
+const rot = collect.narrativeFileRot(narrative);
+if (rot.length === 0) {
+  w("None. Every file path cited by a hand-maintained row resolves.");
+} else {
+  w(
+    "**These rows cite evidence that is gone.** Each was true when it was written and may still be; what is certain is that the file it names no longer exists, so the citation cannot be followed. " +
+      "Correct the row in `scripts/review-package.mjs`.",
+  );
+  table(
+    ["Section", "Missing path"],
+    rot.map((r) => [`\`${r.where}\``, `\`${r.ref}\``]),
+  );
 }
 
 /* --- V ------------------------------------------------------------------ */
