@@ -656,6 +656,7 @@ export const te: Translations = {
       byPerson: "{name} రాసినది",
       relatedTitle: "సంబంధిత గైడ్‌లు",
       readGuide: "ఈ గైడ్‌ను చదవండి",
+      categoryRelationships: "సంబంధాలు",
       categoryStartingAgain: "కొత్త ప్రారంభం",
       categorySafety: "భద్రత",
       categoryCompanionship: "తోడు",
