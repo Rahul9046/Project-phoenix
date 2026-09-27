@@ -657,6 +657,7 @@ export const hi: Translations = {
       byPerson: "{name} द्वारा लिखित",
       relatedTitle: "संबंधित गाइड",
       readGuide: "यह गाइड पढ़ें",
+      categoryRelationships: "रिश्ते",
       categoryStartingAgain: "फिर से शुरुआत",
       categorySafety: "सुरक्षा",
       categoryCompanionship: "साथ",

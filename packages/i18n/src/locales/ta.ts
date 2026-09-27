@@ -656,6 +656,7 @@ export const ta: Translations = {
       byPerson: "{name} எழுதியது",
       relatedTitle: "தொடர்புடைய வழிகாட்டிகள்",
       readGuide: "இந்த வழிகாட்டியைப் படியுங்கள்",
+      categoryRelationships: "உறவுகள்",
       categoryStartingAgain: "மீண்டும் தொடக்கம்",
       categorySafety: "பாதுகாப்பு",
       categoryCompanionship: "தோழமை",

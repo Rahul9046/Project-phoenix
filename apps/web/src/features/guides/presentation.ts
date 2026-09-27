@@ -13,6 +13,7 @@ import type { Guide, GuideCategory } from "./types";
 
 /** The dictionary key for a category. Exhaustive, so a new one cannot be forgotten. */
 const CATEGORY_KEYS: Record<GuideCategory, TranslationKey> = {
+  relationships: "marketing.guides.categoryRelationships",
   startingAgain: "marketing.guides.categoryStartingAgain",
   safety: "marketing.guides.categorySafety",
   companionship: "marketing.guides.categoryCompanionship",
