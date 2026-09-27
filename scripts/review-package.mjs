@@ -58,6 +58,7 @@ const narrative = {
     ["Blocking", "apps/mobile/app/you/blocked.tsx, supabase/migrations/*connection_tables*"],
     ["In-app activity indicators: a count of new connections and of conversations with unread messages, on the navigation of both clients. In-app only -- no push, email, SMS or browser notifications exist, and no notification feed", "supabase/migrations/*activity_indicators*, apps/web/src/features/app-shell, apps/mobile/src/features/activity"],
     ["Privacy Policy, Terms and Community & Safety Guidelines, shared by both clients, with acceptance recorded per member against a version", "packages/legal, supabase/migrations/*legal_acceptance*"],
+    ["A public Guides section at `/guides` and `/guides/<slug>`, inside the marketing route group so it carries the site header, footer, language switch and site-level structured data. An article is data rather than markup -- a `Guide` object whose body is a union of typed blocks, following `@eraya/legal` rather than adding MDX and four dependencies. Metadata, canonical, `Article` JSON-LD and `BreadcrumbList` JSON-LD are all generated from that object, so a published guide cannot ship with half of them. **One article is published**, and the other six planned slugs answer 404", "apps/web/src/features/guides, apps/web/src/app/(marketing)/guides, docs/13-seo.md"],
   ],
 
   mockedOrIncomplete: [
@@ -104,6 +105,8 @@ const narrative = {
   ],
 
   observations: [
+    ["shipped", "**Guides, and the first article.** The section shipped on 2026-09-27 with an empty registry on purpose -- routes, metadata, structured data, breadcrumbs, sitemap integration and the index page all built and exercised, and not one word of article prose invented to demonstrate them. The first approved article, `/guides/dating-after-divorce-india`, was published the same day from copy handed over rather than generated. Verified on the live site rather than from the build: HTTP 200, exactly one `robots` directive reading `index, follow`, canonical `https://eraya.app/guides/dating-after-divorce-india`, the approved SEO title and meta description byte-identical, `Article` and `BreadcrumbList` JSON-LD parsing with `author` and `publisher` both resolving by `@id` to the on-page `Organization` named Eraya, a visible breadcrumb carrying `aria-current`, one contextual link to `/safety`, and the article present in `sitemap.xml`. `npm run seo:probe` returned 304/304 against production on 2026-09-27.", "apps/web/src/features/guides/content/dating-after-divorce-india.ts"],
+    ["safety", "**A draft guide cannot become a search result, and the gate is one function.** `select.ts` is the only place in the feature that reads `status`; the index page, the article route, the sitemap and the related list all go through it. Published is an equality against the literal string `\"published\"` rather than `!== \"draft\"`, so a status added later -- `review`, `scheduled` -- is private until somebody decides otherwise. A draft answers **404**, identically to a slug nobody has ever written, so the two cannot be told apart by someone guessing: no `noindex` page to index, nothing to confirm the slug is real, and no unapproved prose on the public internet with only a meta tag in front of it. `npm test` runs eleven assertions over that one file, including the future-status guard and that a draft's date cannot leak into the index's `lastModified`. The six planned-but-unwritten slugs all return 404 in production.", "apps/web/src/features/guides/select.ts, select.test.ts"],
     ["launch blocker", "The three legal documents are written and published (section N3), but none has been reviewed by a lawyer and no postal address is disclosed anywhere. Indian consumer and payment rules require an address before live payments, and a home address is not an option — so this is a business decision rather than a code one.", "packages/legal, docs/07-open-questions.md"],
     ["resolved, unverified", "A member could not delete their account from the web in production: the deployed Worker carried no secrets of any kind, so the one server action needing the service role threw and the account survived while the member was told to try again. The secret was set on 2026-09-22 and verified on the live version; deletion has not been re-tested end to end, so treat it as fixed rather than proven. Two things are worth keeping from it. Deletion is the promise with the least room for a caveat and the three legal documents say it works. And it went unnoticed because `deleteAccount` is the only runtime consumer of a server-side secret in the whole app — a missing secret broke exactly one feature and nothing failed alongside it.", "apps/web/src/features/account/actions.ts, apps/web/wrangler.jsonc"],
     ["technical debt", "`scripts/security-probe.mjs` tests account deletion through the `delete_my_account()` RPC only. The web server action deletes by a different route — the admin API under the service role — and is not covered, which is why the probe stayed green while the web path was broken in production. A probe that exercises one of two paths reads as if it exercised both.", "scripts/security-probe.mjs"],
@@ -292,6 +295,28 @@ narrative.trustNotes.forEach(bullet);
 /* --- C ------------------------------------------------------------------ */
 h2("C. Screen inventory");
 h3(`Web — ${web.length} routes`);
+/*
+ * The `noindex` column says *how* a route is kept out of search, not merely
+ * whether some file mentions it. It was a boolean until 2026-09-27 and was
+ * wrong in both directions: every `(app)` route reported `—` because the
+ * declaration lives in the group layout rather than in the page, so member
+ * profiles read as indexable; and `/guides/[slug]` reported `yes` on the
+ * strength of a `generateMetadata` branch that only fires for a draft or an
+ * unknown slug, while the published article carried `index, follow`.
+ */
+const NOINDEX_LABEL = {
+  always: "yes — page",
+  inherited: "yes — group layout",
+  conditional: "drafts only",
+};
+w(
+  "_`noindex` column: **yes — page** the route declares it itself; " +
+    "**yes — group layout** the `(app)` or `(auth)` layout declares it for the whole group; " +
+    "**drafts only** the route is indexable when published and answers 404 otherwise, " +
+    "so the `index: false` in its source is the not-found branch; " +
+    "**—** indexable. Site-wide indexing is gated separately by " +
+    "`NEXT_PUBLIC_ALLOW_INDEXING`, and `npm run seo:probe` is what checks the served result._",
+);
 table(
   ["Route", "Group", "Auth", "Kind", "noindex", "File"],
   web.map((r) => [
@@ -299,7 +324,7 @@ table(
     r.group,
     r.authed ? "signed-in" : "public",
     r.kind + (r.dynamic ? " (dynamic)" : ""),
-    r.noindex ? "yes" : "—",
+    NOINDEX_LABEL[r.noindex] ?? "—",
     `\`${r.file.replace("apps/web/src/app", "…/app")}\``,
   ]),
 );

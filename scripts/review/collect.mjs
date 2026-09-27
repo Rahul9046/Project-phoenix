@@ -120,8 +120,58 @@ function deployment() {
 // C. Screens
 // ---------------------------------------------------------------------------
 
+/** A `robots: { index: false }` anywhere in a metadata object. */
+const NOINDEX = /robots:\s*\{\s*index:\s*false/;
+
+/**
+ * Which route groups declare `noindex` in their own layout.
+ *
+ * Read once, because it is the difference between this column being useful and
+ * being dangerous. Every route under `(app)` -- `/home`, `/discovery/[id]`, the
+ * whole account area -- used to report `—` here, because none of those pages
+ * says anything about robots in its own file. The `(app)` layout says it for
+ * all of them. A reviewer reading "member profiles: noindex —" would have drawn
+ * exactly the wrong conclusion, and the conclusion would have been the
+ * generator's fault rather than the code's.
+ */
+function groupsDeclaringNoindex() {
+  const declared = new Set();
+  for (const group of ["app", "auth", "marketing"]) {
+    if (NOINDEX.test(read(`apps/web/src/app/(${group})/layout.tsx`))) {
+      declared.add(group);
+    }
+  }
+  return declared;
+}
+
+/**
+ * How a route is kept out of search, if it is.
+ *
+ * Three answers rather than a boolean, because a boolean was wrong in both
+ * directions. A page whose *only* `index: false` sits inside `generateMetadata`
+ * is not a noindex page: that branch is the not-found path, and the published
+ * page it also serves resolves to `index, follow`. `/guides/[slug]` reported
+ * `yes` on that basis while the live article carried `index, follow` -- a false
+ * alarm this document raised twice.
+ *
+ * So: `always` for a static `export const metadata`, `inherited` for a group
+ * layout that covers the route, `conditional` for a `generateMetadata` branch,
+ * and nothing when the route is genuinely indexable.
+ */
+function noindexKind(source, group, inheriting) {
+  const at = source.search(/export\s+(?:async\s+)?function\s+generateMetadata/);
+  const staticPart = at === -1 ? source : source.slice(0, at);
+  const dynamicPart = at === -1 ? "" : source.slice(at);
+
+  if (NOINDEX.test(staticPart)) return "always";
+  if (inheriting.has(group)) return "inherited";
+  if (NOINDEX.test(dynamicPart)) return "conditional";
+  return null;
+}
+
 /** Next.js App Router: a folder defines a URL; groups in (parens) do not. */
 export function webRoutes() {
+  const inheriting = groupsDeclaringNoindex();
   return walk("apps/web/src/app", (f) => f === "page.tsx" || f === "route.ts")
     .map((file) => {
       const segments = relative(join(ROOT, "apps/web/src/app"), join(ROOT, file))
@@ -136,7 +186,11 @@ export function webRoutes() {
         kind: file.endsWith("route.ts") ? "route handler" : "page",
         authed: file.includes("(app)"),
         group: file.match(/\((app|auth|marketing)\)/)?.[1] ?? "root",
-        noindex: /robots:\s*\{\s*index:\s*false/.test(source),
+        noindex: noindexKind(
+          source,
+          file.match(/\((app|auth|marketing)\)/)?.[1] ?? "root",
+          inheriting,
+        ),
         dynamic: /\[[^\]]+\]/.test(url),
       };
     })
@@ -1111,10 +1165,30 @@ export function runChecks({ skip = false } = {}) {
     }
   };
 
+  const pkg = readJson("package.json") ?? {};
+
   run("TypeScript (web + mobile)", "npm run typecheck");
   run("ESLint (web)", "npm run lint");
   run("ESLint (mobile)", "npm run mobile:lint");
   run("Next.js production build", "npm run build");
+
+  /*
+   * Run, not listed. This is the one suite in the repository that touches
+   * nothing outside the process: `node --test` over `select.ts`, which is the
+   * draft/publish gate for guides. No credentials, no network, no database,
+   * about a tenth of a second. Reporting it as "unknown" while it was sitting
+   * there runnable was the generator being lazy about the one claim a reviewer
+   * most wants evidence for -- that an unpublished article cannot become public.
+   */
+  if (pkg.scripts?.test) {
+    run("Unit tests (draft/publish gate)", "npm test");
+  } else {
+    results.push({
+      name: "Unit tests",
+      status: "absent",
+      detail: "no test script in any workspace",
+    });
+  }
 
   /*
    * The four probes are listed, not run.
@@ -1129,7 +1203,6 @@ export function runChecks({ skip = false } = {}) {
    * So they are reported with what they prove and the command to run them, and
    * a reviewer can see at a glance which boundaries have a test at all.
    */
-  const pkg = readJson("package.json") ?? {};
   const probes = [
     ["Security probe", "security", "RLS and grants, as an ordinary member: that nobody can grant themselves membership, read another member's rows, or call a function they should not"],
     ["Payments probe", "payments:probe", "server-side pricing, idempotent settlement, expiry as a date, and that every plan is prepaid rather than recurring"],
@@ -1137,21 +1210,28 @@ export function runChecks({ skip = false } = {}) {
     ["Analytics probe", "analytics:probe", "that each funnel event is actually recorded, by performing the transition and looking for the row"],
     ["Religion probe", "religion:probe", "that a disclosed religion reaches another member, that \"prefer not to say\" and never-answered both arrive as nothing and match no filter, and that an account predating the question keeps working with null"],
     ["Activity probe", "activity:probe", "the unread and new-connection counts, by connecting two throwaway members and messaging between them: that a count is of conversations rather than messages, that a sender never counts their own, that reading clears exactly one, that a second sign-in sees the same numbers, and that blocking or deleting leaves no phantom behind"],
+    /*
+     * The SEO probe is the odd one out and carries its own reason.
+     *
+     * It needs no credentials and writes nothing -- it only GETs public pages --
+     * so the usual objection does not apply. What does apply is that it walks
+     * about thirty live URLs in quick succession, and this Worker intermittently
+     * answers 503 under exactly that pattern on the free plan's CPU budget (see
+     * section B). A red row here would usually be the host rather than the site's
+     * SEO, and a document that cries wolf about its own tooling is worse than one
+     * with no checks at all. So it is named, with what it proves, and run by hand.
+     */
+    ["SEO probe", "seo:probe", "what eraya.app actually tells a crawler, asserted on parsed values: robots.txt rules resolved longest-match against the paths they cover, every sitemap `<loc>` fetched and checked for a `noindex` it should not carry, each canonical compared as a URL against the canonical origin, every private route required to answer with a redirect or a refusal, the www redirect, and all JSON-LD handed to `JSON.parse`. This is the only check here that can see what production serves -- `tsc` and `next build` both pass on a site that is entirely `noindex`, and `NEXT_PUBLIC_ALLOW_INDEXING` is inlined from the deploy workflow's environment, so the repository cannot know its own production value", "It needs no credentials and writes nothing, but it walks about thirty live URLs in quick succession and this Worker intermittently answers 503 under that pattern, so a failure here would usually be the host rather than the site. Run it by hand"],
   ];
-  for (const [name, script, proves] of probes) {
+  for (const [name, script, proves, reason] of probes) {
     results.push({
       name,
       status: pkg.scripts?.[script] ? "not run here" : "absent",
       detail: pkg.scripts?.[script]
-        ? `\`npm run ${script}\` — ${proves}. Needs credentials and touches the live project, so it is not run by this generator.`
+        ? `\`npm run ${script}\` — ${proves}. ${reason ?? "Needs credentials and touches the live project, so it is not run by this generator."}`
         : "no script",
     });
   }
 
-  results.push({
-    name: "Unit/integration tests",
-    status: pkg.scripts?.test ? "unknown" : "absent",
-    detail: pkg.scripts?.test ? "a test script exists" : "no test script in any workspace",
-  });
   return results;
 }
