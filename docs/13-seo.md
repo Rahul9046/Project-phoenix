@@ -1,7 +1,8 @@
 # SEO
 
 Two pieces of work, in order. The technical foundation is done and verified; the
-content infrastructure is built and carrying six published guides.
+content infrastructure is built, and the seven guides it was built for are
+written and live.
 
 ## The foundation
 
@@ -37,20 +38,22 @@ group, so the section arrives with the site header, footer, language switch and
 site-level structured data already around it, and inherits that group's
 indexable default rather than declaring anything about robots itself.
 
-**Six guides are published** — three on 2026-09-27
+**Seven guides are published, and the batch is complete** — three on 2026-09-27
 (`/guides/dating-after-divorce-india`,
 `/guides/how-to-start-dating-after-divorce`,
-`/guides/when-to-date-after-divorce`) and three on 2026-09-28
+`/guides/when-to-date-after-divorce`) and four on 2026-09-28
 (`/guides/dating-after-divorce-with-kids`,
 `/guides/dating-after-separation-india`,
-`/guides/online-dating-safety-after-divorce`). All six are approved copy,
+`/guides/online-dating-safety-after-divorce`,
+`/guides/dating-apps-vs-matrimony-after-divorce`). All seven are approved copy,
 transcribed rather than generated, and they are the only articles. They read as
-a cluster rather than six separate pages: the third links to two of the others,
-the fourth to all three, the fifth to all four, and the sixth to all five. The
-rule that kept the registry empty still governs everything after them -- a set
-of thin AI-written guides would be worse for this site than no guides at all, it
-is what Google's helpful-content work exists to demote, and unlike a missing
-page it is hard to take back once indexed.
+a cluster rather than seven separate pages, and the cluster is finished: every
+guide links to every other. The rule that kept the registry empty still governs
+everything after them -- a set of thin AI-written guides would be worse for this
+site than no guides at all, it is what Google's helpful-content work exists to
+demote, and unlike a missing page it is hard to take back once indexed. It
+governs the empty plan below in exactly the same way: an eighth guide is a
+decision about what to write, not a slot left open.
 
 Checked on eraya.app on 2026-09-28, as each of the fourth, fifth and sixth went
 up: all six answer HTTP 200 with a single `index, follow`, a canonical equal to
@@ -182,13 +185,23 @@ promise a `/guides/safety` that does not exist.
 Both reference the `Organization` and `WebSite` the `(marketing)` layout already
 emits on the same page, by `@id`, rather than describing a second Eraya.
 
-## Planned, not written
+## Planned, not written — and now nothing is
 
-One slug remains, as a writing target. It is not an entry waiting to be switched
-on, and `/guides/this-guide-does-not-exist` holds its place in the probe's
-**private** list — the next slug somebody starts writing should join it there, so
-that the day it is published is a day the probe fails and somebody has to move it
-deliberately. Silence until then is how a placeholder ships.
+The list below is finished. Every slug on it is published, none is waiting to be
+switched on, and no replacement was invented to keep the column occupied: a
+planned slug exists because somebody intends to write that article, so inventing
+one to preserve a tidy table would be the placeholder this section has refused
+from the start.
+
+Nothing depended on the list being non-empty, which is worth saying because it
+would have been easy to assume otherwise. The draft gate is proved by fixtures
+in `select.test.ts` -- guides that live in the test file and never go near
+`registry.ts` -- and the probe proves an unknown slug 404s using
+`/guides/this-guide-does-not-exist`, a slug nobody will ever write. Neither
+needs a real unwritten article, so neither had to be adjusted when the plan
+emptied. If an eighth guide is ever started, its slug joins the probe's
+**private** list, so that the day it is published is a day the probe fails and
+somebody has to move it deliberately.
 
 | Slug | Working title |
 | --- | --- |
@@ -198,12 +211,14 @@ deliberately. Silence until then is how a placeholder ships.
 | ~~`dating-after-divorce-with-kids`~~ | **Published 2026-09-28.** First guide to link to all three of the others |
 | ~~`dating-after-separation-india`~~ | **Published 2026-09-28.** First guide to link to all four of the others |
 | ~~`online-dating-safety-after-divorce`~~ | **Published 2026-09-28.** First guide in the `safety` category and the first to use the `safety` CTA, both of which had existed unused since the section shipped |
-| `dating-apps-vs-matrimony-after-divorce` | Dating Apps or Matrimony Sites After Divorce |
+| ~~`dating-apps-vs-matrimony-after-divorce`~~ | **Published 2026-09-28.** The last of the batch; every guide now links to every other |
 
 `finding-companionship-after-losing-spouse` sat on this list until 2026-09-28
-and no longer does; the one remaining target is the comparison above. Noted
-rather than deleted, because a slug leaving the plan is a decision somebody
-made, and the next person reading this should be able to see that it was.
+and left it without being written. Noted rather than deleted, because a slug
+leaving the plan is a decision somebody made, and the next person reading this
+should be able to see that it was. It answers 404 exactly as an invented slug
+does, which is the whole argument for a 404 over a "coming soon" page: a dropped
+slug, a planned slug and a slug nobody ever thought of are one answer.
 
 Landing pages such as `/divorced-dating-india` are a separate thing and not
 guides. Nothing in this architecture prevents them: they would be ordinary pages
@@ -212,9 +227,9 @@ in the `(marketing)` group, added to `publicPaths` in `app/sitemap.ts` the way
 
 ## Two things for the owner to decide
 
-**Six guides are live, so `/guides` is no longer thin.** Every one of those
+**Seven guides are live, so `/guides` is no longer thin.** Every one of those
 URLs can now be submitted for indexing in Search Console, alongside
-`https://eraya.app/guides` itself. The sitemap carries all seven and did not
+`https://eraya.app/guides` itself. The sitemap carries all eight and did not
 move.
 
 **The homepage hero says "Verified members."** (`marketing.hero.note`). It

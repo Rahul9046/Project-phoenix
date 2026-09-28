@@ -1,6 +1,7 @@
 import { datingAfterDivorceIndia } from "./content/dating-after-divorce-india";
 import { datingAfterDivorceWithKids } from "./content/dating-after-divorce-with-kids";
 import { datingAfterSeparationIndia } from "./content/dating-after-separation-india";
+import { datingAppsVsMatrimonyAfterDivorce } from "./content/dating-apps-vs-matrimony-after-divorce";
 import { howToStartDatingAfterDivorce } from "./content/how-to-start-dating-after-divorce";
 import { onlineDatingSafetyAfterDivorce } from "./content/online-dating-safety-after-divorce";
 import { whenToDateAfterDivorce } from "./content/when-to-date-after-divorce";
@@ -13,7 +14,7 @@ import {
 } from "./select";
 
 /**
- * Every guide Eraya has written. Six, as of 2026-09-28.
+ * Every guide Eraya has written. Seven, as of 2026-09-28.
  *
  * The infrastructure shipped empty on purpose and this is the first thing to go
  * into it: approved copy, transcribed rather than generated. The rule that kept
@@ -31,8 +32,13 @@ import {
  * `"published"` when it is approved. It appears in the sitemap on the next
  * deploy without anyone editing `app/sitemap.ts`.
  *
- * The one remaining slug is planned in `docs/13-seo.md`. It is a target for
- * writing, not an entry waiting to be switched on.
+ * Nothing is planned and unwritten any more: the seven slugs `docs/13-seo.md`
+ * listed are all published, and the batch the section was built for is finished.
+ * An eighth guide would be a new decision about what to write, not a slot
+ * waiting to be filled -- which is the state to keep. Nothing here needs a
+ * placeholder to stay honest: the draft gate is proved by fixtures in
+ * `select.test.ts`, and the probe proves an unknown slug 404s with a slug
+ * nobody will ever write.
  *
  * ## Why a written array rather than a directory read
  *
@@ -46,6 +52,7 @@ const guides: readonly Guide[] = [
   datingAfterDivorceIndia,
   datingAfterDivorceWithKids,
   datingAfterSeparationIndia,
+  datingAppsVsMatrimonyAfterDivorce,
   howToStartDatingAfterDivorce,
   onlineDatingSafetyAfterDivorce,
   whenToDateAfterDivorce,
