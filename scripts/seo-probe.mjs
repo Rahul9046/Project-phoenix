@@ -59,6 +59,7 @@ const PUBLIC_PATHS = [
   "/guides/dating-after-divorce-with-kids",
   "/guides/dating-after-separation-india",
   "/guides/how-to-start-dating-after-divorce",
+  "/guides/online-dating-safety-after-divorce",
   "/guides/when-to-date-after-divorce",
 ];
 
