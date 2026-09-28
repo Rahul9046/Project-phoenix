@@ -46,14 +46,14 @@ indexable default rather than declaring anything about robots itself.
 `/guides/online-dating-safety-after-divorce`). All six are approved copy,
 transcribed rather than generated, and they are the only articles. They read as
 a cluster rather than six separate pages: the third links to two of the others,
-the fourth to all three, the fifth to all four, and the sixth to all five. The rule that kept the
-registry empty still governs everything after them -- a set of thin AI-written
-guides would be worse for this site than no guides at all, it is what
-Google's helpful-content work exists to demote, and unlike a missing page it is
-hard to take back once indexed.
+the fourth to all three, the fifth to all four, and the sixth to all five. The
+rule that kept the registry empty still governs everything after them -- a set
+of thin AI-written guides would be worse for this site than no guides at all, it
+is what Google's helpful-content work exists to demote, and unlike a missing
+page it is hard to take back once indexed.
 
-Checked on eraya.app on 2026-09-28, the day the fourth and then the fifth went
-up: all five answer HTTP 200 with a single `index, follow`, a canonical equal to
+Checked on eraya.app on 2026-09-28, as each of the fourth, fifth and sixth went
+up: all six answer HTTP 200 with a single `index, follow`, a canonical equal to
 their own URL, the approved SEO title and meta description byte-identical, both
 `Article` and `BreadcrumbList` JSON-LD parsing with `author` and `publisher`
 resolving by `@id` to the on-page `Organization` named Eraya, a visible
@@ -63,18 +63,21 @@ every page here has, so the approved SEO title is byte-identical in `og:title`
 and `twitter:title` rather than in the title tag alone — and where a guide sets
 `seoTitle`, the approved `h1` is the separate string the heading, the breadcrumb
 and the JSON-LD `headline` all carry. Article #4 carries its links to the three
-before it; Article #5 carries all five of its approved links — the four other
-guides and `/safety`.
+before it, Article #5 all five of its approved links, and Article #6 all six of
+its own — every other guide, and `/safety`. The cluster is closed: each of the
+six links to each of the others.
 
-The two slugs still unwritten answer 404, appear nowhere in the sitemap, and
-serve a page byte-identical to the one `/guides/this-guide-does-not-exist`
+The one slug still unwritten answers 404, appears nowhere in the sitemap, and
+serves a page byte-identical to the one `/guides/this-guide-does-not-exist`
 serves, which is the property that matters: a reader guessing at a slug cannot
 tell a planned article from one nobody has ever thought of. That was checked by
 comparing the responses rather than by looking for a string, because a missing
-placeholder and a typo in the search term produce the same silence.
+placeholder and a typo in the search term produce the same silence. The slug
+that left the plan on the same day was checked the same way and answers
+identically.
 
-`npm run seo:probe` returned **451/451** the day the fourth went up and
-**500/500** after the fifth, both against production.
+`npm run seo:probe` returned **451/451** the day the fourth went up, **500/500**
+after the fifth and **549/549** after the sixth, all against production.
 
 ### Content is data, not markup
 
