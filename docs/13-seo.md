@@ -1,7 +1,7 @@
 # SEO
 
 Two pieces of work, in order. The technical foundation is done and verified; the
-content infrastructure is built and carrying four published guides.
+content infrastructure is built and carrying five published guides.
 
 ## The foundation
 
@@ -37,20 +37,21 @@ group, so the section arrives with the site header, footer, language switch and
 site-level structured data already around it, and inherits that group's
 indexable default rather than declaring anything about robots itself.
 
-**Four guides are published** — three on 2026-09-27
+**Five guides are published** — three on 2026-09-27
 (`/guides/dating-after-divorce-india`,
 `/guides/how-to-start-dating-after-divorce`,
-`/guides/when-to-date-after-divorce`) and one on 2026-09-28
-(`/guides/dating-after-divorce-with-kids`). All four are approved copy,
+`/guides/when-to-date-after-divorce`) and two on 2026-09-28
+(`/guides/dating-after-divorce-with-kids`,
+`/guides/dating-after-separation-india`). All five are approved copy,
 transcribed rather than generated, and they are the only articles. They read as
-a cluster rather than four separate pages: the third links to two of the others
-and the fourth links to all three. The rule that kept the registry empty still
-governs everything after them -- a set of thin AI-written guides would be worse
-for this site than no guides at all, it is what Google's helpful-content work
-exists to demote, and unlike a missing page it is hard to take back once
-indexed.
+a cluster rather than five separate pages: the third links to two of the others,
+the fourth to all three, and the fifth to all four. The rule that kept the
+registry empty still governs everything after them -- a set of thin AI-written
+guides would be worse for this site than no guides at all, it is what
+Google's helpful-content work exists to demote, and unlike a missing page it is
+hard to take back once indexed.
 
-Checked on eraya.app on 2026-09-28, the day the fourth went up: all four answer
+Checked on eraya.app on 2026-09-28, the day the fourth went up: all four answered
 HTTP 200 with a single `index, follow`, a canonical equal to their own URL, the
 approved SEO title and meta description byte-identical in `og:title`,
 `twitter:title`, the `h1` and the JSON-LD `headline`, `Article` and
@@ -58,7 +59,7 @@ approved SEO title and meta description byte-identical in `og:title`,
 and an entry in `sitemap.xml`; Article #4 also carries links to all three of the
 others and to `/safety`, and robots.txt disallows nothing that covers it. The
 `<title>` element adds the site-wide `— Eraya` suffix every page here has. The
-three remaining planned slugs answer 404 and appear nowhere in the sitemap.
+planned slugs that remained answered 404 and appeared nowhere in the sitemap.
 `npm run seo:probe` returned **451/451** against production.
 
 ### Content is data, not markup
@@ -166,7 +167,7 @@ emits on the same page, by `@id`, rather than describing a second Eraya.
 
 ## Planned, not written
 
-Three slugs remain, as writing targets. They are not entries waiting to be switched
+Two slugs remain, as writing targets. They are not entries waiting to be switched
 on, and `/guides/this-guide-does-not-exist` holds their place in the probe's
 **private** list — the next slug somebody starts writing should join it there, so
 that the day it is published is a day the probe fails and somebody has to move it
@@ -178,7 +179,7 @@ deliberately. Silence until then is how a placeholder ships.
 | ~~`how-to-start-dating-after-divorce`~~ | **Published 2026-09-27.** First use of `seoTitle`, and the first guide to link to another |
 | ~~`when-to-date-after-divorce`~~ | **Published 2026-09-27.** First guide to link to two others |
 | ~~`dating-after-divorce-with-kids`~~ | **Published 2026-09-28.** First guide to link to all three of the others |
-| `dating-after-separation-india` | Dating After Separation in India |
+| ~~`dating-after-separation-india`~~ | **Published 2026-09-28.** First guide to link to all four of the others |
 | `online-dating-safety-after-divorce` | Staying Safe When Meeting Someone Online After Divorce |
 | `finding-companionship-after-losing-spouse` | Finding Companionship After Losing a Spouse |
 
@@ -189,9 +190,9 @@ in the `(marketing)` group, added to `publicPaths` in `app/sitemap.ts` the way
 
 ## Two things for the owner to decide
 
-**Four guides are live, so `/guides` is no longer thin.** Every one of those
+**Five guides are live, so `/guides` is no longer thin.** Every one of those
 URLs can now be submitted for indexing in Search Console, alongside
-`https://eraya.app/guides` itself. The sitemap carries all five and did not move.
+`https://eraya.app/guides` itself. The sitemap carries all six and did not move.
 
 **The homepage hero says "Verified members."** (`marketing.hero.note`). It
 predates this work and was left alone: rewriting approved marketing copy was out
