@@ -51,16 +51,29 @@ guides would be worse for this site than no guides at all, it is what
 Google's helpful-content work exists to demote, and unlike a missing page it is
 hard to take back once indexed.
 
-Checked on eraya.app on 2026-09-28, the day the fourth went up: all four answered
-HTTP 200 with a single `index, follow`, a canonical equal to their own URL, the
-approved SEO title and meta description byte-identical in `og:title`,
-`twitter:title`, the `h1` and the JSON-LD `headline`, `Article` and
-`BreadcrumbList` JSON-LD that parse, a visible breadcrumb, a link from `/guides`
-and an entry in `sitemap.xml`; Article #4 also carries links to all three of the
-others and to `/safety`, and robots.txt disallows nothing that covers it. The
-`<title>` element adds the site-wide `— Eraya` suffix every page here has. The
-planned slugs that remained answered 404 and appeared nowhere in the sitemap.
-`npm run seo:probe` returned **451/451** against production.
+Checked on eraya.app on 2026-09-28, the day the fourth and then the fifth went
+up: all five answer HTTP 200 with a single `index, follow`, a canonical equal to
+their own URL, the approved SEO title and meta description byte-identical, both
+`Article` and `BreadcrumbList` JSON-LD parsing with `author` and `publisher`
+resolving by `@id` to the on-page `Organization` named Eraya, a visible
+breadcrumb, a link from `/guides`, an entry in `sitemap.xml`, and no robots.txt
+rule covering them. The `<title>` element adds the site-wide `— Eraya` suffix
+every page here has, so the approved SEO title is byte-identical in `og:title`
+and `twitter:title` rather than in the title tag alone — and where a guide sets
+`seoTitle`, the approved `h1` is the separate string the heading, the breadcrumb
+and the JSON-LD `headline` all carry. Article #4 carries its links to the three
+before it; Article #5 carries all five of its approved links — the four other
+guides and `/safety`.
+
+The two slugs still unwritten answer 404, appear nowhere in the sitemap, and
+serve a page byte-identical to the one `/guides/this-guide-does-not-exist`
+serves, which is the property that matters: a reader guessing at a slug cannot
+tell a planned article from one nobody has ever thought of. That was checked by
+comparing the responses rather than by looking for a string, because a missing
+placeholder and a typo in the search term produce the same silence.
+
+`npm run seo:probe` returned **451/451** the day the fourth went up and
+**500/500** after the fifth, both against production.
 
 ### Content is data, not markup
 
