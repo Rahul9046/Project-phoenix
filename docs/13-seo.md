@@ -1,7 +1,7 @@
 # SEO
 
 Two pieces of work, in order. The technical foundation is done and verified; the
-content infrastructure is built and empty.
+content infrastructure is built and carrying four published guides.
 
 ## The foundation
 
@@ -49,6 +49,17 @@ governs everything after them -- a set of thin AI-written guides would be worse
 for this site than no guides at all, it is what Google's helpful-content work
 exists to demote, and unlike a missing page it is hard to take back once
 indexed.
+
+Checked on eraya.app on 2026-09-28, the day the fourth went up: all four answer
+HTTP 200 with a single `index, follow`, a canonical equal to their own URL, the
+approved SEO title and meta description byte-identical in `og:title`,
+`twitter:title`, the `h1` and the JSON-LD `headline`, `Article` and
+`BreadcrumbList` JSON-LD that parse, a visible breadcrumb, a link from `/guides`
+and an entry in `sitemap.xml`; Article #4 also carries links to all three of the
+others and to `/safety`, and robots.txt disallows nothing that covers it. The
+`<title>` element adds the site-wide `— Eraya` suffix every page here has. The
+three remaining planned slugs answer 404 and appear nowhere in the sitemap.
+`npm run seo:probe` returned **451/451** against production.
 
 ### Content is data, not markup
 
@@ -178,10 +189,9 @@ in the `(marketing)` group, added to `publicPaths` in `app/sitemap.ts` the way
 
 ## Two things for the owner to decide
 
-**The first guide is live, so `/guides` is no longer thin.** Both URLs can now
-be submitted for indexing in Search Console:
-`https://eraya.app/guides` and `https://eraya.app/guides/dating-after-divorce-india`.
-The sitemap carries both and did not move.
+**Four guides are live, so `/guides` is no longer thin.** Every one of those
+URLs can now be submitted for indexing in Search Console, alongside
+`https://eraya.app/guides` itself. The sitemap carries all five and did not move.
 
 **The homepage hero says "Verified members."** (`marketing.hero.note`). It
 predates this work and was left alone: rewriting approved marketing copy was out
