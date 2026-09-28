@@ -55,32 +55,38 @@ demote, and unlike a missing page it is hard to take back once indexed. It
 governs the empty plan below in exactly the same way: an eighth guide is a
 decision about what to write, not a slot left open.
 
-Checked on eraya.app on 2026-09-28, as each of the fourth, fifth and sixth went
-up: all six answer HTTP 200 with a single `index, follow`, a canonical equal to
-their own URL, the approved SEO title and meta description byte-identical, both
-`Article` and `BreadcrumbList` JSON-LD parsing with `author` and `publisher`
-resolving by `@id` to the on-page `Organization` named Eraya, a visible
-breadcrumb, a link from `/guides`, an entry in `sitemap.xml`, and no robots.txt
-rule covering them. The `<title>` element adds the site-wide `— Eraya` suffix
-every page here has, so the approved SEO title is byte-identical in `og:title`
-and `twitter:title` rather than in the title tag alone — and where a guide sets
-`seoTitle`, the approved `h1` is the separate string the heading, the breadcrumb
-and the JSON-LD `headline` all carry. Article #4 carries its links to the three
-before it, Article #5 all five of its approved links, and Article #6 all six of
-its own — every other guide, and `/safety`. The cluster is closed: each of the
-six links to each of the others.
+Checked on eraya.app on 2026-09-28, as each of the fourth, fifth, sixth and
+seventh went up: all seven answer HTTP 200 with a single `index, follow`, a
+canonical equal to their own URL, the approved SEO title and meta description
+byte-identical, both `Article` and `BreadcrumbList` JSON-LD parsing with
+`author` and `publisher` resolving by `@id` to the on-page `Organization` named
+Eraya, a visible breadcrumb, a link from `/guides`, an entry in `sitemap.xml`,
+and no robots.txt rule covering them. The `<title>` element adds the site-wide
+`— Eraya` suffix every page here has, so the approved SEO title is
+byte-identical in `og:title` and `twitter:title` rather than in the title tag
+alone — and where a guide sets `seoTitle`, the approved `h1` is the separate
+string the heading, the breadcrumb and the JSON-LD `headline` all carry. Each
+article carries every approved link it was given; Article #7 carries seven, so
+every guide now links to every other and the cluster is finished.
 
-The one slug still unwritten answers 404, appears nowhere in the sitemap, and
-serves a page byte-identical to the one `/guides/this-guide-does-not-exist`
-serves, which is the property that matters: a reader guessing at a slug cannot
-tell a planned article from one nobody has ever thought of. That was checked by
-comparing the responses rather than by looking for a string, because a missing
-placeholder and a typo in the search term produce the same silence. The slug
-that left the plan on the same day was checked the same way and answers
-identically.
+The index and the sitemap were also asked how many guides exist, rather than
+only whether the newest one was there: `/guides` lists exactly seven, the
+sitemap carries exactly seven `/guides/<slug>` URLs, and the two sets are
+identical. That is the assertion that would catch an eighth slug appearing from
+anywhere.
+
+Nothing is planned and unwritten, so there is no planned slug to check any
+more. What was checked instead is that the absence looks the same from outside:
+`finding-companionship-after-losing-spouse`, which left the plan unwritten, a
+truncation of a real slug, and a slug nobody ever proposed all answer 404 with a
+body byte-identical to `/guides/this-guide-does-not-exist`. That comparison is
+the honest form of the test — a string being absent from a response cannot tell
+a missing placeholder from a typo in the search term — and it is what "no
+placeholder is exposed" actually means.
 
 `npm run seo:probe` returned **451/451** the day the fourth went up, **500/500**
-after the fifth and **549/549** after the sixth, all against production.
+after the fifth, **549/549** after the sixth and **598/598** after the seventh,
+all against production.
 
 ### Content is data, not markup
 
