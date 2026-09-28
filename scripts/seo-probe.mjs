@@ -58,6 +58,7 @@ const PUBLIC_PATHS = [
   "/guides/dating-after-divorce-india",
   "/guides/dating-after-divorce-with-kids",
   "/guides/dating-after-separation-india",
+  "/guides/dating-apps-vs-matrimony-after-divorce",
   "/guides/how-to-start-dating-after-divorce",
   "/guides/online-dating-safety-after-divorce",
   "/guides/when-to-date-after-divorce",
@@ -100,8 +101,11 @@ const PRIVATE_PATHS = [
    * it was published would be a day this probe failed and somebody had to move
    * the slug deliberately rather than let a placeholder ship quietly. That day
    * was 2026-09-27: it is a real article now, it is in `PUBLIC_PATHS`, and the
-   * article checks in `probeGuides` cover it. The next planned guide can take
-   * its place here when somebody starts writing one.
+   * article checks in `probeGuides` cover it. Every planned slug has since gone
+   * the same way -- the last on 2026-09-28 -- so this entry stands alone, which
+   * is what it was always for. It is not a stand-in for a planned article and
+   * does not need one to exist: the claim it proves is that a slug nobody wrote
+   * answers 404 rather than rendering, and that claim survives an empty plan.
    */
   "/guides/this-guide-does-not-exist",
 ];
