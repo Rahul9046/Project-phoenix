@@ -464,9 +464,19 @@ export function plans() {
  * Both tiers are seeded side by side with a human description, which makes the
  * migration the honest source: the TypeScript fallback only describes what
  * happens when the table is unreachable.
+ *
+ * And, for the same reason `plans()` replays later migrations, so does this.
+ * Stopping at the seed made this table advertise `canSeeInteresters` in every
+ * review package generated after 2026-09-20, the day the capability was
+ * retired -- the identities it unlocked are now obtainable at no tier, and the
+ * row was deleted precisely so the generated pricing page would stop offering
+ * them. A reviewer reading the old table would have raised a premium feature
+ * that no longer exists, which is the failure the comment above warns about,
+ * repeated in the next function down.
  */
 export function entitlementMatrix() {
-  const seed = read("supabase/migrations/20260826100600_seed_membership.sql");
+  const seedFile = "supabase/migrations/20260826100600_seed_membership.sql";
+  const seed = read(seedFile);
   const rows = [...seed.matchAll(
     /\(\s*'(free|premium)',\s*'([A-Za-z]+)',\s*'(boolean|number)',\s*'([^']*)',\s*'([^']*)'\s*\)/g,
   )];
@@ -474,6 +484,29 @@ export function entitlementMatrix() {
   for (const [, tier, key, kind, value, description] of rows) {
     if (!byKey.has(key)) byKey.set(key, { capability: key, kind, description });
     byKey.get(key)[tier] = value;
+  }
+
+  /*
+   * Replay retirements in migration order.
+   *
+   * Only deletes by key are replayed, because a delete is the only thing that
+   * has ever happened to a seeded capability -- and it is the mutation the
+   * product uses deliberately, since the public pricing table is generated
+   * from whatever rows exist. A capability set to false for both tiers would
+   * still advertise itself, which is why it is removed instead.
+   */
+  const migrations = existsSync(join(ROOT, "supabase/migrations"))
+    ? readdirSync(join(ROOT, "supabase/migrations")).filter((f) => f.endsWith(".sql")).sort()
+    : [];
+  const retired = [];
+  for (const file of migrations) {
+    if (`supabase/migrations/${file}` === seedFile) continue;
+    for (const m of read(`supabase/migrations/${file}`).matchAll(
+      /delete\s+from\s+public\.entitlements\s+where\s+key\s*=\s*'([A-Za-z]+)'/g,
+    )) {
+      const key = m[1];
+      if (byKey.delete(key)) retired.push({ file, key });
+    }
   }
 
   // What the client falls back to when the table cannot be read.
@@ -484,7 +517,8 @@ export function entitlementMatrix() {
   );
 
   return {
-    source: "supabase/migrations/20260826100600_seed_membership.sql",
+    source: seedFile,
+    retired,
     rows: [...byKey.values()].map((r) => ({ ...r, fallback: fallback[r.capability] })),
   };
 }

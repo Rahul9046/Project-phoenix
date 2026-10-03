@@ -1,7 +1,10 @@
 import { membershipCopy } from "@/features/account/content";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
 import { formatRenewalDate } from "@/features/membership/format";
-import { loadMembership } from "@/features/membership/entitlements";
+import {
+  loadMembership,
+  loadTierComparison,
+} from "@/features/membership/entitlements";
 import { PremiumCheckout } from "@/features/membership/PremiumCheckout";
 
 export const metadata = { title: "Membership" };
@@ -22,7 +25,10 @@ export const metadata = { title: "Membership" };
 export default async function MembershipPage() {
   // The catalogue is fetched by the checkout island instead: its prices depend
   // on who is asking, and this render is shared.
-  const membership = await loadMembership();
+  const [membership, comparison] = await Promise.all([
+    loadMembership(),
+    loadTierComparison(),
+  ]);
 
   const { entitlements, subscription } = membership;
   const isPremium = membership.tier === "premium";
@@ -36,11 +42,27 @@ export default async function MembershipPage() {
     ["Message the people you connect with", entitlements.canMessageConnections],
   ] as const;
 
-  const premiumAdds = [
-    "More profile reverts",
-    "Browse incognito",
-    "Priority profile visibility",
-  ];
+  /*
+   * What Premium adds, and only what it actually adds.
+   *
+   * This listed "Browse incognito" and "Priority profile visibility" until
+   * 2026-10-03. Neither existed: both were seeded entitlement rows that no SQL
+   * and no component ever read, and `discover_members` has never carried a tier
+   * term, so a paying profile was ordered exactly like a free one. They were
+   * withdrawn rather than implemented in a hurry, which leaves one true line.
+   *
+   * Built from `loadTierComparison`, which reads both tiers out of the
+   * `entitlements` table, rather than from `entitlements.revertLimit` -- that
+   * one holds *this viewer's* allowance, so a free member reading their own
+   * number would be told premium offers them three instead of three.
+   */
+  const premiumAdds = comparison
+    .filter((capability) => capability.isUpgrade)
+    .map((capability) =>
+      capability.kind === "number"
+        ? `${capability.description}: ${capability.premium} instead of ${capability.free}`
+        : capability.description,
+    );
 
   return (
     <AppPage title={membershipCopy.title} lede={membershipCopy.lede}>

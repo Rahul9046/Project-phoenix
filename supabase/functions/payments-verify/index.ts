@@ -2,6 +2,17 @@ import { fetchOrderPayments, verifyCheckoutSignature } from "../_shared/razorpay
 import { admin, callerId, CORS, json, log } from "../_shared/request.ts";
 
 /**
+ * Which provider's order ids this endpoint speaks about.
+ *
+ * `payments` is unique on `(provider, provider_order_id)`, so every lookup here
+ * carries both. This file only ever handles Razorpay -- a store purchase is
+ * verified against the store, not against an order id a client hands over --
+ * and naming the provider once is what stops a second one inheriting the
+ * assumption that an order id is unique on its own.
+ */
+const PROVIDER = "razorpay" as const;
+
+/**
  * Confirming a purchase, and rescuing one that got lost.
  *
  * Two jobs, one endpoint, because they answer the same question: is this order
@@ -50,6 +61,7 @@ Deno.serve(async (request) => {
   const { data: owned } = await db
     .from("payments")
     .select("id, status, profile_id")
+    .eq("provider", PROVIDER)
     .eq("provider_order_id", orderId)
     .eq("profile_id", profile)
     .maybeSingle();
@@ -65,6 +77,23 @@ Deno.serve(async (request) => {
     return json({ status: "paid", membership });
   }
 
+  /*
+   * Refunded, and said so here rather than discovered at the bottom.
+   *
+   * Razorpay goes on reporting a refunded payment as `captured` -- the capture
+   * happened, and the refund is a separate entity against it. So the
+   * reconciliation path below would fetch that record, read it as proof, and
+   * ask to settle. `settle_payment` refuses, because a revoked payment can
+   * never buy time again, and answering the question up here makes that a
+   * stated outcome instead of a near miss. The member's own history shows the
+   * status through `my_payments()`.
+   */
+  if (owned.status === "refunded" || owned.status === "partially_refunded") {
+    log("payment_verify_refunded", { status: owned.status });
+    const { data: membership } = await db.rpc("my_membership_for", { p_profile: profile });
+    return json({ status: owned.status, membership });
+  }
+
   let confirmedPaymentId: string | null = null;
 
   if (paymentId && signature) {
@@ -73,6 +102,7 @@ Deno.serve(async (request) => {
     if (!valid) {
       log("payment_signature_invalid", {});
       await db.rpc("settle_payment", {
+        p_provider: PROVIDER,
         p_order_id: orderId,
         p_provider_payment_id: null,
         p_status: "failed",
@@ -117,6 +147,7 @@ Deno.serve(async (request) => {
        * webhook that lands between the fetch above and this call still wins.
        */
       await db.rpc("settle_payment", {
+        p_provider: PROVIDER,
         p_order_id: orderId,
         p_provider_payment_id: declined.id ? String(declined.id) : null,
         p_status: "failed",
@@ -149,6 +180,7 @@ Deno.serve(async (request) => {
   }
 
   const { data: settled, error } = await db.rpc("settle_payment", {
+    p_provider: PROVIDER,
     p_order_id: orderId,
     p_provider_payment_id: confirmedPaymentId,
     p_status: "paid",

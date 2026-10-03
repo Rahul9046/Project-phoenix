@@ -13,8 +13,6 @@ export type PaymentProvider = Database["public"]["Enums"]["payment_provider"];
  * directly -- see `entitlements.ts` for why.
  */
 export type EntitlementKey =
-  | "canUseIncognito"
-  | "canUsePriorityVisibility"
   | "canBrowseProfiles"
   | "canUseDiscoveryFilters"
   | "canExpressInterest"
@@ -23,12 +21,20 @@ export type EntitlementKey =
 
 export type Entitlements = {
   readonly tier: MembershipTier;
-  readonly canUseIncognito: boolean;
-  readonly canUsePriorityVisibility: boolean;
   readonly canBrowseProfiles: boolean;
   readonly canUseDiscoveryFilters: boolean;
   readonly canExpressInterest: boolean;
   readonly canMessageConnections: boolean;
+  /**
+   * The only capability that differs by tier, and the only one enforced.
+   *
+   * `canUseIncognito` and `canUsePriorityVisibility` were here, seeded,
+   * advertised, and implemented nowhere; they were withdrawn on 2026-10-03
+   * rather than left on sale. Either can return the way any capability arrives
+   * -- two `entitlements` rows and the feature that reads them -- and the point
+   * of removing the keys as well as the rows is that neither can come back as
+   * a row alone.
+   */
   readonly revertLimit: number;
 };
 

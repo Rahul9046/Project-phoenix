@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "app.eraya.mobile",
-      "versionCode": 3,
+      "versionCode": 4,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "backgroundColor": "#BD4F33",

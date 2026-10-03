@@ -43,21 +43,26 @@ import type { TFunction, TranslationKey } from "@eraya/i18n";
  * moving one of them behind the paywall a deliberate act rather than drift.
  */
 
+/*
+ * What Premium adds, and only what it actually adds.
+ *
+ * Two more entries sat here until 2026-10-03 -- "quiet" (browse incognito) and
+ * "earlier" (priority visibility). Neither existed anywhere but on this screen
+ * and in two seeded entitlement rows that no SQL and no component ever read;
+ * `discover_members` has never carried a tier term, so a paying profile was
+ * ordered exactly like a free one. They were withdrawn rather than implemented
+ * in a hurry, and the rows went with them.
+ *
+ * The locale keys are left in `packages/i18n` deliberately. Removing a key
+ * means editing six dictionaries, and an unused key costs nothing while a
+ * half-removed one breaks a language nobody on this team reads. If either
+ * feature is built, the copy is already written.
+ */
 const PREMIUM_ADDS = [
   {
     icon: "arrow-undo-outline",
     title: "membership.addsSecondChancesTitle",
     body: "membership.addsSecondChancesBody",
-  },
-  {
-    icon: "eye-off-outline",
-    title: "membership.addsQuietTitle",
-    body: "membership.addsQuietBody",
-  },
-  {
-    icon: "trending-up-outline",
-    title: "membership.addsEarlierTitle",
-    body: "membership.addsEarlierBody",
   },
 ] as const satisfies readonly {
   icon: string;

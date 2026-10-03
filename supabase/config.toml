@@ -209,3 +209,38 @@ secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
 # RLS policies.
 [storage]
 enabled = false
+
+# ---------------------------------------------------------------------------
+# Edge functions
+# ---------------------------------------------------------------------------
+#
+# These sections are read by `supabase functions deploy`, not by
+# `supabase config push`. Deploying is what applies them, so a change here
+# takes effect on the next deploy of the named function and not before.
+#
+# This block exists because the webhook's exemption used to live in a sentence
+# in docs/10-payments.md and in whoever remembered it. `supabase functions
+# deploy payments-webhook` without `--no-verify-jwt` applies the default, turns
+# verification back on, and Razorpay's deliveries start coming back 401 -- at
+# which point the only thing still settling a payment is a client happening to
+# return and reconcile. A successful-looking deploy that breaks payments
+# invisibly, which is the same trap `npm run config:push` exists to prevent for
+# the auth config. Written down, a plain deploy now does the right thing.
+
+# Razorpay holds no Supabase session and never will, so there is no JWT to
+# verify. Its signature is the authentication: `payments-webhook` recomputes an
+# HMAC-SHA256 over the raw request bytes against RAZORPAY_WEBHOOK_SECRET,
+# compares it in constant time, and rejects before parsing anything. Turning
+# this to `true` does not add a layer -- it removes the only caller.
+[functions.payments-webhook]
+verify_jwt = false
+
+# The other two are called by a signed-in client through `functions.invoke`,
+# which sends the member's token, and they need it: an order must belong to
+# somebody. Stated rather than left to the default, so the contrast with the
+# webhook above is a decision on the page instead of an omission.
+[functions.payments-create-order]
+verify_jwt = true
+
+[functions.payments-verify]
+verify_jwt = true

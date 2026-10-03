@@ -39,6 +39,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_events: {
+        Row: {
+          actor: string | null
+          detail: Json
+          event: string
+          id: number
+          occurred_at: string
+        }
+        Insert: {
+          actor?: string | null
+          detail?: Json
+          event: string
+          id?: never
+          occurred_at?: string
+        }
+        Update: {
+          actor?: string | null
+          detail?: Json
+          event?: string
+          id?: never
+          occurred_at?: string
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           country_code: string
@@ -280,6 +304,7 @@ export type Database = {
           reported_id: string
           reporter_id: string
           reviewed_at: string | null
+          reviewed_by: string | null
           status: Database["public"]["Enums"]["report_status"]
         }
         Insert: {
@@ -290,6 +315,7 @@ export type Database = {
           reported_id: string
           reporter_id: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["report_status"]
         }
         Update: {
@@ -300,6 +326,7 @@ export type Database = {
           reported_id?: string
           reporter_id?: string
           reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["report_status"]
         }
         Relationships: [
@@ -445,6 +472,288 @@ export type Database = {
           },
         ]
       }
+      moderation_actions: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          id: string
+          note: string | null
+          report_id: string | null
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          report_id?: string | null
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          report_id?: string | null
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_actions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "member_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_actions_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ops_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      payment_events: {
+        Row: {
+          event_type: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_event_id: string
+          received_at: string
+        }
+        Insert: {
+          event_type: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_event_id: string
+          received_at?: string
+        }
+        Update: {
+          event_type?: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_event_id?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
+      payment_revocations: {
+        Row: {
+          amount_paise: number | null
+          id: string
+          kind: string
+          payment_id: string
+          previous_period_end: string | null
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id: string | null
+          provider_reversal_id: string | null
+          reason: string | null
+          resulting_period_end: string | null
+          revoked_at: string
+        }
+        Insert: {
+          amount_paise?: number | null
+          id?: string
+          kind: string
+          payment_id: string
+          previous_period_end?: string | null
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_reversal_id?: string | null
+          reason?: string | null
+          resulting_period_end?: string | null
+          revoked_at?: string
+        }
+        Update: {
+          amount_paise?: number | null
+          id?: string
+          kind?: string
+          payment_id?: string
+          previous_period_end?: string | null
+          profile_id?: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_reversal_id?: string | null
+          reason?: string | null
+          resulting_period_end?: string | null
+          revoked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_revocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_revocations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          currency: string
+          failed_at: string | null
+          id: string
+          intro_offer_applied: boolean
+          paid_at: string | null
+          plan_id: string
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id: string | null
+          provider_payment_id: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_paise: number
+          created_at?: string
+          currency?: string
+          failed_at?: string | null
+          id?: string
+          intro_offer_applied?: boolean
+          paid_at?: string | null
+          plan_id: string
+          profile_id: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_payment_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          currency?: string
+          failed_at?: string | null
+          id?: string
+          intro_offer_applied?: boolean
+          paid_at?: string | null
+          plan_id?: string
+          profile_id?: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_payment_id?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_otp_requests: {
+        Row: {
+          attempts: number
+          expires_at: string
+          id: string
+          phone_number: string
+          profile_id: string
+          requested_at: string
+          resends: number
+          sent_at: string | null
+          status: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          expires_at: string
+          id?: string
+          phone_number: string
+          profile_id: string
+          requested_at?: string
+          resends?: number
+          sent_at?: string | null
+          status?: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          expires_at?: string
+          id?: string
+          phone_number?: string
+          profile_id?: string
+          requested_at?: string
+          resends?: number
+          sent_at?: string | null
+          status?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      product_events: {
+        Row: {
+          actor: string | null
+          amount_paise: number | null
+          event: string
+          id: number
+          intro_offer_applied: boolean | null
+          occurred_at: string
+          plan_code: string | null
+          platform: string | null
+        }
+        Insert: {
+          actor?: string | null
+          amount_paise?: number | null
+          event: string
+          id?: never
+          intro_offer_applied?: boolean | null
+          occurred_at?: string
+          plan_code?: string | null
+          platform?: string | null
+        }
+        Update: {
+          actor?: string | null
+          amount_paise?: number | null
+          event?: string
+          id?: never
+          intro_offer_applied?: boolean | null
+          occurred_at?: string
+          plan_code?: string | null
+          platform?: string | null
+        }
+        Relationships: []
+      }
       profile_languages: {
         Row: {
           created_at: string
@@ -523,17 +832,21 @@ export type Database = {
           languages_undisclosed: boolean
           legal_accepted_at: string | null
           legal_version_accepted: string | null
-          ui_locale: string
           looking_for: string | null
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
           other_city: string | null
+          phone_number: string | null
           phone_verified_at: string | null
           phone_verified_via: string | null
-          religion: Database["public"]["Enums"]["religion"] | null
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion: Database["public"]["Enums"]["religion"] | null
           seeking: Database["public"]["Enums"]["gender"][] | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
+          ui_locale: string
           updated_at: string
         }
         Insert: {
@@ -548,17 +861,21 @@ export type Database = {
           languages_undisclosed?: boolean
           legal_accepted_at?: string | null
           legal_version_accepted?: string | null
-          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
+          phone_number?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
-          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           seeking?: Database["public"]["Enums"]["gender"][] | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          ui_locale?: string
           updated_at?: string
         }
         Update: {
@@ -573,17 +890,21 @@ export type Database = {
           languages_undisclosed?: boolean
           legal_accepted_at?: string | null
           legal_version_accepted?: string | null
-          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
+          phone_number?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
-          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           seeking?: Database["public"]["Enums"]["gender"][] | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
+          ui_locale?: string
           updated_at?: string
         }
         Relationships: [
@@ -700,6 +1021,66 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activity_summary: {
+        Args: never
+        Returns: {
+          connections_needing_attention: number
+          new_connections: number
+          unread_conversations: number
+        }[]
+      }
+      admin_dismiss_report: {
+        Args: { p_note?: string; p_report: string }
+        Returns: undefined
+      }
+      admin_list_reports: {
+        Args: { p_filter?: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          reason_code: Database["public"]["Enums"]["report_reason"]
+          reported_id: string
+          reported_name: string
+          reported_suspended_at: string
+          reporter_id: string
+          reporter_name: string
+          reports_against_reported: number
+          reviewed_at: string
+          status: Database["public"]["Enums"]["report_status"]
+        }[]
+      }
+      admin_restore_member: {
+        Args: { p_note?: string; p_profile: string }
+        Returns: undefined
+      }
+      admin_suspend_member: {
+        Args: { p_profile: string; p_reason?: string; p_report?: string }
+        Returns: undefined
+      }
+      attach_provider_order: {
+        Args: { p_order_id: string; p_payment: string }
+        Returns: undefined
+      }
+      begin_payment: {
+        Args: { p_plan_code: string; p_profile: string }
+        Returns: {
+          amount_paise: number
+          currency: string
+          intro_applies: boolean
+          payment_id: string
+          period_months: number
+          plan_name: string
+        }[]
+      }
+      begin_phone_otp: {
+        Args: { p_phone: string; p_profile: string; p_resend?: boolean }
+        Returns: {
+          outcome: string
+          request_id: string
+          retry_after_seconds: number
+        }[]
+      }
       city_coverage: {
         Args: never
         Returns: {
@@ -707,60 +1088,30 @@ export type Database = {
           state_count: number
         }[]
       }
+      claim_payment_event: {
+        Args: { p_event_id: string; p_event_type: string }
+        Returns: boolean
+      }
+      claim_phone_otp_attempt: {
+        Args: { p_profile: string }
+        Returns: {
+          outcome: string
+          phone_number: string
+          request_id: string
+        }[]
+      }
+      complete_phone_otp: {
+        Args: { p_phone: string; p_profile: string; p_request: string }
+        Returns: string
+      }
+      confirm_phone_otp_send: {
+        Args: { p_profile: string; p_sent: boolean }
+        Returns: string
+      }
       delete_my_account: { Args: never; Returns: undefined }
-      membership_catalogue: {
-        Args: never
-        Returns: {
-          code: string
-          name: string
-          description: string | null
-          period_months: number
-          price_paise: number
-          standard_price_paise: number
-          intro_applies: boolean
-          currency: string
-        }[]
-      }
-      my_membership: { Args: never; Returns: Json }
-      my_payments: {
-        Args: never
-        Returns: {
-          id: string
-          plan_name: string
-          period_months: number
-          amount_paise: number
-          currency: string
-          status: string
-          intro_offer_applied: boolean
-          created_at: string
-          paid_at: string | null
-        }[]
-      }
-      record_product_event: {
-        Args: {
-          event_name: string
-          plan_code?: string | null
-          amount_paise?: number | null
-          intro_offer_applied?: boolean | null
-          platform?: string | null
-        }
-        Returns: undefined
-      }
-      record_auth_event: {
-        Args: {
-          event_name: string
-          masked_identifier?: string | null
-          reason?: string | null
-        }
-        Returns: undefined
-      }
-      record_discovery_view: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      record_profile_view: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      disclosed_religion: {
+        Args: { p_religion: Database["public"]["Enums"]["religion"] }
+        Returns: Database["public"]["Enums"]["religion"]
       }
       discover_members: {
         Args: {
@@ -797,6 +1148,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_active_premium: { Args: { p_profile: string }; Returns: boolean }
       home_summary: {
         Args: never
         Returns: {
@@ -807,14 +1159,9 @@ export type Database = {
         }[]
       }
       interests_received_count: { Args: never; Returns: number }
-      activity_summary: {
-        Args: never
-        Returns: {
-          connections_needing_attention: number
-          new_connections: number
-          unread_conversations: number
-        }[]
-      }
+      intro_offer_used: { Args: { p_profile: string }; Returns: boolean }
+      is_moderator: { Args: never; Returns: boolean }
+      is_suspended: { Args: { p_profile?: string }; Returns: boolean }
       mark_connections_seen: { Args: never; Returns: undefined }
       mark_conversation_read: {
         Args: { connection_id: string }
@@ -837,6 +1184,19 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      membership_catalogue: {
+        Args: never
+        Returns: {
+          code: string
+          currency: string
+          description: string
+          intro_applies: boolean
+          name: string
+          period_months: number
+          price_paise: number
+          standard_price_paise: number
+        }[]
+      }
       my_conversations: {
         Args: never
         Returns: Database["public"]["CompositeTypes"]["conversation_row"][]
@@ -847,6 +1207,64 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      my_membership: { Args: never; Returns: Json }
+      my_membership_for: { Args: { p_profile: string }; Returns: Json }
+      my_payments: {
+        Args: never
+        Returns: {
+          amount_paise: number
+          created_at: string
+          currency: string
+          id: string
+          intro_offer_applied: boolean
+          paid_at: string
+          period_months: number
+          plan_name: string
+          status: Database["public"]["Enums"]["payment_status"]
+        }[]
+      }
+      ops_setting: {
+        Args: { fallback: number; setting_key: string }
+        Returns: number
+      }
+      phone_is_verified: {
+        Args: { verified_at: string; verified_via: string }
+        Returns: boolean
+      }
+      phone_otp_capacity: { Args: never; Returns: Json }
+      record_auth_event: {
+        Args: {
+          event_name: string
+          masked_identifier?: string
+          reason?: string
+        }
+        Returns: undefined
+      }
+      record_discovery_view: { Args: never; Returns: undefined }
+      record_phone_event: {
+        Args: {
+          event_name: string
+          masked_number?: string
+          p_profile?: string
+          reason?: string
+        }
+        Returns: undefined
+      }
+      record_phone_otp_send: {
+        Args: { p_request: string; p_sent: boolean }
+        Returns: undefined
+      }
+      record_product_event: {
+        Args: {
+          amount_paise?: number
+          event_name: string
+          intro_offer_applied?: boolean
+          plan_code?: string
+          platform?: string
+        }
+        Returns: undefined
+      }
+      record_profile_view: { Args: never; Returns: undefined }
       report_and_block_member: {
         Args: {
           p_details?: string
@@ -857,6 +1275,18 @@ export type Database = {
       }
       revert_last_pass: { Args: never; Returns: string }
       reverts_remaining: { Args: never; Returns: number }
+      revoke_payment: {
+        Args: {
+          p_amount_paise?: number
+          p_kind: string
+          p_order_id: string
+          p_provider: Database["public"]["Enums"]["payment_provider"]
+          p_reason?: string
+          p_reversal_id?: string
+          p_status?: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: Json
+      }
       search_cities: {
         Args: { max_results?: number; query: string }
         Returns: {
@@ -866,6 +1296,15 @@ export type Database = {
           state: string
           state_code: string
         }[]
+      }
+      settle_payment: {
+        Args: {
+          p_order_id: string
+          p_provider: Database["public"]["Enums"]["payment_provider"]
+          p_provider_payment_id: string
+          p_status: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: Json
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -886,6 +1325,15 @@ export type Database = {
         | "stripe"
         | "apple_app_store"
         | "google_play"
+      payment_status:
+        | "created"
+        | "authorized"
+        | "paid"
+        | "failed"
+        | "cancelled"
+        | "refunded"
+        | "partially_refunded"
+      relationship_status: "divorced" | "separated" | "widowed"
       religion:
         | "hindu"
         | "muslim"
@@ -895,7 +1343,6 @@ export type Database = {
         | "jain"
         | "other"
         | "prefer_not_to_say"
-      relationship_status: "divorced" | "separated" | "widowed"
       report_reason:
         | "fake_profile"
         | "harassment"
@@ -957,12 +1404,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -986,11 +1433,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1011,11 +1458,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1036,11 +1483,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1053,11 +1500,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1089,7 +1536,26 @@ export const Constants = {
         "apple_app_store",
         "google_play",
       ],
+      payment_status: [
+        "created",
+        "authorized",
+        "paid",
+        "failed",
+        "cancelled",
+        "refunded",
+        "partially_refunded",
+      ],
       relationship_status: ["divorced", "separated", "widowed"],
+      religion: [
+        "hindu",
+        "muslim",
+        "christian",
+        "sikh",
+        "buddhist",
+        "jain",
+        "other",
+        "prefer_not_to_say",
+      ],
       report_reason: [
         "fake_profile",
         "harassment",

@@ -14,10 +14,10 @@ import { supabase } from "@/lib/supabase/client";
  * that compared a tier.
  *
  * And the client is not the authority. What is fetched here decides what the UI
- * offers; what the database decides is what actually happens. `interests_received`
- * checks the subscription in SQL and returns nothing without it, and
- * `revert_last_pass` counts the allowance in SQL -- so an app that lied to itself
- * about being premium would get a prettier screen and exactly the same data.
+ * offers; what the database decides is what actually happens. `revert_last_pass`
+ * and `reverts_remaining` count the allowance in SQL, against `has_active_premium`
+ * -- so an app that lied to itself about being premium would get a prettier
+ * screen and exactly the same data.
  *
  * `subscriptions` has no insert, update or delete policy for anyone, so a client
  * cannot grant itself a tier in the first place.
@@ -25,10 +25,18 @@ import { supabase } from "@/lib/supabase/client";
 
 export type Entitlements = {
   tier: "free" | "premium";
-  canUseIncognito: boolean;
-  canUsePriorityVisibility: boolean;
   canBrowseProfiles: boolean;
   canUseDiscoveryFilters: boolean;
+  /**
+   * The only capability that differs by tier, and the only one enforced.
+   *
+   * `canUseIncognito` and `canUsePriorityVisibility` were here, seeded,
+   * advertised on the membership screen, and implemented nowhere. They were
+   * withdrawn on 2026-10-03 rather than left on sale. Either can return the
+   * way any capability arrives -- two `entitlements` rows and the feature that
+   * reads them -- and removing the keys as well as the rows is what stops one
+   * coming back as a row alone.
+   */
   revertLimit: number;
 };
 
@@ -41,29 +49,34 @@ export type Entitlements = {
  */
 export const freeDefaults: Entitlements = {
   tier: "free",
-  canUseIncognito: false,
-  canUsePriorityVisibility: false,
   canBrowseProfiles: true,
   canUseDiscoveryFilters: true,
   revertLimit: 3,
 };
 
+/**
+ * The tier, asked of the server rather than worked out from a row.
+ *
+ * This used to query `subscriptions` and filter on `status` alone. Nothing in
+ * the project ever writes `expired`, so a term that had run out stayed at
+ * `active` and this returned `premium` for ever.
+ *
+ * The fix is not to add a date comparison here. A date compared on a phone is
+ * compared against the phone's clock, which the person holding it can set to
+ * whatever they like -- so the honest version of that check is the one that
+ * runs in Postgres. `my_membership()` applies `current_period_end > now()`
+ * there and is already what the membership screen reads, so the app now has one
+ * answer instead of two that could disagree.
+ */
 async function readTier(): Promise<"free" | "premium"> {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) return "free";
+  const { data, error } = await supabase.rpc("my_membership");
+  if (error || !data) return "free";
 
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("status, membership_plans!inner(tier)")
-    .eq("profile_id", me)
-    .in("status", ["trialing", "active", "past_due", "cancelled"])
-    .limit(1);
+  const row = data as Record<string, unknown>;
 
-  const row = data?.[0];
-  const plan = row?.membership_plans as { tier?: string } | undefined;
-
-  return plan?.tier === "premium" ? "premium" : "free";
+  // Both halves, for the same reason the web asks for both: `active` is the
+  // date test and `tier` is what was bought. Anything else is free.
+  return row.active === true && row.tier === "premium" ? "premium" : "free";
 }
 
 export async function getEntitlements(): Promise<Entitlements> {
@@ -101,8 +114,6 @@ export async function getEntitlements(): Promise<Entitlements> {
 
   return {
     tier,
-    canUseIncognito: boolean("canUseIncognito", false),
-    canUsePriorityVisibility: boolean("canUsePriorityVisibility", false),
     canBrowseProfiles: boolean("canBrowseProfiles", true),
     canUseDiscoveryFilters: boolean("canUseDiscoveryFilters", true),
     revertLimit: number("revertLimit", 3),

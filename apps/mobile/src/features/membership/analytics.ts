@@ -39,9 +39,14 @@ export function recordProductEvent(
   void supabase
     .rpc("record_product_event", {
       event_name: event,
-      plan_code: properties.planCode ?? null,
-      amount_paise: properties.amountPaise ?? null,
-      intro_offer_applied: properties.introOfferApplied ?? null,
+      // `undefined` rather than `null`, matching what the generated types ask
+      // for: an argument with a SQL default is `?: T`, so leaving the key out
+      // lets the default apply. All three are `default null` in
+      // `record_product_event`, so the recorded value is unchanged -- and the
+      // web client has always passed `undefined` here.
+      plan_code: properties.planCode ?? undefined,
+      amount_paise: properties.amountPaise ?? undefined,
+      intro_offer_applied: properties.introOfferApplied ?? undefined,
       platform: Platform.OS === "ios" ? "ios" : "android",
     })
     .then(undefined, () => {

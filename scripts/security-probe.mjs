@@ -704,7 +704,7 @@ console.log("\nPayments");
   );
 }
 
-for (const table of ["payment_events", "product_events"]) {
+for (const table of ["payment_events", "product_events", "payment_revocations"]) {
   const { status, body } = await request(meera.token, `${table}?select=*`);
   check(
     `a member reads nothing from ${table}`,
@@ -722,6 +722,12 @@ for (const fn of [
   "claim_payment_event",
   "my_membership_for",
   "intro_offer_used",
+  // Added 2026-10-03 with the revocation work. `revoke_payment` takes a term
+  // away and `has_active_premium` would answer about anybody, so both belong
+  // on this list rather than only in `npm run payments:probe` -- which calls
+  // them with real arguments and is the stronger of the two tests.
+  "revoke_payment",
+  "has_active_premium",
 ]) {
   const { status } = await request(meera.token, `rpc/${fn}`, {
     method: "POST",

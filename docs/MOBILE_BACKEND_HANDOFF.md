@@ -139,11 +139,24 @@ Note what is still absent: no email, no phone number, no date of birth. Only a
 computed age.
 
 Membership is read through the `entitlements` table keyed by tier — never
-hardcode what free or premium can do. Current keys: `canSeeInteresters`,
-`canUseIncognito`, `canUsePriorityVisibility`, `revertLimit` (3 free / 15
-premium), `canBrowseProfiles`, `canUseDiscoveryFilters`. Note that `subscriptions`
-has **no insert, update or delete policy for anyone** — subscriptions can only be
-written with the service role, which is correct until a payment provider exists.
+hardcode what free or premium can do. Current keys: `revertLimit` (3 free / 15
+premium), `canBrowseProfiles`, `canUseDiscoveryFilters`, `canExpressInterest`,
+`canMessageConnections`.
+
+Three keys have been withdrawn and are not coming back as rows alone.
+`canSeeInteresters` went on 2026-09-20: who has expressed interest in you is not
+purchasable at any tier, and there is no function that returns those identities.
+`canUseIncognito` and `canUsePriorityVisibility` went on 2026-10-03 because
+neither was ever implemented — both were advertised on two membership screens
+while `discover_members` carried no tier term at all. `revertLimit` is the only
+key that differs between the tiers, and the only one enforced.
+
+Note that `subscriptions` has **no insert, update or delete policy for anyone**
+— it is written only with the service role, by `settle_payment` when money
+arrives and `revoke_payment` when it goes back. And do not read the tier from a
+subscription row's `status`: nothing writes `expired`, so a lapsed term still
+says `active`. Ask `my_membership()`, which applies `current_period_end > now()`
+in Postgres — against Postgres's clock rather than the handset's.
 
 ## 6. Product rules the mobile client must not break
 

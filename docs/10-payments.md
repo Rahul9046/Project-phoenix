@@ -103,8 +103,29 @@ the awkward end of the month: 31 January plus one month is 28 February.
 
 ### Expiry
 
-Premium is a date, not a boolean. `my_membership()` reports active only while
-`current_period_end > now()`, so nothing depends on a nightly job having run.
+Premium is a date, not a boolean. `current_period_end > now()` is the rule, and
+nothing depends on a nightly job having run -- a job that has not run yet is a
+member with access they have not paid for.
+
+**Nothing writes `expired`.** No trigger, no job, no `pg_cron`. The enum value
+exists and is produced by exactly one thing, `revoke_payment`, when a revocation
+leaves no time behind. So a lapsed term sits at `active` indefinitely, and that
+is the normal state of every expired membership rather than a fault.
+
+Which means every reader must compare the date, and until 2026-10-03 three of
+them did not: `loadMembership()` on the web, `readTier()` on mobile, and
+`revert_last_pass()` / `reverts_remaining()` in SQL all decided premium from
+`status` alone and went on granting it for ever. The rule now has one home:
+
+- `has_active_premium(profile)` is the authority in SQL, and the two revert
+  functions go through it rather than restating the test.
+- `my_membership()` applies the same rule and is what both clients ask. Neither
+  compares a date itself: on the web that would be a second clock, and on a
+  phone it would be a clock the member can set.
+
+`npm run payments:probe` asserts each reader separately against a term that has
+lapsed while still saying `active`. Asserting only `my_membership` is how the
+other three stayed broken for a month -- it was the one that was already right.
 
 ## Reconciliation
 
@@ -215,33 +236,102 @@ It must point at the deployed web app, because that is where `/checkout` lives. 
 2. **Settings → Webhooks → Add New Webhook**
    - URL: `https://<project-ref>.supabase.co/functions/v1/payments-webhook`
    - Secret: choose one, then set it as `RAZORPAY_WEBHOOK_SECRET`
-   - Events: `payment.captured`, `payment.failed`, `order.paid`
-3. Deploy with JWT verification **off** for the webhook — Razorpay has no
-   Supabase session and never will. The signature is the authentication:
+   - Events: `payment.captured`, `payment.failed`, `order.paid`, `refund.processed`
+3. Deploy. A plain deploy is now correct:
 
 ```
-supabase functions deploy payments-webhook   --no-verify-jwt
-supabase functions deploy payments-create-order payments-verify
+supabase functions deploy payments-create-order payments-verify payments-webhook
 ```
 
-**One of the three takes no JWT, and it must be deployed with the flag.**
-`config.toml` carries no per-function settings, so a plain deploy applies the
-default and turns verification back on -- a successful-looking deploy that
-breaks payments, the same trap `npm run config:push` exists to prevent.
+**The JWT exemption is in `supabase/config.toml`, not in a flag you have to
+remember.** `[functions.payments-webhook] verify_jwt = false` is read by
+`supabase functions deploy`, so the webhook keeps its exemption and the other
+two keep their requirement without anybody passing anything.
 
-`payments-webhook` because Razorpay has no Supabase session and never will --
-its signature is the authentication.
+It used to live in a sentence in this file. A plain
+`supabase functions deploy payments-webhook` applied the default, turned
+verification back on, and every Razorpay delivery started coming back 401 --
+with nothing failing anywhere visible, and the only thing still settling a
+payment being a client happening to return and reconcile. A successful-looking
+deploy that breaks payments, which is the same trap `npm run config:push` exists
+to prevent for the auth config.
 
-The other two are called by a signed-in client through `functions.invoke`, which
-sends the member's token, and they need it -- an order must belong to somebody.
+`--no-verify-jwt` still works and is now redundant. Note the section is read at
+**deploy** time and not by `supabase config push`, so a change to it takes
+effect on the next deploy of that function and not before.
 
-## Refunds
+Why the webhook and not the other two: Razorpay has no Supabase session and
+never will, so there is no JWT to verify -- its signature is the authentication,
+recomputed over the raw request bytes before anything is parsed. The other two
+are called by a signed-in client through `functions.invoke`, which sends the
+member's token, and they need it: an order must belong to somebody.
+`npm run payments:probe` asserts all three stanzas, so a sweep that turned
+verification off everywhere would fail.
 
-Razorpay will send refund events. They are recorded as seen and change no
-entitlement, deliberately: what a refund should do to a membership is a product
-decision nobody has made, and silently removing access is the wrong half to
-guess at. `payments.status` has `refunded` and `partially_refunded` ready for
-when that decision exists.
+## Refunds and revocation
+
+A **full** refund now takes the membership back. Until 2026-10-03 it did not:
+refund events were recorded as seen and changed no entitlement, so money could
+go back while Premium stayed. The gap underneath that was larger than refunds --
+nothing in the system could shorten or end a term, for any reason.
+
+### The primitive
+
+`revoke_payment(provider, order_id, kind, ...)` withdraws the months one settled
+payment granted. It knows nothing about Razorpay: a refund, a chargeback, a
+Google Play `VOIDED_PURCHASE` and a correction somebody is making by hand are
+the same operation, and `kind` is the only difference between them.
+
+**It subtracts rather than rebuilds, and that is the whole design.** A member's
+term is the accumulation of every payment they have made -- one month bought on
+the 1st and three months bought on the 5th are a single row ending four months
+out, not two rows. So revoking the one-month payment cannot mean ending the
+term, which would destroy three months somebody paid for and did not get back.
+It means taking back the months *that* payment added:
+`current_period_end - period_months`.
+
+Calendar arithmetic is not perfectly associative -- 31 January plus a month
+minus a month is 28 January -- so a term straddling a short month can land a day
+or two from where a full replay would put it. Accepted, in exchange for never
+destroying a purchase it was not asked to touch.
+
+When the subtraction leaves nothing, the term is floored one microsecond past
+its own start: the least `subscriptions_period_order` accepts, past rather than
+future, and without rewriting when the membership began. The row is set to
+`expired` -- the only thing in the project that writes that value.
+
+**Idempotent**, on `payment_revocations.payment_id`, which is unique. A provider
+that sends a refund twice, a webhook retried after a timeout, and a human
+pressing the button again all find the payment already revoked and change
+nothing. Serialised by `for update` on the payment row, so of two arriving
+together one revokes and the other is told what the first did.
+
+And **a revoked payment can never buy the time back.** `settle_payment` refuses
+one outright. That guard is load-bearing: Razorpay goes on reporting a refunded
+payment as `captured` -- the capture happened, the refund is a separate entity
+against it -- so without it, a member refunded on Monday could press "check
+again" on Tuesday and have the term handed back. The old early return on `paid`
+would not have caught it, because the row says `refunded`.
+
+Nobody but the service role can call it. `payment_revocations` has RLS on and
+**no policies at all**, not even a select: the member-visible fact is
+`payments.status`, which `my_payments()` already returns.
+
+### Partial refunds are still undecided
+
+`refund.processed` is compared against the amount in the `payments` row -- ours,
+written before Razorpay was ever called, not the figure in the payload. Anything
+short of the full amount is logged as `webhook_refund_partial` and changes no
+entitlement.
+
+That is deliberate and it is not a policy. What a partial refund should do to a
+prepaid term is a product decision nobody has made, and guessing in the member's
+disfavour is how somebody loses three months over a small goodwill adjustment.
+`payments.status` has `partially_refunded` ready for when the decision exists.
+
+`refund.created` is also ignored: a refund that has been initiated is not a
+refund that has settled, and withdrawing a membership on the strength of an
+intention that may still fail is the wrong way round.
 
 ## Open question: app store billing
 
@@ -266,7 +356,22 @@ for one that is neither.
 Not part of this work, and not to be done casually. Before a live key is set:
 
 - Razorpay KYC and account activation completed
-- a live webhook configured against the production URL, with its own secret
+- a live webhook configured against the production URL, with its own secret --
+  test-mode and live-mode webhooks are separate in Razorpay, and a test secret
+  will not verify a live delivery
+- `refund.processed` subscribed on the live webhook, or a full refund silently
+  leaves the membership standing
 - the app store billing question above answered
-- refund policy decided and written down
+- **partial** refund policy decided and written down; full refunds are handled
 - `payments` reviewed once against real settlement data
+
+Done as of 2026-10-03, and worth not undoing:
+
+- every entitlement reader compares the date (see Expiry)
+- Premium advertises only `revertLimit`, the one capability it enforces
+- revocation exists, is idempotent, and is safe against stacked purchases
+- order lookups are scoped by `(provider, provider_order_id)`
+- the webhook's JWT exemption is in `config.toml`
+
+All five are asserted by `npm run payments:probe`, which is the evidence --
+there are no tests and no staging environment.

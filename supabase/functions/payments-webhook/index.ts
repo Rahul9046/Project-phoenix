@@ -29,8 +29,39 @@ import { admin, json, log } from "../_shared/request.ts";
  * documented in docs/10-payments.md.
  */
 
+/**
+ * Which provider's order ids this endpoint speaks about.
+ *
+ * `payments` is unique on `(provider, provider_order_id)`, and both database
+ * functions called below take the provider as their first argument for that
+ * reason. Naming it once here is what stops a second provider's webhook
+ * inheriting the assumption that an order id is unique on its own.
+ */
+const PROVIDER = "razorpay" as const;
+
 const CAPTURED = new Set(["payment.captured", "order.paid"]);
 const FAILED = new Set(["payment.failed"]);
+
+/*
+ * Refunds, which now do something.
+ *
+ * `refund.processed` is the one that matters: the money has gone back. Acted on
+ * rather than acknowledged and ignored, which is what used to happen -- a
+ * member could be refunded in full and keep Premium, because nothing in this
+ * system could shorten a term.
+ *
+ * `refund.created` is deliberately not here. A refund that has been initiated
+ * is not a refund that has settled, and withdrawing somebody's membership on
+ * the strength of an intention that may still fail is the wrong way round.
+ *
+ * What counts as "in full" is decided against the payment's own amount, below.
+ * A partial refund changes no entitlement, because what a partial refund should
+ * do to a prepaid term is a product decision nobody has made -- and inventing
+ * one here, silently, is how a member loses three months over a ₹50 goodwill
+ * adjustment. It is logged so the decision has evidence behind it when somebody
+ * makes it. See docs/10-payments.md.
+ */
+const REFUNDED = new Set(["refund.processed"]);
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ status: "error" }, 405);
@@ -82,7 +113,34 @@ Deno.serve(async (request) => {
     return json({ status: "duplicate" });
   }
 
-  const orderId = extractOrderId(payload);
+  let orderId = extractOrderId(payload);
+
+  /*
+   * A refund that arrives without the payment entity beside it.
+   *
+   * Razorpay normally sends `payload.payment.entity` alongside the refund, and
+   * `extractOrderId` reads the order from there. The refund entity itself
+   * carries only `payment_id`, so when the payment entity is absent there is
+   * nothing to match on -- and a refund silently dropped as "no order" is a
+   * member keeping Premium they were paid back for. One lookup closes that:
+   * `payments` is unique on `(provider, provider_payment_id)`.
+   */
+  if (!orderId && REFUNDED.has(eventType)) {
+    const paymentRef = (entity(payload, "refund") ?? {}).payment_id;
+
+    if (typeof paymentRef === "string") {
+      const { data: byPayment } = await db
+        .from("payments")
+        .select("provider_order_id")
+        .eq("provider", PROVIDER)
+        .eq("provider_payment_id", paymentRef)
+        .maybeSingle();
+
+      orderId = typeof byPayment?.provider_order_id === "string"
+        ? byPayment.provider_order_id
+        : null;
+    }
+  }
 
   if (!orderId) {
     log("webhook_no_order", { event: eventType });
@@ -91,6 +149,7 @@ Deno.serve(async (request) => {
 
   if (CAPTURED.has(eventType)) {
     const { data: settled, error } = await db.rpc("settle_payment", {
+      p_provider: PROVIDER,
       p_order_id: orderId,
       p_provider_payment_id: extractPaymentId(payload),
       p_status: "paid",
@@ -112,6 +171,7 @@ Deno.serve(async (request) => {
 
   if (FAILED.has(eventType)) {
     await db.rpc("settle_payment", {
+      p_provider: PROVIDER,
       p_order_id: orderId,
       p_provider_payment_id: extractPaymentId(payload),
       p_status: "failed",
@@ -120,17 +180,83 @@ Deno.serve(async (request) => {
     return json({ status: "ok" });
   }
 
+  if (REFUNDED.has(eventType)) {
+    const refund = entity(payload, "refund") ?? {};
+    const refunded = asPaise(refund.amount);
+    const reversalId = typeof refund.id === "string" ? refund.id : null;
+
+    /*
+     * Compared against what we recorded charging, not against anything in the
+     * payload. The amount a client or a provider states is a claim; the
+     * `payments` row was written by us before Razorpay was ever called.
+     */
+    const { data: row } = await db
+      .from("payments")
+      .select("amount_paise")
+      .eq("provider", PROVIDER)
+      .eq("provider_order_id", orderId)
+      .maybeSingle();
+
+    const charged = typeof row?.amount_paise === "number" ? row.amount_paise : null;
+    const full = refunded !== null && charged !== null && refunded >= charged;
+
+    if (!full) {
+      /*
+       * A partial refund, or an amount we could not establish. Either way this
+       * is not the case the policy covers, and guessing in the member's
+       * disfavour would take months away over a goodwill adjustment.
+       */
+      log("webhook_refund_partial", {
+        event: eventType,
+        refunded,
+        charged,
+        reason: refunded === null || charged === null ? "amount_unknown" : "partial",
+      });
+      return json({ status: "ignored" });
+    }
+
+    const { data: revoked, error } = await db.rpc("revoke_payment", {
+      p_provider: PROVIDER,
+      p_order_id: orderId,
+      p_kind: "refund",
+      p_reason: `razorpay ${eventType}`,
+      p_reversal_id: reversalId,
+      p_amount_paise: refunded,
+      p_status: "refunded",
+    });
+
+    if (error) {
+      log("webhook_revoke_failed", { event: eventType, reason: error.message });
+      // Ours and probably temporary, so ask Razorpay to try again.
+      return json({ status: "error" }, 500);
+    }
+
+    const result = revoked as { outcome?: string; premium_active?: boolean } | null;
+    log("webhook_revoked", {
+      event: eventType,
+      outcome: String(result?.outcome ?? ""),
+      premium_active: result?.premium_active ?? null,
+    });
+    return json({ status: "ok" });
+  }
+
   /*
    * Everything else is acknowledged and ignored.
    *
-   * Refunds in particular: Razorpay will send them, and what a refund should do
-   * to a membership is a product decision nobody has made. Silently removing
-   * access is the wrong half to guess at, so the event is recorded as seen and
-   * the entitlement is left alone. See docs/10-payments.md.
+   * Recorded as seen so a retry changes nothing, and acted on by nothing,
+   * because nothing below has an agreed meaning for a prepaid term. The one
+   * that used to sit here and should not have is the refund above.
    */
   log("webhook_ignored", { event: eventType });
   return json({ status: "ignored" });
 });
+
+/** Razorpay sends minor units as a number; anything else is not an amount. */
+function asPaise(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.round(value)
+    : null;
+}
 
 function entity(payload: Record<string, unknown>, name: string): Record<string, unknown> | null {
   const container = payload.payload as Record<string, unknown> | undefined;

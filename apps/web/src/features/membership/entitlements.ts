@@ -35,8 +35,6 @@ import {
  */
 const FREE_FALLBACK: Entitlements = {
   tier: "free",
-  canUseIncognito: false,
-  canUsePriorityVisibility: false,
   canBrowseProfiles: true,
   canUseDiscoveryFilters: true,
   canExpressInterest: true,
@@ -67,17 +65,36 @@ export async function loadMembership(): Promise<Membership> {
     return { tier: "free", entitlements: FREE_FALLBACK, subscription: null };
   }
 
+  /*
+   * The tier comes from the database, not from a status this code interprets.
+   *
+   * It used to be read off the subscription row's plan, filtered on `status`
+   * alone -- and since nothing in the project ever writes `expired`, a term
+   * that had run out sat at `active` and this function went on reporting
+   * premium for ever. `my_membership()` applies the real rule,
+   * `current_period_end > now()`, in Postgres, against Postgres's own clock.
+   * That matters beyond tidiness: a date compared here would be compared
+   * against this server's clock, which is a second source of truth for the one
+   * fact the whole paywall turns on.
+   *
+   * The `gt` below is a narrowing of the same rule so an expired row is not
+   * fetched and rendered as a live term. It is not what decides the tier.
+   */
+  const nowIso = new Date().toISOString();
+
   // RLS limits this to the caller's own rows, so no profile filter is needed
   // for correctness -- but the partial unique index allows only one live row
   // anyway, and asking for it explicitly documents the intent.
-  const [{ data: subscriptionRows }, { data: entitlementRows }] =
+  const [{ data: reported }, { data: subscriptionRows }, { data: entitlementRows }] =
     await Promise.all([
+      supabase.rpc("my_membership"),
       supabase
         .from("subscriptions")
         .select(
           "id, status, provider, current_period_end, cancel_at, is_introductory, membership_plans(code, name, tier, period_months)",
         )
         .in("status", [...ENTITLING_STATUSES])
+        .gt("current_period_end", nowIso)
         .order("current_period_end", { ascending: false })
         .limit(1),
       supabase.from("entitlements").select("tier, key, value"),
@@ -96,10 +113,23 @@ export async function loadMembership(): Promise<Membership> {
     | null
     | undefined;
 
-  const tier: MembershipTier = plan?.tier ?? "free";
+  /*
+   * Premium requires both halves of the database's answer.
+   *
+   * `active` is the date test and `tier` is what was bought. Reading only the
+   * first would trust a row whose plan is unknown to this build; reading only
+   * the second is the bug this replaces. Anything else at all is free, which is
+   * the safe direction to be wrong in.
+   */
+  const answer = (reported ?? null) as
+    | { tier?: string | null; active?: boolean | null }
+    | null;
+
+  const tier: MembershipTier =
+    answer?.active === true && answer.tier === "premium" ? "premium" : "free";
 
   const subscription: Subscription | null =
-    row && plan
+    tier === "premium" && row && plan
       ? {
           id: row.id,
           status: row.status,
@@ -119,14 +149,6 @@ export async function loadMembership(): Promise<Membership> {
 
   const entitlements: Entitlements = {
     tier,
-    canUseIncognito: asBoolean(
-      valueOf("canUseIncognito"),
-      FREE_FALLBACK.canUseIncognito,
-    ),
-    canUsePriorityVisibility: asBoolean(
-      valueOf("canUsePriorityVisibility"),
-      FREE_FALLBACK.canUsePriorityVisibility,
-    ),
     canBrowseProfiles: asBoolean(
       valueOf("canBrowseProfiles"),
       FREE_FALLBACK.canBrowseProfiles,

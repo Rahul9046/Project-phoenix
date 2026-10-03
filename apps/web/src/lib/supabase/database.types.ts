@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       auth_events: {
@@ -531,6 +556,66 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_revocations: {
+        Row: {
+          amount_paise: number | null
+          id: string
+          kind: string
+          payment_id: string
+          previous_period_end: string | null
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id: string | null
+          provider_reversal_id: string | null
+          reason: string | null
+          resulting_period_end: string | null
+          revoked_at: string
+        }
+        Insert: {
+          amount_paise?: number | null
+          id?: string
+          kind: string
+          payment_id: string
+          previous_period_end?: string | null
+          profile_id: string
+          provider: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_reversal_id?: string | null
+          reason?: string | null
+          resulting_period_end?: string | null
+          revoked_at?: string
+        }
+        Update: {
+          amount_paise?: number | null
+          id?: string
+          kind?: string
+          payment_id?: string
+          previous_period_end?: string | null
+          profile_id?: string
+          provider?: Database["public"]["Enums"]["payment_provider"]
+          provider_order_id?: string | null
+          provider_reversal_id?: string | null
+          reason?: string | null
+          resulting_period_end?: string | null
+          revoked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_revocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_revocations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_paise: number
@@ -747,21 +832,21 @@ export type Database = {
           languages_undisclosed: boolean
           legal_accepted_at: string | null
           legal_version_accepted: string | null
-          ui_locale: string
           looking_for: string | null
           onboarding_stage: Database["public"]["Enums"]["onboarding_stage"]
           other_city: string | null
           phone_number: string | null
           phone_verified_at: string | null
           phone_verified_via: string | null
-          religion: Database["public"]["Enums"]["religion"] | null
           relationship_status:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion: Database["public"]["Enums"]["religion"] | null
           seeking: Database["public"]["Enums"]["gender"][] | null
           suspended_at: string | null
           suspended_by: string | null
           suspension_reason: string | null
+          ui_locale: string
           updated_at: string
         }
         Insert: {
@@ -776,21 +861,21 @@ export type Database = {
           languages_undisclosed?: boolean
           legal_accepted_at?: string | null
           legal_version_accepted?: string | null
-          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_number?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
-          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           seeking?: Database["public"]["Enums"]["gender"][] | null
           suspended_at?: string | null
           suspended_by?: string | null
           suspension_reason?: string | null
+          ui_locale?: string
           updated_at?: string
         }
         Update: {
@@ -805,21 +890,21 @@ export type Database = {
           languages_undisclosed?: boolean
           legal_accepted_at?: string | null
           legal_version_accepted?: string | null
-          ui_locale?: string
           looking_for?: string | null
           onboarding_stage?: Database["public"]["Enums"]["onboarding_stage"]
           other_city?: string | null
           phone_number?: string | null
           phone_verified_at?: string | null
           phone_verified_via?: string | null
-          religion?: Database["public"]["Enums"]["religion"] | null
           relationship_status?:
             | Database["public"]["Enums"]["relationship_status"]
             | null
+          religion?: Database["public"]["Enums"]["religion"] | null
           seeking?: Database["public"]["Enums"]["gender"][] | null
           suspended_at?: string | null
           suspended_by?: string | null
           suspension_reason?: string | null
+          ui_locale?: string
           updated_at?: string
         }
         Relationships: [
@@ -1019,7 +1104,15 @@ export type Database = {
         Args: { p_phone: string; p_profile: string; p_request: string }
         Returns: string
       }
+      confirm_phone_otp_send: {
+        Args: { p_profile: string; p_sent: boolean }
+        Returns: string
+      }
       delete_my_account: { Args: never; Returns: undefined }
+      disclosed_religion: {
+        Args: { p_religion: Database["public"]["Enums"]["religion"] }
+        Returns: Database["public"]["Enums"]["religion"]
+      }
       discover_members: {
         Args: {
           city_ids?: string[]
@@ -1055,6 +1148,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_active_premium: { Args: { p_profile: string }; Returns: boolean }
       home_summary: {
         Args: never
         Returns: {
@@ -1133,6 +1227,10 @@ export type Database = {
         Args: { fallback: number; setting_key: string }
         Returns: number
       }
+      phone_is_verified: {
+        Args: { verified_at: string; verified_via: string }
+        Returns: boolean
+      }
       phone_otp_capacity: { Args: never; Returns: Json }
       record_auth_event: {
         Args: {
@@ -1142,14 +1240,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      record_discovery_view: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      record_profile_view: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      record_discovery_view: { Args: never; Returns: undefined }
       record_phone_event: {
         Args: {
           event_name: string
@@ -1173,6 +1264,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_profile_view: { Args: never; Returns: undefined }
       report_and_block_member: {
         Args: {
           p_details?: string
@@ -1183,6 +1275,18 @@ export type Database = {
       }
       revert_last_pass: { Args: never; Returns: string }
       reverts_remaining: { Args: never; Returns: number }
+      revoke_payment: {
+        Args: {
+          p_amount_paise?: number
+          p_kind: string
+          p_order_id: string
+          p_provider: Database["public"]["Enums"]["payment_provider"]
+          p_reason?: string
+          p_reversal_id?: string
+          p_status?: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: Json
+      }
       search_cities: {
         Args: { max_results?: number; query: string }
         Returns: {
@@ -1196,6 +1300,7 @@ export type Database = {
       settle_payment: {
         Args: {
           p_order_id: string
+          p_provider: Database["public"]["Enums"]["payment_provider"]
           p_provider_payment_id: string
           p_status: Database["public"]["Enums"]["payment_status"]
         }
@@ -1228,6 +1333,7 @@ export type Database = {
         | "cancelled"
         | "refunded"
         | "partially_refunded"
+      relationship_status: "divorced" | "separated" | "widowed"
       religion:
         | "hindu"
         | "muslim"
@@ -1237,7 +1343,6 @@ export type Database = {
         | "jain"
         | "other"
         | "prefer_not_to_say"
-      relationship_status: "divorced" | "separated" | "widowed"
       report_reason:
         | "fake_profile"
         | "harassment"
@@ -1409,6 +1514,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       entitlement_kind: ["boolean", "number"],
@@ -1438,6 +1546,16 @@ export const Constants = {
         "partially_refunded",
       ],
       relationship_status: ["divorced", "separated", "widowed"],
+      religion: [
+        "hindu",
+        "muslim",
+        "christian",
+        "sikh",
+        "buddhist",
+        "jain",
+        "other",
+        "prefer_not_to_say",
+      ],
       report_reason: [
         "fake_profile",
         "harassment",

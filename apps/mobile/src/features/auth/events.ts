@@ -59,8 +59,13 @@ export function recordAuthEvent(
   void supabase
     .rpc("record_auth_event", {
       event_name: event,
-      masked_identifier: options.identifier ?? null,
-      reason: options.reason ?? null,
+      // Omitted rather than sent as null, which is what the generated types
+      // now ask for: an argument with a SQL default is `?: T`, so `undefined`
+      // leaves the key out and the default applies. Both parameters are
+      // `default null` in `record_auth_event`, so this is the same value
+      // arriving by the route the types describe.
+      masked_identifier: options.identifier ?? undefined,
+      reason: options.reason ?? undefined,
     })
     .then(undefined, () => {
       // Deliberately silent. There is nothing a person can do about a failed
