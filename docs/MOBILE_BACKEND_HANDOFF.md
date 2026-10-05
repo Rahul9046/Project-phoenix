@@ -210,11 +210,18 @@ These are decisions, not implementation details. Each one has a reason.
 
 Do not present any of these as working, in the app or in copy.
 
-- **Phone verification is mocked.** Any six digits are accepted and no SMS is
-  ever sent. `profiles.phone_verified_at` is written by the application itself.
-  Because of this, "Phone verified" is deliberately **not** shown as a trust mark
-  on another member's card — a safety claim must never run ahead of the system.
-  `apps/web/src/features/auth/phone-verification.ts` documents the switch-over.
+- **Phone verification cannot be completed in the app.** It is not mocked and no
+  arbitrary or fixed code is accepted anywhere. The web verifies for real through
+  MSG91's OTP widget; the app uses MSG91's OTP API, which needs a DLT-approved
+  template before MSG91 will deliver in India, so the step currently fails
+  truthfully rather than succeeding. It is optional on both clients and blocks
+  nobody. `profiles.phone_verified_at` is written **only** by the verify edge
+  function holding the service role — a trigger refuses that column to every
+  client, so no app can mark itself verified. A "Phone verified" mark is shown on
+  a member's card, and only for `phone_verified_via = 'msg91'`, which every
+  producer of `member_card` checks through `phone_is_verified()`; reaching the
+  `phone_verified` onboarding stage earns no mark, because it means only that the
+  step is behind somebody. None of this concerns email sign-in.
 - **Payments are integrated. Never simulate a successful payment.** Razorpay
   settles on the web and on iOS, in test mode -- so a subscription *can* be
   created, by `settle_payment` running with the service role and by nothing else.

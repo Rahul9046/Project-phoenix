@@ -84,28 +84,38 @@ Apple's guidelines require its own control rather than a web flow.
 
 ---
 
-## 4. Phone verification — **not a blocker, but visible**
+## 4. Phone verification — **real on the web, not yet possible in the app**
 
-Mocked. No SMS is sent and any six digits are accepted. Every screen that touches
-it says so, and **no member is ever shown a "phone verified" badge**, because
-that would be a safety claim the system cannot support.
+Not mocked, on either client. The provider is MSG91 and nothing accepts an
+arbitrary or fixed code — a deployed project cannot be made to, however its
+secrets are configured.
 
-To switch it on:
+**The web verifies for real.** It uses MSG91's OTP widget, with MSG91's CAPTCHA
+validation enabled, and a real Indian number has been verified on
+`https://eraya.app`. The server exchanges the widget's access token for a
+verified number; the browser never decides the outcome.
 
-1. Choose an SMS provider — in India, Twilio or MSG91. This is a paid service.
-2. Configure it in Supabase, **Authentication → Providers → Phone**, and set
-   `enable_signup = true` under `[auth.sms]` in `supabase/config.toml`.
-3. Replace the two function bodies in
-   `apps/mobile/src/features/onboarding/phone.ts` — the file documents exactly
-   what with — and set `phoneVerificationIsLive = true`. The screens reword
-   themselves from that flag.
-4. Restore the "Phone verified" mark in `apps/mobile/src/ui/Person.tsx` and the
-   web's `MemberPresentation.tsx`. One line in each.
-5. Delete `completePhoneStep` from `features/onboarding/data.ts`. Supabase sets
-   `auth.users.phone_confirmed_at` and a trigger mirrors it.
+**The app cannot complete it yet.** MSG91's widget is a browser SDK and there is
+no honest way to run it in Expo, so the app uses MSG91's OTP API instead — a real
+SMS, checked by MSG91, with `phone_verified_at` written only by an edge function
+holding the service role. That path needs `MSG91_TEMPLATE_ID` alongside the auth
+key, **and the template must be DLT-approved before MSG91 will deliver anything
+in India.** Until it is, the app asks for a real code and fails truthfully rather
+than accepting one.
 
-Note that Indian SMS also requires DLT registration with a telecom operator
-before a template can be sent. Start that early; it takes weeks.
+**It blocks nobody.** Phone verification is optional on both clients since
+2026-09-22: somebody may decline the step, finish onboarding, and come back to it
+from Account → Verification whenever it works.
+
+What remains is configuration, not code: a DLT-registered template, then
+`MSG91_TEMPLATE_ID` as a Supabase edge-function secret. DLT registration goes
+through a telecom operator and takes weeks — start it early.
+
+A **"Phone verified" mark is shown**, and only ever for a number MSG91 actually
+verified: every producer of `member_card` goes through `phone_is_verified()`,
+which requires `phone_verified_via = 'msg91'`. Reaching the `phone_verified`
+onboarding stage earns nothing, because it means only that the step is behind
+somebody. Nothing here concerns email sign-in, which is a separate flow.
 
 ---
 
