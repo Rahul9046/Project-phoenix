@@ -57,3 +57,14 @@ member-facing function must `revoke execute ... from public, anon` and then
 update or delete policy for anyone, deliberately. Membership is written by
 whatever takes the money, running with the service role. A client that can write
 its own subscription row can award itself premium.
+
+**Never treat a store's word as a grant.** A Google Play `purchaseToken` from a
+device is a lookup key, not proof -- the same way a Razorpay callback is a claim.
+Entitlement comes only from `payments-play-verify` asking the Android Publisher
+API, and a purchase is consumed only *after* the server has granted the term,
+because Play revokes an unacknowledged purchase after three days and the grant
+must never depend on the acknowledgement succeeding. Android also never falls
+back to Razorpay for Premium: the dispatch in
+`apps/mobile/src/features/membership/payments.ts` is on `Platform.OS`, not a
+flag, because an Android build that opened a web checkout would breach Play's
+payments policy. See `docs/10-payments.md` and `docs/14-google-play.md`.
