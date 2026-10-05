@@ -36,7 +36,14 @@ publishable needs no code change.
 
 ## Migrations
 
-Everything about the schema lives in `supabase/migrations/`, in order:
+Everything about the schema lives in `supabase/migrations/`, in order.
+
+**This table is selective on purpose.** It names the migrations that define the
+schema a reader needs to understand, not every file in the directory — there are
+many more, and several later ones only adjust or re-grant what is already
+described elsewhere in this document. `supabase/migrations/` in timestamp order is
+the authority; this is a map, not an index. When a migration changes something
+this document explains, it belongs here.
 
 | Migration | What it does |
 | --- | --- |
@@ -66,6 +73,10 @@ Everything about the schema lives in `supabase/migrations/`, in order:
 | `…150100_city_coverage` | Counts of cities and states, for marketing copy |
 | `…150200_search_cities_fuzzy` | Trigram fallback so a misspelling still finds the city |
 | `…150300_close_waitlist_writes` | Drops the public insert policy on `waitlist` |
+| `…100100_payments` | `payments`, `payment_events`, `begin_payment`, `settle_payment`, `intro_offer_used` |
+| `…100200_payment_events_analytics` | The payment funnel event names |
+| `…100100_expiry_revocation_and_provider_scope` | `has_active_premium` as the one authority, `revoke_payment`, `payment_revocations`, order lookups scoped by `(provider, provider_order_id)` |
+| `…100100_google_play_billing` | `payments.acknowledged_at`, the two `play_*_product_id` columns, and a provider parameter on `begin_payment` and `claim_payment_event` |
 
 Apply them with the Supabase CLI:
 
@@ -109,7 +120,28 @@ sit beside `app/`, which in this layout means `apps/web/src/proxy.ts`.
 | Apple | Real — Supabase OAuth |
 | Facebook | Real — Supabase OAuth |
 | Email | Real — magic link (`signInWithOtp`) |
-| Phone OTP | **Mocked** — no SMS provider chosen |
+| Phone verification, web | **Real** — MSG91, exercised in production |
+| Phone verification, app | **Unavailable** — the provider is chosen; delivery is not possible yet |
+
+Phone verification is not a sign-in method; it is an optional step a member may
+decline. It is listed here because the two clients are in different states and
+that difference has been described wrongly before.
+
+**On the web it is real.** A real Indian number has been verified on
+`https://eraya.app` through the MSG91 widget, with MSG91's CAPTCHA validation
+enabled. Nothing is simulated.
+
+**In the app it currently cannot happen.** The app uses MSG91's OTP API rather
+than the browser widget, and that path needs a DLT-approved SMS template before
+MSG91 will deliver anything in India. `MSG91_TEMPLATE_ID` is the only missing
+configuration and no code changes when it arrives; until then the app asks for a
+real code and fails truthfully rather than accepting one. It blocks nobody --
+the step is optional on both clients since 2026-09-22.
+
+Only `phone_verified_via = 'msg91'` earns a trust mark. A member who reached the
+`phone_verified` stage without it has merely put the step behind them, and no
+badge is shown to anybody on the strength of that. See
+[07-open-questions.md](07-open-questions.md).
 
 OAuth returns to `/auth/callback`, which exchanges the code for a session.
 Email links land on `/auth/confirm`. Both are route handlers, because only those
@@ -346,13 +378,19 @@ standard way round it needs room to move rows temporarily out of range.
 
 ## Membership and entitlements
 
-Eraya is freemium. The paid tier exists in the database today; payments do not.
+Eraya is freemium, and the paid tier is sold. Razorpay settles payments on the
+web and on iOS; Google Play is built server-side for Android and is not yet able
+to take money. The model is [10-payments.md](10-payments.md); Play's own surface
+is [14-google-play.md](14-google-play.md). This section is the schema.
 
 | Table | Holds | Who may write |
 | --- | --- | --- |
 | `membership_plans` | The catalogue and its prices, in paise | Migrations only |
 | `entitlements` | What each tier may do, as `(tier, key) -> jsonb` | Migrations only |
 | `subscriptions` | One row per term, per member | **Service role only** |
+| `payments` | One row per intended payment, per provider | **Service role only** |
+| `payment_events` | One row per provider delivery, keyed `(provider, provider_event_id)` | **Service role only** |
+| `payment_revocations` | One row per withdrawn payment | **Service role only**, RLS on with no policies at all |
 
 ### Why `subscriptions` has no write policy
 
@@ -390,23 +428,92 @@ discount would invent a claim the product does not make.
 
 | Plan | Price | Note |
 | --- | --- | --- |
-| Monthly | ₹199 first month, then ₹299 | The only recurring plan |
-| 3 months | ₹699 | One-off term |
-| 6 months | ₹1,299 | One-off term |
-| 12 months | ₹2,399 | One-off term |
+| Monthly | ₹199 first month, then ₹299 | The only plan with introductory pricing |
+| 3 months | ₹699 | — |
+| 6 months | ₹1,299 | — |
+| 12 months | ₹2,399 | — |
 
-The renewal price is shown beside the introductory one, never behind a click.
+Every plan is a prepaid term. **Nothing renews and nothing is auto-debited**, on
+either provider -- there is no mandate anywhere in the system, and the ₹299 is
+what a second month costs if somebody chooses to buy one, not a renewal that
+happens to them. The later price is shown beside the introductory one rather than
+behind a click.
 
-### What is not built
+`membership_plans.is_recurring` is `true` on the monthly plan, which reads as a
+contradiction and is not one: the column dates from the original design and is
+read by exactly one thing, the web pricing page's per-month figure. Nothing in
+the payment path consults it, and no code anywhere initiates a repeat charge.
+Treat the name as historical; do not build on it.
 
-No payment provider is configured. `subscriptions.provider` defaults to `'none'`,
-and a row in that state records intent and must never be read as money received —
-which is why `'pending'` is excluded from `ENTITLING_STATUSES`. The membership
-page says payments are not open rather than showing a button that would not
-charge.
+The ₹199 rule in full -- first ever one-month purchase, decided from payment
+history rather than a flag, never restored by reinstalling -- is in
+[10-payments.md](10-payments.md). Google Play needs **two** products for this one
+plan, because a Play one-time product carries one price; that is
+[14-google-play.md](14-google-play.md).
 
-`'cancelled'` **is** entitling: cancelling stops the renewal, it does not refund
-the current term.
+### What the provider column means
+
+`subscriptions.provider` still defaults to `'none'`, and a row in that state
+records intent and must never be read as money received — which is why
+`'pending'` is excluded from `ENTITLING_STATUSES`. `'none'` is a sensible state
+for a membership and a meaningless one for a charge, so `begin_payment` refuses
+it outright: a payment row with no provider could never be settled, because every
+settlement path looks a row up by provider and order id together.
+
+`'cancelled'` **is** entitling. Nothing renews, so there is no renewal to stop;
+the status means the term was ended as an arrangement while the time already paid
+for stands. Withdrawing time is `revoke_payment`'s job and nothing else's.
+
+### Google Play, added 2026-10-04
+
+Migration `20261004100100_google_play_billing` made the last Razorpay-biased
+primitives provider-aware. It is **additive**, reads and writes no existing row,
+and adds, removes or changes no RLS policy.
+
+| Change | Why |
+| --- | --- |
+| `payments.acknowledged_at` | Play revokes a purchase nobody acknowledged within three days, so "did we tell the store" has to be a fact on the row, not something inferred from a log. Nullable with no default, so every Razorpay row correctly reads "not acknowledged" — Razorpay has no such step and never sets it |
+| `membership_plans.play_product_id` | The Play product charged at the ordinary price. NULL means this plan cannot be bought on Play yet |
+| `membership_plans.play_intro_product_id` | The Play product charged at the introductory price. NULL on every plan without introductory pricing, which is correct rather than missing |
+| Two partial unique indexes | A product id identifies exactly one plan, or the annual product could quietly deliver one month |
+| `begin_payment` gained `p_provider` | It is the only function that creates a `payments` row, and it was taking the column default |
+| `claim_payment_event` gained `p_provider` | `payment_events` has been keyed `(provider, provider_event_id)` since it was written, but the function writing it was not |
+
+**Both columns are NULL on every plan, deliberately.** The columns are the
+mechanism; the values are a Play Console decision that has not been made, and
+inventing an id would put a string in the database that does not exist in Play
+Console.
+
+**The defaults are the safety.** Both functions keep their original parameters in
+their original order and gain a defaulted third (`default 'razorpay'`), so the
+deployed `payments-create-order` and `payments-webhook` — which pass named
+arguments and no provider — behave exactly as before. That is what allowed the
+schema to be applied to production before the Play functions were deployed. **Do
+not remove the defaults without redeploying those two first.** The old
+two-argument overloads were dropped explicitly rather than left to be shadowed,
+so exactly one signature of each exists.
+
+Why the provider matters to `claim_payment_event` specifically: a Play Real-time
+Developer Notification carries a Pub/Sub message id, which shares no namespace
+with a Razorpay event id. Claimed under the Razorpay default, the first Google id
+that collided with a Razorpay one would be read as already processed and dropped
+— and the notification least worth dropping is `VOIDED_PURCHASE`, the only thing
+that takes Premium back from a refunded member.
+
+`settle_payment`, `revoke_payment`, `has_active_premium` and
+`membership_catalogue()` were **untouched**. Google Play reaches entitlement
+through the same `settle_payment` Razorpay does, which is the whole point: there
+is one place where money becomes time. No new tier, entitlement or capability was
+added.
+
+The two Play product columns are readable by `anon, authenticated` through the
+existing active-plans select policy from `20260826100500_membership_rls.sql` —
+nothing new was granted, and that is what lets the Android client read the ids to
+ask Play for a localised price.
+
+**Not deployed.** The migration is in production; `payments-play-begin` and
+`payments-play-verify` are not, and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` is unset.
+See [14-google-play.md](14-google-play.md).
 
 ## Pushing config: never use the CLI directly
 
