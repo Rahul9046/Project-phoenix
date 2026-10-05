@@ -57,3 +57,22 @@ member-facing function must `revoke execute ... from public, anon` and then
 update or delete policy for anyone, deliberately. Membership is written by
 whatever takes the money, running with the service role. A client that can write
 its own subscription row can award itself premium.
+
+**Never treat a store's word as a grant.** A Google Play `purchaseToken` from a
+device is a lookup key, not proof -- the same way a Razorpay callback is a claim.
+Entitlement comes only from `payments-play-verify` asking the Android Publisher
+API, and a purchase is consumed only *after* the server has granted the term,
+because Play revokes an unacknowledged purchase after three days and the grant
+must never depend on the acknowledgement succeeding.
+
+**Never decide how a build takes money from `Platform.OS`.** Android ships as two
+artifacts: the APK downloaded from eraya.app, which is sideloaded and keeps the
+Razorpay browser checkout, and the Play build, which must sell through Play
+Billing and must never fall back to Razorpay. Both report `android`. The one
+authority is `paymentProvider` in
+`apps/mobile/src/features/membership/purchasing.ts`, built from
+`distributionChannel` in `distribution.ts`, which reads
+`EXPO_PUBLIC_DISTRIBUTION` -- inlined at build time, absent meaning `direct` so
+that forgetting it can never point a public install at a Billing client Play
+will not serve. `purchase()` switches on it exhaustively; add a provider and the
+switch stops compiling. See `docs/10-payments.md` and `docs/14-google-play.md`.
