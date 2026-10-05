@@ -1,6 +1,13 @@
 import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "@/lib/supabase/client";
+import {
+  asMembership,
+  invoke,
+  type Membership,
+  type PurchaseOutcome,
+} from "@/features/membership/contract";
+import { purchaseOnPlay, usesPlayBilling } from "@/features/membership/play-billing";
 
 /**
  * Buying Premium.
@@ -10,7 +17,19 @@ import { supabase } from "@/lib/supabase/client";
  * conclude that a payment succeeded -- every one of those is answered by the
  * server, because every one of them is worth lying about.
  *
- * The shape of a purchase:
+ * There are two ways to pay and this file chooses between them. On Android the
+ * purchase goes through Google Play Billing, because an app distributed through
+ * the Play Store has to sell digital goods through Play; everywhere else -- iOS,
+ * and this app running on the web -- it goes through Razorpay in the system
+ * browser, exactly as it always has. The website is untouched by any of this and
+ * is Razorpay only.
+ *
+ * `purchase()` is the seam the header below used to promise. The Razorpay path
+ * is `purchaseThroughRazorpay`, unchanged line for line, and the Play path is in
+ * `play-billing.ts`. Both end the same way: by reading the membership the server
+ * reports, never by concluding one here.
+ *
+ * The shape of a Razorpay purchase:
  *
  *   ask the server to create an order   (it picks the price)
  *   open the website's /checkout page   (in the browser, not in a screen we drew)
@@ -21,12 +40,14 @@ import { supabase } from "@/lib/supabase/client";
  * same way sign-in already opens Google, so the only thing crossing back is an
  * order id and a signature that is useless without the key secret.
  *
- * There is no native Razorpay module here on purpose. One would mean a new
- * build of every client before anybody could pay, a config plugin to keep
- * working, and a second integration drifting away from the website's. If the
- * app stores later require their own billing, this file is the seam that
- * changes -- see docs/10-payments.md.
+ * There is still no native Razorpay module here, for the reasons that were
+ * always true: a new build of every client before anybody could pay, a config
+ * plugin to keep working, and a second integration drifting away from the
+ * website's. Play Billing is a native module because Play leaves no choice --
+ * see docs/10-payments.md.
  */
+
+export type { Membership, PurchaseOutcome } from "@/features/membership/contract";
 
 export type Plan = {
   code: string;
@@ -41,15 +62,6 @@ export type Plan = {
   currency: string;
 };
 
-export type Membership = {
-  tier: "free" | "premium";
-  active: boolean;
-  expiresAt: string | null;
-  planName: string | null;
-  periodMonths: number | null;
-  introOfferUsed: boolean;
-};
-
 export type PaymentRecord = {
   id: string;
   planName: string;
@@ -60,29 +72,6 @@ export type PaymentRecord = {
   createdAt: string;
   paidAt: string | null;
 };
-
-/**
- * What happened, in words the product can use.
- *
- * `processing` is the important one and the reason this is not a boolean. Money
- * can have left somebody's account while the confirmation has not arrived, and
- * the honest thing to say then is that we are still checking -- not "failed",
- * which is wrong, and not "you have not been charged", which we do not know.
- */
-export type PurchaseOutcome =
-  | { status: "paid"; membership: Membership }
-  | { status: "processing" }
-  | { status: "cancelled" }
-  | { status: "failed" }
-  /**
-   * We could not work out what happened, and the reason is ours rather than
-   * the bank's -- an order the server does not recognise, a signature that did
-   * not check out, a status this build has never heard of. Distinct from
-   * `failed` because calling it a decline invents a reason, and distinct from
-   * `unavailable` because the network was fine and money may well have moved.
-   */
-  | { status: "unconfirmed" }
-  | { status: "unavailable" };
 
 const rupeesFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -150,13 +139,27 @@ type OrderReply = {
 };
 
 /**
- * The whole purchase, start to finish.
+ * Buying a term, by whichever route this platform is allowed to use.
+ *
+ * The only decision made here is which store takes the money. Android is Play
+ * and everything else is Razorpay, and the branch is on the platform rather
+ * than on a feature flag because it is not a preference anybody should be able
+ * to switch -- shipping an Android build that opened a web checkout for Premium
+ * would breach Play's payments policy.
+ */
+export async function purchase(planCode: string): Promise<PurchaseOutcome> {
+  if (usesPlayBilling()) return purchaseOnPlay(planCode);
+  return purchaseThroughRazorpay(planCode);
+}
+
+/**
+ * The whole Razorpay purchase, start to finish.
  *
  * Every branch that could end in "we think you paid" instead asks the server
  * again. The client's view of a payment is a hint; the answer comes from a
  * signature check or from Razorpay's own record of the order.
  */
-export async function purchase(planCode: string): Promise<PurchaseOutcome> {
+async function purchaseThroughRazorpay(planCode: string): Promise<PurchaseOutcome> {
   const created = await invoke<OrderReply>("payments-create-order", {
     planCode,
   });
@@ -219,6 +222,16 @@ export async function purchase(planCode: string): Promise<PurchaseOutcome> {
 }
 
 /**
+ * Everything a Razorpay order can end as.
+ *
+ * `unconfigured` is excluded because it cannot happen here: it means a plan has
+ * no Google Play product, and Razorpay has no such concept. Stated as a type so
+ * the payment-return screen stays exhaustive without having to write a member
+ * facing sentence for a state it can never show.
+ */
+export type RazorpayOutcome = Exclude<PurchaseOutcome, { status: "unconfigured" }>;
+
+/**
  * Asking the server what really happened to an order.
  *
  * Used when the browser closed without a clear answer, and again from the
@@ -228,7 +241,7 @@ export async function purchase(planCode: string): Promise<PurchaseOutcome> {
 export async function reconcile(
   orderId: string,
   options: { assumeCancelled: boolean } = { assumeCancelled: false },
-): Promise<PurchaseOutcome> {
+): Promise<RazorpayOutcome> {
   const checked = await invoke<{ status?: string; membership?: unknown }>(
     "payments-verify",
     { orderId },
@@ -278,18 +291,6 @@ export async function reconcile(
   }
 }
 
-function asMembership(value: unknown): Membership {
-  const row = (value ?? {}) as Record<string, unknown>;
-  return {
-    tier: row.tier === "premium" ? "premium" : "free",
-    active: row.active === true,
-    expiresAt: (row.expires_at as string) ?? null,
-    planName: (row.plan_name as string) ?? null,
-    periodMonths: (row.period_months as number) ?? null,
-    introOfferUsed: row.intro_offer_used === true,
-  };
-}
-
 /**
  * Where the checkout page lives.
  *
@@ -306,17 +307,4 @@ function asMembership(value: unknown): Membership {
  */
 function siteUrl(): string {
   return process.env.EXPO_PUBLIC_SITE_URL ?? "";
-}
-
-async function invoke<T>(
-  name: string,
-  body: Record<string, unknown>,
-): Promise<T | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke<T>(name, { body });
-    if (error) return null;
-    return data ?? null;
-  } catch {
-    return null;
-  }
 }

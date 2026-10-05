@@ -4,7 +4,7 @@ import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { routes } from "@/features/auth/routing";
-import { reconcile, type PurchaseOutcome } from "@/features/membership/payments";
+import { reconcile, type RazorpayOutcome } from "@/features/membership/payments";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
@@ -38,7 +38,7 @@ import type { TFunction } from "@eraya/i18n";
  * a lookup key here, not proof of anything, and it buys nothing on its own.
  */
 
-type State = { kind: "checking" } | { kind: "settled"; outcome: PurchaseOutcome };
+type State = { kind: "checking" } | { kind: "settled"; outcome: RazorpayOutcome };
 
 export default function PaymentReturn() {
   const t = useT();
@@ -175,14 +175,14 @@ const checkingNote = (t: TFunction): Note => ({
 /**
  * The answer, in the product's own words.
  *
- * Six states rather than two, for the reason `PurchaseOutcome` has six: money
+ * Six states rather than two, for the reason `RazorpayOutcome` has six: money
  * can leave somebody's account while the confirmation does not arrive, and the
  * honest thing to say then is that we are still checking. Nothing here says
  * "you have not been charged" unless the server actually knows that -- a
  * promise a phone is in no position to make -- and nothing here blames a bank
  * for a fault of ours, which is what `unconfirmed` exists to keep separate.
  */
-function noteFor(outcome: PurchaseOutcome, t: TFunction): Note {
+function noteFor(outcome: RazorpayOutcome, t: TFunction): Note {
   switch (outcome.status) {
     case "paid":
       return {

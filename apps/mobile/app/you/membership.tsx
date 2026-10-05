@@ -13,6 +13,13 @@ import {
   type PaymentRecord,
   type Plan,
 } from "@/features/membership/payments";
+import {
+  loadPlayStore,
+  onPlayPurchaseRecovered,
+  recoverPlayPurchases,
+  usesPlayBilling,
+  type PlayStore,
+} from "@/features/membership/play-billing";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
@@ -88,7 +95,12 @@ type Outcome =
   | { kind: "cancelled" }
   | { kind: "failed" }
   /** Ours went wrong, not their bank's. See `PurchaseOutcome.unconfirmed`. */
-  | { kind: "unconfirmed" };
+  | { kind: "unconfirmed" }
+  /**
+   * Google Play has nothing to sell for this plan yet, and nobody was charged.
+   * Android only -- see `PurchaseOutcome.unconfigured`.
+   */
+  | { kind: "unconfigured" };
 
 export default function MembershipScreen() {
   const t = useT();
@@ -97,6 +109,13 @@ export default function MembershipScreen() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
+  /**
+   * What Google Play will sell, on Android only.
+   *
+   * Stays null everywhere else, and every use of it below is guarded, so the
+   * iOS and web renders of this screen are exactly what they were.
+   */
+  const [play, setPlay] = useState<PlayStore | null>(null);
 
   const load = useCallback(async () => {
     const [catalogue, current, history] = await Promise.all([
@@ -107,6 +126,14 @@ export default function MembershipScreen() {
     setPlans(catalogue);
     setMembership(current);
     setPayments(history);
+
+    /*
+     * Asked after the catalogue, because which Play product applies to a plan
+     * depends on `introApplies` -- and that is the server's answer about this
+     * member's history, not something to work out here.
+     */
+    if (usesPlayBilling()) setPlay(await loadPlayStore(catalogue));
+
     return catalogue;
   }, []);
 
@@ -116,14 +143,86 @@ export default function MembershipScreen() {
       await load();
       if (!active) return;
       recordProductEvent("membership_screen_viewed");
+
+      /*
+       * Anything paid for on Play and never verified.
+       *
+       * The case this exists for is an app killed between the Play sheet
+       * closing and the server being told. Play keeps handing such a purchase
+       * back until it is consumed, and Google refunds it after three days, so
+       * the sweep is what turns "I paid and got nothing" into a term rather
+       * than a support message.
+       *
+       * Only `paid` and `processing` are shown. A leftover this screen cannot
+       * explain -- a refunded purchase, a token the server would not accept --
+       * is left to the purchase flow rather than raised unprompted at the
+       * moment somebody opens the screen for an unrelated reason.
+       */
+      const recovered = await recoverPlayPurchases();
+      if (!active || !recovered) return;
+
+      if (recovered.status === "paid") {
+        setOutcome({ kind: "paid", until: recovered.membership.expiresAt });
+        await load();
+        return;
+      }
+
+      if (recovered.status === "processing") setOutcome({ kind: "processing" });
     })();
     return () => {
       active = false;
     };
   }, [load]);
 
+  /*
+   * A purchase that settles with nobody waiting for it.
+   *
+   * Play can report one late -- after a deferred payment completes, or after a
+   * sheet somebody left open. The screen re-reads the server rather than being
+   * told what to show, because the server is the only thing that knows whether
+   * a term was granted.
+   */
+  useEffect(() => {
+    if (!usesPlayBilling()) return;
+
+    return onPlayPurchaseRecovered((settled) => {
+      if (settled.status !== "paid") return;
+      setOutcome({ kind: "paid", until: settled.membership.expiresAt });
+      void load();
+    });
+  }, [load]);
+
   const chosen = plans?.find((plan) => plan.code === selected) ?? null;
   const busy = outcome.kind === "working";
+
+  /**
+   * Can this plan actually be bought on this device?
+   *
+   * True everywhere Razorpay runs. On Android it is Play's answer: the plan
+   * needs a product id in the database and that product has to exist in Play
+   * Console. Until both are true the button is disabled rather than opening a
+   * sheet that cannot sell anything.
+   */
+  function buyable(plan: Plan | null): boolean {
+    if (!plan) return false;
+    if (!usesPlayBilling()) return true;
+    // Still loading Play's answer. Not offered yet rather than offered blind.
+    if (!play) return false;
+    return play.buyable.includes(plan.code);
+  }
+
+  /**
+   * What a plan costs, in the words of whoever is charging.
+   *
+   * On Android that is Google's own localised string, because Play takes the
+   * money and applies its own tax handling -- showing Eraya's paise figure
+   * beside a Play sheet that says something else would make us the ones who
+   * were wrong. Display only: the term is granted on what the server verifies,
+   * never on anything this function returns.
+   */
+  function priceOf(plan: Plan): string {
+    return play?.prices[plan.code] ?? formatPaise(plan.pricePaise);
+  }
 
   async function buy() {
     if (!chosen || busy) return;
@@ -174,6 +273,20 @@ export default function MembershipScreen() {
      */
     if (result.status === "unconfirmed" || result.status === "unavailable") {
       setOutcome({ kind: "unconfirmed" });
+      return;
+    }
+
+    /*
+     * There was nothing to sell, and nobody was charged.
+     *
+     * Not recorded as a failure for the same reason as the two above: this is
+     * Eraya's own configuration being incomplete, not a payment anybody
+     * refused. The Play store state is re-read so the button settles into
+     * being disabled rather than inviting a second attempt that cannot work.
+     */
+    if (result.status === "unconfigured") {
+      setOutcome({ kind: "unconfigured" });
+      if (plans) setPlay(await loadPlayStore(plans));
       return;
     }
 
@@ -238,6 +351,7 @@ export default function MembershipScreen() {
               <PlanRow
                 key={plan.code}
                 plan={plan}
+                price={priceOf(plan)}
                 selected={plan.code === selected}
                 disabled={busy}
                 onSelect={() => {
@@ -255,12 +369,28 @@ export default function MembershipScreen() {
         )}
 
         <Button
-          label={chosen ? `Pay ${formatPaise(chosen.pricePaise)}` : t("membership.choosePlan")}
+          label={chosen ? `Pay ${priceOf(chosen)}` : t("membership.choosePlan")}
           loading={busy}
-          disabled={!chosen || busy}
+          disabled={!chosen || busy || !buyable(chosen)}
           onPress={() => void buy()}
           style={{ marginTop: space.xl }}
         />
+
+        {/*
+          Why the button is disabled, said rather than left to be discovered.
+
+          Android only, and only when Play has nothing to sell: the plans are
+          real and the prices are real, but the store side is not finished, so
+          the honest thing is to say so here instead of letting somebody press
+          a dead button. "Temporarily" is accurate -- this is configuration
+          that has not been completed, not a plan that was withdrawn.
+        */}
+        {plans !== null && play !== null && !play.purchasable ? (
+          <Text variant="caption" tone="subtle" center style={{ marginTop: space.md }}>
+            Premium purchases are temporarily unavailable in the app. Nothing
+            has been charged. Please try again later.
+          </Text>
+        ) : null}
 
         {/*
           Said plainly, and said before payment rather than in a policy nobody
@@ -367,6 +497,24 @@ function OutcomeNote({ outcome }: { outcome: Outcome }) {
       title: t("membership.unconfirmedTitle"),
       body: t("membership.unconfirmedBody"),
     },
+    /*
+     * Nothing to sell, and nothing charged.
+     *
+     * Said as its own state rather than folded into `unconfirmed`, because the
+     * two owe a member different sentences: one means we do not know what
+     * happened to your money, and this one means your money was never asked
+     * for. English only for now -- the six dictionaries need copy somebody has
+     * approved, and an invented translation is worse than an untranslated
+     * string on a screen that already has several.
+     */
+    unconfigured: {
+      icon: "cart-outline" as const,
+      tone: colors.inkMuted,
+      title: "Not available just yet",
+      body:
+        "Premium cannot be bought in the app at the moment, and you have not " +
+        "been charged. Please try again later.",
+    },
   }[outcome.kind];
 
   return (
@@ -386,11 +534,14 @@ function OutcomeNote({ outcome }: { outcome: Outcome }) {
 
 function PlanRow({
   plan,
+  price,
   selected,
   disabled,
   onSelect,
 }: {
   plan: Plan;
+  /** Already formatted, by whoever is charging. See `priceOf`. */
+  price: string;
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
@@ -399,7 +550,7 @@ function PlanRow({
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ selected, disabled }}
-      accessibilityLabel={`${plan.name}, ${formatPaise(plan.pricePaise)}`}
+      accessibilityLabel={`${plan.name}, ${price}`}
       disabled={disabled}
       onPress={onSelect}
       style={({ pressed }) => ({
@@ -429,7 +580,7 @@ function PlanRow({
         </View>
 
         <View style={{ alignItems: "flex-end" }}>
-          <Text variant="headline">{formatPaise(plan.pricePaise)}</Text>
+          <Text variant="headline">{price}</Text>
           {/*
             The ordinary price, stated rather than struck through. ₹299 is what
             the plan costs; presenting it as a saving somebody is losing would

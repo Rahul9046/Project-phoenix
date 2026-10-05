@@ -59,7 +59,8 @@
         {
           "photosPermission": "Eraya uses your photos so you can add one to your profile. Nothing is uploaded until you choose it."
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "extra": {
       "router": {},
