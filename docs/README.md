@@ -23,6 +23,8 @@ aspirations — where something is undecided it is listed in
 | [11-moderation-and-analytics.md](11-moderation-and-analytics.md) | The reports queue, who may moderate, and the funnel |
 | [12-email-delivery.md](12-email-delivery.md) | The sign-in email, its rate limit, and what raising it costs |
 | [13-seo.md](13-seo.md) | Indexing, the SEO probe, and how a guide is written and published |
+| [14-google-play.md](14-google-play.md) | Google Play Billing: the products, the credential, the Console blocker, and what is not yet proven |
+| [15-android-signing-and-distribution.md](15-android-signing-and-distribution.md) | How the beta is built and signed, and the open question about Play distribution |
 | [BUILD_REVIEW_WORKFLOW.md](BUILD_REVIEW_WORKFLOW.md) | Generating the review package for an outside reviewer |
 
 ## Status
@@ -30,15 +32,25 @@ aspirations — where something is undecided it is listed in
 The product is built and deployed at `eraya.app`, on both the web and an Expo
 app: sign-in by emailed code, onboarding, discovery, interest, connections,
 messaging, blocking, reporting with a moderation queue, account deletion, and
-Premium bought through Razorpay.
+Premium — bought through Razorpay on the web and on iOS, and through Google Play
+Billing on Android.
 
-Three things are deliberately not finished, and the documents say so where they
+Four things are deliberately not finished, and the documents say so where they
 come up rather than implying otherwise:
 
-- **Phone verification is mocked.** Any six digits pass and no SMS is sent, so
-  nothing in the product may show a "verified number" mark. Real SMS needs DLT
-  registration.
+- **Phone verification is real on the web and unavailable in the app.** A real
+  Indian number has been verified on `eraya.app` through MSG91. The app uses
+  MSG91's OTP API instead of the browser widget, and that path needs a
+  DLT-approved template before anything can be delivered, so in the app the step
+  cannot currently be completed. It is optional on both clients and blocks
+  nobody. Only a member MSG91 actually verified is ever shown a "verified number"
+  mark.
 - **Razorpay is in test mode.** No live key is configured; no real money moves.
+- **Google Play cannot take money yet.** The client and the server side are
+  built, but the Play products do not exist, the Play edge functions are
+  undeployed, and the Console work is blocked while Google verifies the developer
+  identity. **No Play purchase has been made and no device test has happened** —
+  see [14-google-play.md](14-google-play.md).
 - **Privacy policy and terms are placeholders.** India's DPDP Act applies and
   both app stores require them. This is a launch blocker.
 

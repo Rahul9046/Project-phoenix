@@ -121,6 +121,84 @@ likely to be paying with a foreign card. Enabling international payments is an
 application to Razorpay carrying higher fees and additional compliance.
 Answering it "no" is legitimate; answering it by accident is not.
 
+## Payments and the app stores
+
+The payment and entitlement model is settled and documented in
+[10-payments.md](10-payments.md); Google Play's own surface is
+[14-google-play.md](14-google-play.md). What follows is what those two
+deliberately do **not** answer. None of it is to be resolved by guessing, and
+nothing in the code currently depends on an answer.
+
+**A Play licence tester's purchase grants real Premium.** `payments-play-verify`
+logs `test_purchase: true` and otherwise treats such a purchase as genuine,
+because refusing one would make device testing impossible. Whether to gate that
+in production is a one-line change nobody has decided. The only control over who
+can make such a purchase is the tester list in Play Console, which is why it is
+recorded rather than hidden.
+
+**How far purchase recovery should reach.** A Play purchase can be paid for and
+never verified — the app killed between the sheet closing and the server being
+told. Today a listener runs for the life of the process and a sweep runs when the
+membership screen mounts. Somebody who pays, is killed, and never reopens that
+screen is covered only by the listener. Whether the sweep should also run at
+launch or after sign-in is undecided, and it interacts with Google's three-day
+window: an unacknowledged purchase is refunded automatically after it.
+
+**iOS has no in-app purchase path.** The Android question was answered on
+2026-10-04; Apple's was not. iOS still opens the Razorpay checkout in the system
+browser, which Apple is likely to refuse for a digital good at submission, and no
+StoreKit work exists. Decided for one store is not decided for both.
+
+**How the sideload beta and a Play release relate to each other.** Play App
+Signing and an upload signing configuration still have to be set up. What
+identity the Play build will carry, whether the existing beta key can serve as
+the upload key, and what the transition means for the testers already running
+sideloaded builds are one question, and it is open until Play is configured
+deliberately. The existing identity must be preserved in the meantime so current
+testers stay upgradeable, and the keystore is backed up locally and off-device.
+See [15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
+Do not plan around a guessed answer.
+
+**What a partial refund should do to a prepaid term.** Unchanged and still open.
+`refund.processed` short of the full amount is logged and changes no entitlement;
+`payments.status` has `partially_refunded` waiting for the decision. Guessing in
+the member's disfavour is how somebody loses three months over a goodwill
+adjustment. Play voids are all-or-nothing, so the undecided case remains a
+Razorpay partial.
+
+**Whether the payment funnel should know which provider took the money.** It
+currently does not: both providers emit the same event names, and `amountPaise`
+is Eraya's intended price rather than what Google charged, which on Android can
+differ because Play applies its own tax handling. Adding a provider dimension and
+recording the charged amount are the same decision.
+
+**Approved copy for the Play `unconfigured` state, in six languages.** The
+Android screen says, in English only, that premium cannot be bought in the app at
+the moment and that nothing has been charged. It is two literal strings rather
+than dictionary keys, so `npm run i18n:check` passes while they remain
+untranslated — precisely the failure mode the language checks exist to catch. The
+copy needs approval before translation.
+
+**Whether to assert in a check that Android cannot reach Razorpay.** The
+invariant lives in one `Platform.OS` branch in `payments.ts`, and
+`npm run payments:probe` is server-side and cannot see it. Nothing would currently
+fail if somebody made the Razorpay path reachable on Android, which would breach
+Play's payments policy.
+
+### Known gaps, not questions
+
+These have answers; the work simply is not done.
+
+- **No Play void reaches the system.** Real-time Developer Notifications,
+  Pub/Sub and `VOIDED_PURCHASE` are Phase 2c and are not built, so a refunded or
+  charged-back Play purchase does not currently take Premium back by itself.
+  `revoke_payment` exists and accepts one; nothing delivers it.
+- **The Play Console work is blocked.** Google is verifying the developer
+  identity, and contact-phone verification along with Android developer and
+  package verification are unavailable until that completes. No product can be
+  created, nothing can be uploaded to a track, and therefore no Play Billing test
+  of any kind is possible yet.
+
 ## Brand — defects in the supplied logo pack
 
 Two problems in `assets/brand/` that need a corrected export. The mark geometry
@@ -179,8 +257,10 @@ drew it. Re-centring is a one-line change in `ErayaMark`.
 
 - What happens when someone in a launch city clicks through after launch? There
   is no signup flow behind the CTA yet.
-- Pricing is undecided, so the page says nothing about it. The claim "no paywall
-  before a first conversation" does constrain what the model can be.
+- ~~Pricing is undecided~~ — settled and shipped. The plans, their prices and the
+  ₹199 introductory rule are in [10-payments.md](10-payments.md). The claim "no
+  paywall before a first conversation" still constrains the model and is still
+  honoured.
 - "Free revert for the previous profile in a session" is stated as a principle;
   the actual mechanic (how many, how long a session lasts) is unspecified.
 - Moderation capacity is assumed, not planned. "Every report is read by a
