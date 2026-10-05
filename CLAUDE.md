@@ -36,11 +36,21 @@ feature actually needs it, not in anticipation of one.
 a premium feature is an insert plus the feature, not a hunt through the UI for
 `tier === 'premium'`.
 
-**Never show a badge for something Eraya has not checked.** Phone verification
-is mocked -- any six digits pass, no SMS is sent -- so no member is shown a
-"phone verified" mark on another member's card, on either client. A trust mark
-that runs ahead of the system is worse than none, because the person relying on
-it is a stranger deciding whether to meet someone.
+**Never show a badge for something Eraya has not checked.** A "phone verified"
+mark may rest on one predicate and no other: `phone_is_verified()`, which is
+`phone_verified_at` together with `phone_verified_via = 'msg91'`. Reaching the
+`phone_verified` onboarding stage means only that the step is behind somebody --
+completed or declined -- and earns no mark, and neither does a number the retired
+stand-in marked. A trust mark that runs ahead of the system is worse than none,
+because the person relying on it is a stranger deciding whether to meet someone.
+
+Verification itself is **real on the web**, through MSG91's OTP widget, and has
+been exercised in production. **In the app it cannot currently be completed**:
+that path uses MSG91's OTP API, which will not deliver in India without a
+DLT-approved template, so the app asks for a real code and fails truthfully
+rather than accepting one. It is optional on both clients and blocks nobody. No
+deployed project accepts a fixed or arbitrary code. None of this concerns email
+sign-in, which is a separate flow.
 
 **Never run `supabase config push` directly. Use `npm run config:push`.** The
 config refers to OAuth credentials as `env(NAME)`, and when a variable is missing
