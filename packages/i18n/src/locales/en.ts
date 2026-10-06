@@ -731,8 +731,6 @@ export const en = {
       primaryCta: "Create your account",
       secondaryCta: "How Eraya works",
       note: "Open across India. Verified members. A considered few, never an endless list.",
-      /* The quiet third line under the hero's two buttons. */
-      androidCta: "Download the Android app",
     },
 
     trust: {
@@ -902,7 +900,6 @@ export const en = {
       contact: "Contact",
       tagline: "A trusted place to begin again, for people who are divorced, separated or widowed.",
       social: "Social",
-      comingSoon: "coming soon",
       copyright: "© {year} Eraya. A {organization} product.",
     },
     /*

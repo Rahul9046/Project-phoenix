@@ -547,8 +547,6 @@ export const te: Translations = {
       primaryCta: "మీ ఖాతాను సృష్టించండి",
       secondaryCta: "Eraya ఎలా పని చేస్తుంది",
       note: "భారతదేశమంతటా అందుబాటులో. ధృవీకరించిన సభ్యులు. ఆలోచించి ఎంచుకున్న కొందరు, ఎప్పటికీ ముగియని జాబితా కాదు.",
-      /* The quiet third line under the hero's two buttons. */
-      androidCta: "ఆండ్రాయిడ్ యాప్‌ను డౌన్‌లోడ్ చేయండి",
     },
 
     trust: {
@@ -690,7 +688,6 @@ export const te: Translations = {
       contact: "సంప్రదించండి",
       tagline: "విడాకులు తీసుకున్నవారు, విడిగా ఉంటున్నవారు, జీవిత భాగస్వామిని కోల్పోయినవారు మళ్ళీ మొదలుపెట్టడానికి ఒక నమ్మకమైన చోటు.",
       social: "సోషల్",
-      comingSoon: "త్వరలో",
       copyright: "© {year} Eraya. ఒక {organization} ఉత్పత్తి.",
     },
     pricing: {

@@ -548,8 +548,6 @@ export const hi: Translations = {
       primaryCta: "अपना खाता बनाएँ",
       secondaryCta: "Eraya कैसे काम करता है",
       note: "पूरे भारत में उपलब्ध। सत्यापित सदस्य। सोच-समझकर चुने हुए कुछ लोग, कभी न खत्म होने वाली सूची नहीं।",
-      /* The quiet third line under the hero's two buttons. */
-      androidCta: "एंड्रॉइड ऐप डाउनलोड कीजिए",
     },
 
     trust: {
@@ -691,7 +689,6 @@ export const hi: Translations = {
       contact: "संपर्क",
       tagline: "तलाकशुदा, अलग रह रहे और जीवनसाथी को खो चुके लोगों के लिए फिर से शुरू करने की एक भरोसेमंद जगह।",
       social: "सोशल",
-      comingSoon: "जल्द आ रहा है",
       copyright: "© {year} Eraya। एक {organization} उत्पाद।",
     },
     pricing: {

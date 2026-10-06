@@ -1,3 +1,4 @@
+import { androidCta } from "@/features/marketing/android-app";
 import { ErayaMark } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
@@ -39,35 +40,56 @@ export async function Hero() {
           </p>
 
           {/*
-            The Android app, named in the hero but not competing with it.
+            The Android app, in the hero and as a real button.
 
-            A link and not a third button. The hero sells one decision -- create
-            an account -- and the two buttons above are already a primary and a
-            secondary; a third filled or outlined control would flatten that
-            hierarchy and make the most important thing on the page harder to
-            pick out. A quiet link is discoverable without bidding for the same
-            attention, which is the right weight for a second way in to a product
-            whose first way in is this page.
+            This was a quiet text link, and that was the wrong call: the only
+            actual download button on the page sat in a card 7,800 px down at a
+            320 px viewport, which is not somewhere anybody finds it. An app you
+            are asking the public to install needs a control, not a mention.
 
-            It points at `/download` rather than starting the download, because a
-            tap in a hero should not begin a 62 MB transfer on mobile data before
-            anyone has said they want the app. The decision, and the three
-            sentences about installing it, are one page away.
+            Still `secondary` rather than `primary`, and set below a hairline
+            rather than added to the row above. The filled terracotta "Create
+            your account" stays the one dominant thing in the hero; this reads
+            as a separate, second offer -- which is what it is, since the web
+            product is complete and the app is another way in.
 
-            `-ml-1 inline-block min-h-11` gives it a 44 px tap target without
-            moving it off the text's left edge: the quiet variant has no padding
-            of its own, so on a phone it would otherwise be a 20 px-tall target
-            in the middle of a column of text.
+            It downloads directly, the same as the card, because a button that
+            says "Download for Android" and instead opens a page is a small lie.
+            The install guidance sits beside it as a quiet link for anyone who
+            wants to read before tapping.
           */}
-          <p className="mt-3">
-            <Button
-              href="/download"
-              variant="quiet"
-              className="-ml-1 inline-block min-h-11 px-1 py-3 text-sm"
-            >
-              {t("marketing.hero.androidCta")}
-            </Button>
-          </p>
+          <div className="mt-7 border-t border-line pt-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+              <Button
+                href={androidCta.href}
+                download={androidCta.kind === "direct"}
+                variant="secondary"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                {t("marketing.androidApp.cta")}
+              </Button>
+
+              {androidCta.kind === "direct" ? (
+                <Button
+                  href="/download"
+                  variant="quiet"
+                  className="inline-flex min-h-11 items-center justify-center text-sm sm:justify-start"
+                >
+                  {t("marketing.androidApp.helpLink")}
+                </Button>
+              ) : null}
+            </div>
+
+            {/*
+              The one sentence that keeps an iPhone from being offered an APK.
+              Said here as well as on the card and on `/download`, because this
+              is now the first place most people will meet the download.
+            */}
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-subtle">
+              {t("marketing.androidApp.platformNote")}
+            </p>
+          </div>
         </div>
 
         {/*

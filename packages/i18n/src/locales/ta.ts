@@ -547,8 +547,6 @@ export const ta: Translations = {
       primaryCta: "உங்கள் கணக்கை உருவாக்குங்கள்",
       secondaryCta: "Eraya எப்படி வேலை செய்கிறது",
       note: "இந்தியா முழுவதும் கிடைக்கிறது. சரிபார்க்கப்பட்ட உறுப்பினர்கள். சிந்தித்துத் தேர்ந்தெடுக்கப்பட்ட சிலர், முடிவில்லாத பட்டியல் அல்ல.",
-      /* The quiet third line under the hero's two buttons. */
-      androidCta: "ஆண்ட்ராய்டு செயலியைப் பதிவிறக்குங்கள்",
     },
 
     trust: {
@@ -690,7 +688,6 @@ export const ta: Translations = {
       contact: "தொடர்பு",
       tagline: "விவாகரத்து பெற்றவர்கள், பிரிந்து வாழ்பவர்கள், துணையை இழந்தவர்கள் மீண்டும் தொடங்குவதற்கான நம்பகமான இடம்.",
       social: "சமூகம்",
-      comingSoon: "விரைவில்",
       copyright: "© {year} Eraya. ஒரு {organization} தயாரிப்பு.",
     },
     pricing: {
