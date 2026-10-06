@@ -43,7 +43,7 @@ export const footer: {
     titleKey: TranslationKey;
     links: readonly { labelKey: TranslationKey; href: string }[];
   }[];
-  social: readonly string[];
+  social: readonly { name: string; href: string }[];
 } = {
   columns: [
     {
@@ -72,7 +72,24 @@ export const footer: {
       ],
     },
   ],
-  /* Names of companies, the same in every language. */
-  social: ["Instagram", "LinkedIn", "YouTube"],
+  /*
+   * Real accounts only, and each one linked.
+   *
+   * This used to be three names -- Instagram, LinkedIn, YouTube -- rendered as
+   * labelled placeholders, because none of the accounts existed. Instagram now
+   * does, so it is a link; the other two are removed rather than left saying
+   * "coming soon", which is a promise with no date behind it and reads as
+   * neglect once it has been on the page for a while. They come back when there
+   * is something to link to.
+   *
+   * These URLs are also the site's `sameAs` in `schema.ts` -- the claim to a
+   * search engine about which profiles are genuinely Eraya's -- so an entry here
+   * must be an account Eraya actually owns. Nothing aspirational.
+   *
+   * Names of companies, the same in every language.
+   */
+  social: [
+    { name: "Instagram", href: "https://www.instagram.com/join.eraya/" },
+  ],
 };
 

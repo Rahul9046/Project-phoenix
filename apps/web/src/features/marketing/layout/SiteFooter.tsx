@@ -56,20 +56,26 @@ export async function SiteFooter() {
               {t("marketing.footer.social")}
             </h2>
             {/*
-              Placeholders on purpose: the accounts do not exist yet, so these
-              are labelled rather than linked to somewhere misleading.
+              Real accounts, really linked. These were labelled placeholders
+              reading "coming soon" while none existed; `content.ts` now lists
+              only accounts Eraya owns, so every entry is a link and the list is
+              as long as the truth is.
+
+              `rel="me"` alongside `noopener noreferrer`: the first is the
+              conventional way a site claims a profile as its own, and matches
+              the `sameAs` these same URLs produce in `schema.ts`.
             */}
             <ul className="mt-5 space-y-3">
-              {footer.social.map((name) => (
-                <li
-                  key={name}
-                  className="text-[0.95rem] text-ink-subtle"
-                  aria-label={`${name} — ${t("marketing.footer.comingSoon")}`}
-                >
-                  {name}
-                  <span className="ml-2 text-xs text-ink-subtle/80">
-                    {t("marketing.footer.comingSoon")}
-                  </span>
+              {footer.social.map((account) => (
+                <li key={account.name}>
+                  <a
+                    href={account.href}
+                    target="_blank"
+                    rel="me noopener noreferrer"
+                    className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+                  >
+                    {account.name}
+                  </a>
                 </li>
               ))}
             </ul>

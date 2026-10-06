@@ -1,6 +1,6 @@
 import { LOCALES } from "@eraya/i18n";
 
-import { site } from "./content";
+import { footer, site } from "./content";
 
 /**
  * The identities in Eraya's structured data, and the two nodes that own them.
@@ -84,11 +84,19 @@ export const SITE_OG_LOCALE = "en_IN";
  * something untrue and the hardest place to notice.
  *
  * So there is no `aggregateRating`, no `review`, no `foundingDate`, no
- * `numberOfEmployees` and no member count. `sameAs` is absent too: `footer.social`
- * lists Instagram, LinkedIn and YouTube as *names* -- the accounts do not exist
- * yet, which is why the footer labels them rather than linking them -- and
- * `sameAs` takes verified profile URLs. Naming a network is not owning an
+ * `numberOfEmployees` and no member count.
+ *
+ * `sameAs` used to be absent for the same reason: `footer.social` listed
+ * Instagram, LinkedIn and YouTube as *names* when none of the accounts existed,
+ * and `sameAs` takes verified profile URLs -- naming a network is not owning an
  * account on it, and a wrong `sameAs` hands Eraya's identity to whoever does.
+ *
+ * `footer.social` now carries URLs and only for accounts Eraya actually owns, so
+ * `sameAs` is emitted from it directly rather than typed again here. That keeps
+ * the rule intact where it matters: the test is no longer "has somebody
+ * remembered to update the schema" but "is this account real enough to link to
+ * in the footer". If the list is ever empty the key is omitted rather than sent
+ * as an empty array, because an empty `sameAs` is a claim about nothing.
  *
  * `logo` is the 168x168 brand mark rather than the 1200x630 Open Graph card.
  * Different jobs: the card is a social preview and is already carried by
@@ -96,6 +104,8 @@ export const SITE_OG_LOCALE = "en_IN";
  * dimensions are stated because they are a property of the committed file.
  */
 export function organizationNode() {
+  const sameAs = footer.social.map((account) => account.href);
+
   return {
     "@type": "Organization",
     "@id": ORGANIZATION_ID,
@@ -109,6 +119,7 @@ export function organizationNode() {
       width: 168,
       height: 168,
     },
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
 
