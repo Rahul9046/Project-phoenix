@@ -301,6 +301,178 @@ function` grants EXECUTE to PUBLIC, `anon` inherits it, and `revoke ... from
 anon` removes a grant `anon` never separately held. **Revoke from `public`, then
 grant to `authenticated`.**
 
+## Distribution
+
+**Downloaded directly from eraya.app, publicly, while Google Play's mandatory
+closed-testing period runs in parallel.** The two are independent: neither is
+waiting on the other. This is temporary, and the end state is the website
+pointing at a public Play listing instead.
+
+Current shipped build: **v0.1.2, versionCode 3**. `apps/mobile/app.json` is at
+versionCode 4, which is the next build rather than a released one -- the website
+shows the *published* version and says so.
+
+Version lives in `app.json` (`expo.version`, `expo.android.versionCode`) and
+never in `build.gradle`. `apps/mobile/android/` is gitignored and generated.
+
+### Where the bytes are
+
+A GitHub release of this repository. Not a new hosting provider: the same
+repository and account already build and deploy the site through GitHub Actions,
+and release assets are free, public, served from GitHub's CDN and capped at
+2 GiB.
+
+The APK cannot live in `apps/web/public/`. The site is a Cloudflare Worker whose
+static output is uploaded as Workers Assets, which refuses any single file over
+25 MiB; the APK is 62.6 MiB, so dropping it there would not make a slow download
+-- it would make `npm run cf:deploy` throw `Asset too large` and stop the whole
+site shipping. `.gitignore` has excluded `*.apk` since the first Android build,
+because an APK is a build output and a 60 MB binary per release would be in the
+history for ever.
+
+`apps/web/src/app/downloads/[file]/route.ts` 302s to the release asset rather
+than streaming it through the Worker, so GitHub's CDN keeps doing ranges,
+resumption and edge caching. The audience is on Indian mobile data; resumable is
+not a nicety.
+
+### The website side
+
+One file decides everything:
+`apps/web/src/features/marketing/android-app.ts`.
+
+| Thing | Where |
+| --- | --- |
+| Which release the APK comes from | `release` |
+| Where the CTA points | `androidCta` |
+| The public download addresses | `downloads` |
+| CTA, install steps, the Android-only line | `marketing.androidApp.*`, six locales |
+
+Three surfaces read `androidCta` and nothing else knows a URL: a button in the
+hero, the homepage card (`sections/AndroidApp.tsx`), and the standalone
+`/download` page. The footer links `/download` from every page.
+
+`release` and `androidCta` are deliberately **separate switches**. `release`
+says which APK the `/downloads/*` addresses resolve to; `androidCta` says where
+the website's button sends somebody. Those addresses were promised to people --
+they are in Instagram bios and WhatsApp messages nobody gets to go back and edit
+-- so they keep answering after the button has moved to Play.
+
+**Shipping a new build is: publish the GitHub release first, then point
+`release` at it.** In that order. While the two disagree the site offers a
+download that 404s.
+
+### What a visitor is told
+
+No device sniffing, on purpose -- it cannot be wrong, it tells a desktop visitor
+something useful, and the page is server-rendered on a Worker with a 10 ms CPU
+budget it has already exceeded once. One unconditional sentence does the work:
+
+> The app is currently available on Android. You can also use Eraya in your web
+> browser.
+
+An iPhone is never offered an APK as though it would install, and nothing is
+promised about when one might be.
+
+**That sentence states the current position and commits to nothing, and both
+halves are deliberate.** Two earlier versions did more than that. The first --
+*"Android only for now. On an iPhone or a computer, Eraya works in your
+browser"* -- named the iPhone and the browser in one breath and read, to some
+people, as though the download were an option there. The second fixed that and
+said *"iOS is coming soon"*, which promised a release the product has not
+planned: there is no StoreKit work, no iOS in-app purchase path,
+[10-payments.md](10-payments.md) notes Apple generally requires its own billing
+for digital goods, and iOS is recorded as undecided in
+[07-open-questions.md](07-open-questions.md).
+
+**No timeline belongs in this sentence, in any language.** Not "coming soon",
+not "we are working on iOS", not "available soon", and not a softer synonym. A
+date the product has not committed to is the same class of claim as a trust mark
+the system has not earned -- the thing this codebase refuses everywhere else. If
+iOS is decided, the sentence changes because the fact changed.
+
+`/download` carries three sentences about the install, because the unfamiliar
+part of a direct install is a system dialog that appears after the download. It
+says the permission Android asks for is about **this one install**. It does not
+tell anybody to switch on installing from unknown sources and leave it on, and
+must never be edited to. `/beta` was the old address and 308s to `/download`.
+
+### Payments in a directly distributed build
+
+Unchanged from [the Membership section above](#membership): the app opens
+Razorpay checkout on the website in the system browser, and that works in a
+directly installed build exactly as it does anywhere else. Being sideloaded
+changes nothing about it, and no Play policy applies to a build Play is not
+distributing.
+
+**This is the part that changes when Play Billing lands, and it lands on its own
+branch.** That work lives on `feature/play-billing-phase-2a` and is **kept
+separate on purpose**: the direct-distribution release is based on `main` at
+`6c2da57` and must not take a merge, rebase or cherry-pick from it. The two
+answer different questions -- this one is how a phone gets the app while Play's
+closed-testing period runs, that one is how a Play-distributed build takes money
+-- and tying them together would mean the download could not ship until billing
+was ready.
+
+On that branch Android dispatches to Play Billing instead of Razorpay, and since
+the five Play products do not exist yet, Premium becomes unbuyable in-app with an
+honest disabled state rather than a broken checkout. Android must never fall back
+to Razorpay once that lands; the dispatch is on `Platform.OS`, not a flag,
+because an Android build opening a web checkout would breach Play's payments
+policy.
+
+So a rebuild of the app is **not** a free act today, and it is a payments
+decision rather than a distribution one. It is also not a prerequisite for
+anything here: the website ships against the APK already published, and that
+artifact is unchanged -- same signing identity, same `app.eraya.mobile`, same
+`versionCode`.
+
+### Signing
+
+`apps/mobile/android/app/build.gradle` points the `release` build type at
+`signingConfigs.debug`, which is the Expo bare template's default, so a release
+APK carries the universal `CN=Android Debug` certificate from
+`apps/mobile/android/app/debug.keystore`.
+
+**That identity must be preserved.** Android will not install an update signed
+by a different key over an existing install, so it is what keeps everybody
+already running Eraya upgradeable -- and offering the download publicly raises
+the stakes on that rather than changing the rule: the set of installs a key
+change would strand is now open-ended rather than a tester list. The keystore is
+backed up locally and off-device.
+
+Verify before distributing any build:
+
+```
+apksigner verify --print-certs <apk>
+```
+
+Anything other than the expected certificate must not go to existing installs.
+
+**Play App Signing and an upload key still have to be set up, and what identity
+the Play build will carry is deliberately undecided.** Nothing in this
+repository depends on the answer. See
+[07-open-questions.md](07-open-questions.md).
+
+### Switching the website to Google Play
+
+When the public listing exists, replace one object in `android-app.ts`:
+
+```ts
+export const androidCta: AndroidCta = {
+  kind: "play",
+  href: "<the public listing URL>",
+  version: null,
+};
+```
+
+Nothing else changes anywhere. The install steps, the version line and the
+"what to expect" link are already conditional on `kind` and disappear with the
+direct channel; the Android-only sentence stays, because it is still true. The
+`/downloads/*` addresses go on answering.
+
+**No Play URL is written down today, not even a guessed one.** A store link that
+404s is worse than a direct download that works.
+
 ## Checks before a phase is done
 
 ```

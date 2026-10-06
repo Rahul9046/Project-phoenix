@@ -1,9 +1,24 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Logo } from "@/shared/brand/Logo";
 import { Container } from "@/shared/ui/Container";
+import { InstagramIcon } from "@/shared/ui/PlatformIcon";
 import { footer, site } from "@/features/marketing/content";
 import { getT } from "@/features/i18n/server";
+
+/**
+ * The mark for each social account, looked up by name.
+ *
+ * A lookup rather than a field on `footer.social`, because that list lives in
+ * `content.ts` and content files hold data, not components. A name with no entry
+ * here renders as a plain label and still links -- so adding an account is never
+ * blocked on drawing its icon first, and never silently renders nothing.
+ */
+const socialMarks: Record<string, (props: { className?: string }) => ReactNode> =
+  {
+    Instagram: InstagramIcon,
+  };
 
 export async function SiteFooter() {
   const t = await getT();
@@ -56,22 +71,39 @@ export async function SiteFooter() {
               {t("marketing.footer.social")}
             </h2>
             {/*
-              Placeholders on purpose: the accounts do not exist yet, so these
-              are labelled rather than linked to somewhere misleading.
+              Real accounts, really linked. These were labelled placeholders
+              reading "coming soon" while none existed; `content.ts` now lists
+              only accounts Eraya owns, so every entry is a link and the list is
+              as long as the truth is.
+
+              `rel="me"` alongside `noopener noreferrer`: the first is the
+              conventional way a site claims a profile as its own, and matches
+              the `sameAs` these same URLs produce in `schema.ts`.
             */}
             <ul className="mt-5 space-y-3">
-              {footer.social.map((name) => (
-                <li
-                  key={name}
-                  className="text-[0.95rem] text-ink-subtle"
-                  aria-label={`${name} — ${t("marketing.footer.comingSoon")}`}
-                >
-                  {name}
-                  <span className="ml-2 text-xs text-ink-subtle/80">
-                    {t("marketing.footer.comingSoon")}
-                  </span>
+              {footer.social.map((account) => {
+                const Mark = socialMarks[account.name];
+                return (
+                <li key={account.name}>
+                  <a
+                    href={account.href}
+                    target="_blank"
+                    rel="me noopener noreferrer"
+                    className="inline-flex items-center gap-2.5 text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+                  >
+                    {/*
+                      The mark takes `currentColor`, so it muted-greys with the
+                      label and darkens with it on hover rather than sitting at a
+                      fixed colour the row moves away from.
+                    */}
+                    {Mark ? (
+                      <Mark className="h-[1.15rem] w-[1.15rem] shrink-0" />
+                    ) : null}
+                    {account.name}
+                  </a>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         </div>

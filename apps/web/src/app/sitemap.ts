@@ -26,7 +26,12 @@ import { site } from "@/features/marketing/content";
  */
 const publicPaths = [
   "", // the landing page
-  "/beta", // the Android beta, which an Instagram link points straight at
+  /*
+   * The Android download, which an Instagram link points straight at. `/beta`
+   * is the address it used to have and is deliberately absent: it 308s here, and
+   * a redirect is not a page to list.
+   */
+  "/download",
   "/pricing",
   "/safety",
   "/privacy",

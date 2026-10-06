@@ -121,6 +121,27 @@ likely to be paying with a foreign card. Enabling international payments is an
 application to Razorpay carrying higher fees and additional compliance.
 Answering it "no" is legitimate; answering it by accident is not.
 
+**How the directly downloaded Android build and a Play release relate to each
+other.** Play App Signing and an upload signing configuration still have to be
+set up; neither exists. What identity the Play build will carry, whether the
+existing key can serve as the upload key, and what the transition means for
+people already running a build downloaded from eraya.app are one question, and
+it stays open until Play is configured deliberately — with Play's own upload
+requirements read at that time rather than inferred now.
+
+The download became **public** on 2026-10-06, offered from `eraya.app/download`
+while Play's closed-testing period runs in parallel. That answers no part of the
+question, but it enlarges the last part: the population a key change would
+strand is now open-ended rather than a list of testers we could contact. The
+existing identity must be preserved in the meantime, and the keystore is backed
+up locally and off-device.
+
+What is worth carrying in as input rather than conclusion: the current
+certificate is the universal Android debug certificate rather than a key unique
+to Eraya, and Android's rule that an update must be signed by the same key as
+the install it replaces applies to the direct channel whatever Play does. See
+[09-mobile.md](09-mobile.md#distribution). Do not plan around a guessed answer.
+
 ## Brand — defects in the supplied logo pack
 
 Two problems in `assets/brand/` that need a corrected export. The mark geometry

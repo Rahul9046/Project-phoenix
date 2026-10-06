@@ -535,6 +535,15 @@ export const hi: Translations = {
       about: "Eraya के बारे में",
       login: "लॉग इन करें",
       begin: "अपनी शुरुआत करें",
+      /*
+       * The header's Android download label.
+       *
+       * `androidApp.cta` verbatim where the header row can hold it. Bengali,
+       * Tamil and Telugu set too wide for that row and carry the short form,
+       * with the Android mark beside it supplying the platform. Keep any new
+       * value inside roughly 115px of text, or the row overflows.
+       */
+      download: "एंड्रॉइड के लिए डाउनलोड करें",
       signedInAs: "{name} के रूप में साइन इन",
       openMenu: "मेन्यू खोलें",
       closeMenu: "मेन्यू बंद करें",
@@ -630,15 +639,23 @@ export const hi: Translations = {
       reassurance: "पूरे भारत में उपलब्ध। जुड़ना मुफ़्त, और छोड़ना भी — आप अपना खाता और उसमें मौजूद सब कुछ कभी भी मिटा सकते हैं।",
     },
 
-    androidBeta: {
-      eyebrow: "एंड्रॉइड बीटा",
-      title: "Eraya एंड्रॉइड बीटा",
-      lede: "Eraya का अनुभव करने वाले पहले लोगों में शामिल हों।",
-      cta: "एंड्रॉइड बीटा डाउनलोड करें",
-      version: "बीटा संस्करण {version}",
-      note: "एंड्रॉइड आपसे आपके ब्राउज़र से इंस्टॉल करने की अनुमति माँग सकता है। Eraya अभी बीटा में है।",
-      pageTitle: "आपका अगला अध्याय यहीं से शुरू होता है।",
-      pageLede: "Eraya भारत में उन लोगों के लिए एक भरोसेमंद समुदाय है जो तलाकशुदा हैं, अलग रह रहे हैं या जिन्होंने अपने जीवनसाथी को खो दिया है। एंड्रॉइड ऐप खुले बीटा में है — इसे इंस्टॉल कीजिए, अपना खाता बनाइए, और अपनी गति से आगे बढ़िए।",
+
+    androidApp: {
+      eyebrow: "एंड्रॉइड ऐप",
+      title: "Eraya आपके फ़ोन पर",
+      lede: "वही Eraya, एंड्रॉइड के लिए बना। आप ऐप इस्तेमाल करें या वेबसाइट, आपका खाता, आपकी बातचीत और आपकी सेटिंग्स एक ही रहती हैं।",
+      cta: "एंड्रॉइड के लिए डाउनलोड करें",
+      version: "संस्करण {version}",
+      platformNote: "ऐप फ़िलहाल एंड्रॉइड पर उपलब्ध है। आप Eraya को अपने वेब ब्राउज़र में भी इस्तेमाल कर सकते हैं।",
+      helpLink: "इंस्टॉल करते समय क्या होगा",
+      /* The /download page, which stands alone with no header or footer. */
+      pageTitle: "एंड्रॉइड के लिए Eraya पाइए",
+      pageLede: "यह Eraya का आधिकारिक ऐप है, हमारे द्वारा प्रकाशित और सीधे eraya.app से डाउनलोड होने वाला।",
+      stepsTitle: "आगे क्या होगा",
+      stepOne: "ऊपर दिए बटन को दबाइए। आपका ब्राउज़र फ़ाइल डाउनलोड करेगा और फिर पूछेगा कि आप उसे खोलना चाहते हैं या नहीं।",
+      stepTwo: "एंड्रॉइड आपसे आपके ब्राउज़र से यह इंस्टॉल करने की अनुमति माँग सकता है। यह सवाल इसी एक इंस्टॉल के बारे में है, जवाब देकर आप आगे बढ़ सकते हैं।",
+      stepThree: "Eraya खोलिए और साइन इन कीजिए, या नया खाता बनाइए। अगर आप वेबसाइट पर पहले से Eraya इस्तेमाल करते हैं, तो सब कुछ वहीं आपका इंतज़ार कर रहा है।",
+      reassurance: "आपके फ़ोन में और कुछ बदलने की ज़रूरत नहीं है, और Eraya किसी भी दूसरे ऐप की तरह जब चाहें हटाया जा सकता है।",
       backToSite: "eraya.app पर जाएँ",
     },
     guides: {
@@ -674,13 +691,13 @@ export const hi: Translations = {
       about: "परिचय",
       howItWorks: "यह कैसे काम करता है",
       safety: "सुरक्षा",
+      android: "एंड्रॉइड ऐप",
       legalTitle: "क़ानूनी",
       privacy: "निजता",
       terms: "शर्तें",
       contact: "संपर्क",
       tagline: "तलाकशुदा, अलग रह रहे और जीवनसाथी को खो चुके लोगों के लिए फिर से शुरू करने की एक भरोसेमंद जगह।",
       social: "सोशल",
-      comingSoon: "जल्द आ रहा है",
       copyright: "© {year} Eraya। एक {organization} उत्पाद।",
     },
     pricing: {

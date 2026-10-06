@@ -534,6 +534,15 @@ export const te: Translations = {
       about: "Eraya గురించి",
       login: "లాగ్ ఇన్ అవ్వండి",
       begin: "మీ ప్రయాణం మొదలుపెట్టండి",
+      /*
+       * The header's Android download label.
+       *
+       * `androidApp.cta` verbatim where the header row can hold it. Bengali,
+       * Tamil and Telugu set too wide for that row and carry the short form,
+       * with the Android mark beside it supplying the platform. Keep any new
+       * value inside roughly 115px of text, or the row overflows.
+       */
+      download: "డౌన్‌లోడ్",
       signedInAs: "{name} గా సైన్ ఇన్ అయ్యారు",
       openMenu: "మెనూ తెరవండి",
       closeMenu: "మెనూ మూసివేయండి",
@@ -629,15 +638,23 @@ export const te: Translations = {
       reassurance: "భారతదేశమంతటా అందుబాటులో. చేరడం ఉచితం, వెళ్ళిపోవడమూ — మీ ఖాతాను, అందులోని అన్నింటినీ మీరు ఎప్పుడైనా తొలగించుకోవచ్చు.",
     },
 
-    androidBeta: {
-      eyebrow: "ఆండ్రాయిడ్ బీటా",
-      title: "Eraya ఆండ్రాయిడ్ బీటా",
-      lede: "Eraya ని అనుభవించిన మొదటి వ్యక్తులలో ఒకరు కండి.",
-      cta: "ఆండ్రాయిడ్ బీటాను డౌన్‌లోడ్ చేయండి",
-      version: "బీటా వెర్షన్ {version}",
-      note: "మీ బ్రౌజర్ నుండి ఇన్‌స్టాల్ చేయడానికి అనుమతి ఇవ్వమని ఆండ్రాయిడ్ అడగవచ్చు. Eraya ప్రస్తుతం బీటాలో ఉంది.",
-      pageTitle: "మీ తదుపరి అధ్యాయం ఇక్కడే మొదలవుతుంది.",
-      pageLede: "విడాకులు తీసుకున్నవారు, విడిగా ఉంటున్నవారు, జీవిత భాగస్వామిని కోల్పోయినవారి కోసం భారతదేశంలో ఏర్పడిన ఒక నమ్మకమైన సమూహం Eraya. ఆండ్రాయిడ్ యాప్ ఓపెన్ బీటాలో ఉంది — దాన్ని ఇన్‌స్టాల్ చేసి, మీ ఖాతాను సృష్టించి, మీ వేగంతో ముందుకు సాగండి.",
+
+    androidApp: {
+      eyebrow: "ఆండ్రాయిడ్ యాప్",
+      title: "Eraya మీ ఫోన్‌లో",
+      lede: "అదే Eraya, ఆండ్రాయిడ్ కోసం తయారైంది. మీరు యాప్ వాడినా వెబ్‌సైట్ వాడినా, మీ ఖాతా, మీ సంభాషణలు, మీ సెట్టింగ్‌లు ఒకేలా ఉంటాయి.",
+      cta: "ఆండ్రాయిడ్ కోసం డౌన్‌లోడ్ చేయండి",
+      version: "వెర్షన్ {version}",
+      platformNote: "యాప్ ప్రస్తుతం ఆండ్రాయిడ్‌లో అందుబాటులో ఉంది. మీరు Eraya ను మీ వెబ్ బ్రౌజర్‌లో కూడా ఉపయోగించవచ్చు.",
+      helpLink: "ఇన్‌స్టాల్ చేసేటప్పుడు ఏమి జరుగుతుంది",
+      /* The /download page, which stands alone with no header or footer. */
+      pageTitle: "ఆండ్రాయిడ్ కోసం Eraya పొందండి",
+      pageLede: "ఇది Eraya అధికారిక యాప్, మేమే ప్రచురించాం, నేరుగా eraya.app నుండి డౌన్‌లోడ్ అవుతుంది.",
+      stepsTitle: "తర్వాత ఏమి జరుగుతుంది",
+      stepOne: "పైన ఉన్న బటన్‌ను నొక్కండి. మీ బ్రౌజర్ ఫైల్‌ను డౌన్‌లోడ్ చేసి, తర్వాత దాన్ని తెరవాలా అని అడుగుతుంది.",
+      stepTwo: "మీ బ్రౌజర్ నుండి ఇది ఇన్‌స్టాల్ చేయడానికి అనుమతి ఇవ్వమని ఆండ్రాయిడ్ అడగవచ్చు. ఆ ప్రశ్న ఈ ఒక్క ఇన్‌స్టాల్ గురించే, సమాధానం చెప్పి ముందుకు సాగవచ్చు.",
+      stepThree: "Eraya తెరిచి సైన్ ఇన్ చేయండి, లేదా కొత్త ఖాతా సృష్టించండి. మీరు వెబ్‌సైట్‌లో ఇప్పటికే Eraya వాడుతుంటే, అంతా అక్కడే మీ కోసం ఉంటుంది.",
+      reassurance: "మీ ఫోన్‌లో మరేదీ మార్చాల్సిన అవసరం లేదు, మరే యాప్ లాగానే Eraya మీకు కావలసినప్పుడు తీసివేయవచ్చు.",
       backToSite: "eraya.app చూడండి",
     },
     guides: {
@@ -673,13 +690,13 @@ export const te: Translations = {
       about: "పరిచయం",
       howItWorks: "ఇది ఎలా పని చేస్తుంది",
       safety: "భద్రత",
+      android: "ఆండ్రాయిడ్ యాప్",
       legalTitle: "చట్టపరమైనవి",
       privacy: "గోప్యత",
       terms: "నిబంధనలు",
       contact: "సంప్రదించండి",
       tagline: "విడాకులు తీసుకున్నవారు, విడిగా ఉంటున్నవారు, జీవిత భాగస్వామిని కోల్పోయినవారు మళ్ళీ మొదలుపెట్టడానికి ఒక నమ్మకమైన చోటు.",
       social: "సోషల్",
-      comingSoon: "త్వరలో",
       copyright: "© {year} Eraya. ఒక {organization} ఉత్పత్తి.",
     },
     pricing: {
