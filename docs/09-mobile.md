@@ -404,19 +404,27 @@ directly installed build exactly as it does anywhere else. Being sideloaded
 changes nothing about it, and no Play policy applies to a build Play is not
 distributing.
 
-**This is the part that changes when Play Billing lands.** That work exists on
-`feature/play-billing-phase-2a`, which is unmerged and parked while Google
-verifies the developer identity. On that branch Android dispatches to Play
-Billing instead of Razorpay, and since the five Play products do not exist yet,
-Premium becomes unbuyable in-app with an honest disabled state rather than a
-broken checkout. Android must never fall back to Razorpay once that lands; the
-dispatch is on `Platform.OS`, not a flag, because an Android build opening a web
-checkout would breach Play's payments policy.
+**This is the part that changes when Play Billing lands, and it lands on its own
+branch.** That work lives on `feature/play-billing-phase-2a` and is **kept
+separate on purpose**: the direct-distribution release is based on `main` at
+`6c2da57` and must not take a merge, rebase or cherry-pick from it. The two
+answer different questions -- this one is how a phone gets the app while Play's
+closed-testing period runs, that one is how a Play-distributed build takes money
+-- and tying them together would mean the download could not ship until billing
+was ready.
+
+On that branch Android dispatches to Play Billing instead of Razorpay, and since
+the five Play products do not exist yet, Premium becomes unbuyable in-app with an
+honest disabled state rather than a broken checkout. Android must never fall back
+to Razorpay once that lands; the dispatch is on `Platform.OS`, not a flag,
+because an Android build opening a web checkout would breach Play's payments
+policy.
 
 So a rebuild of the app is **not** a free act today, and it is a payments
 decision rather than a distribution one. It is also not a prerequisite for
-anything on this branch: the website change ships against the APK already
-published.
+anything here: the website ships against the APK already published, and that
+artifact is unchanged -- same signing identity, same `app.eraya.mobile`, same
+`versionCode`.
 
 ### Signing
 

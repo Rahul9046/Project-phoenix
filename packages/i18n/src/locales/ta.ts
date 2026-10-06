@@ -534,8 +534,15 @@ export const ta: Translations = {
       about: "Eraya பற்றி",
       login: "உள்நுழையவும்",
       begin: "உங்கள் பயணத்தைத் தொடங்குங்கள்",
-      /* The header's own, short enough to sit beside the primary CTA. */
-      download: "APK பதிவிறக்கம்",
+      /*
+       * The header's Android download label.
+       *
+       * `androidApp.cta` verbatim where the header row can hold it. Bengali,
+       * Tamil and Telugu set too wide for that row and carry the short form,
+       * with the Android mark beside it supplying the platform. Keep any new
+       * value inside roughly 115px of text, or the row overflows.
+       */
+      download: "பதிவிறக்கு",
       signedInAs: "{name} ஆக உள்நுழைந்துள்ளீர்கள்",
       openMenu: "பட்டியலைத் திறக்கவும்",
       closeMenu: "பட்டியலை மூடவும்",

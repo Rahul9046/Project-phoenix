@@ -111,26 +111,23 @@ export function SiteHeader({
             is one. Outlined rather than filled so the primary CTA beside it is
             still the loudest thing in the row.
 
-            ## Why the mark carries it and the word is only read aloud
+            It says "Download for Android", the same wording as the hero, the
+            card, the mobile menu and `/download`, so one action is named one way
+            across the site.
 
-            This row is at its limit. The container is `max-w-6xl`, so it is
-            1,152 px wide on a 1,280 screen and on a 2,560 one, and it already
-            holds a logo, five nav links, a language control, a sign-in link and
-            the primary CTA. Measured at 1,280: English, Hindi and Marathi have
-            room for a labelled button, Bengali goes 75 px over with one, and
-            Tamil and Telugu are 471 px and 90 px over *before* anything is
-            added -- a pre-existing overflow this change did not cause and does
-            not fix.
+            It reads `nav.download` rather than `androidApp.cta` only because of
+            width. This row holds a logo, five nav links, a language control, a
+            sign-in link and the primary CTA, and it is at its limit -- which is
+            why the header has its own measure, see `Container`. The canonical
+            string is `androidApp.cta` verbatim in English, Hindi and Marathi;
+            Bengali, Tamil and Telugu set far wider here -- the Bengali one is
+            299 px against a button budget of 176 -- so those three carry the
+            short form, with the Android mark beside the word supplying the
+            platform the word drops.
 
-            So the header gets the mark, which costs about 56 px instead of 150
-            and fits every language, and the word "Download" is `sr-only` -- a
-            screen reader announces it, and the accessible name is a real one
-            rather than a shrug. The fully labelled button lives everywhere with
-            room for it: the hero, the mobile menu, the homepage card, and
-            `/download`.
-
-            `title` as well, so a hover on a desktop says what it is for anybody
-            unsure what the mark means.
+            Tamil and Telugu still overflow this row whatever goes in it, from
+            five nav labels in scripts wider than Latin. That is a navigation
+            problem this work did not cause and deliberately does not fix.
           */}
           <Button
             href={androidCta.href}

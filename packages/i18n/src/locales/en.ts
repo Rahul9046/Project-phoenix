@@ -717,8 +717,15 @@ export const en = {
       about: "About Eraya",
       login: "Log in",
       begin: "Begin your journey",
-      /* The header's own, short enough to sit beside the primary CTA. */
-      download: "Download the APK",
+      /*
+       * The header's Android download label.
+       *
+       * `androidApp.cta` verbatim where the header row can hold it. Bengali,
+       * Tamil and Telugu set too wide for that row and carry the short form,
+       * with the Android mark beside it supplying the platform. Keep any new
+       * value inside roughly 115px of text, or the row overflows.
+       */
+      download: "Download for Android",
       signedInAs: "Signed in as {name}",
       openMenu: "Open menu",
       closeMenu: "Close menu",
