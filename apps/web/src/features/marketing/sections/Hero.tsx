@@ -37,6 +37,37 @@ export async function Hero() {
           <p className="mt-8 text-sm text-ink-subtle">
             {t("marketing.hero.note")}
           </p>
+
+          {/*
+            The Android app, named in the hero but not competing with it.
+
+            A link and not a third button. The hero sells one decision -- create
+            an account -- and the two buttons above are already a primary and a
+            secondary; a third filled or outlined control would flatten that
+            hierarchy and make the most important thing on the page harder to
+            pick out. A quiet link is discoverable without bidding for the same
+            attention, which is the right weight for a second way in to a product
+            whose first way in is this page.
+
+            It points at `/download` rather than starting the download, because a
+            tap in a hero should not begin a 62 MB transfer on mobile data before
+            anyone has said they want the app. The decision, and the three
+            sentences about installing it, are one page away.
+
+            `-ml-1 inline-block min-h-11` gives it a 44 px tap target without
+            moving it off the text's left edge: the quiet variant has no padding
+            of its own, so on a phone it would otherwise be a 20 px-tall target
+            in the middle of a column of text.
+          */}
+          <p className="mt-3">
+            <Button
+              href="/download"
+              variant="quiet"
+              className="-ml-1 inline-block min-h-11 px-1 py-3 text-sm"
+            >
+              {t("marketing.hero.androidCta")}
+            </Button>
+          </p>
         </div>
 
         {/*

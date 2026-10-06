@@ -1,13 +1,17 @@
-import { downloads } from "@/features/marketing/android-beta";
+import { downloads } from "@/features/marketing/android-app";
 
 /**
  * The permanent address of a downloadable build.
  *
- * `https://www.eraya.app/downloads/eraya-beta.apk` is what goes in an Instagram
- * bio, a WhatsApp message and a tester's browser history, so it is owned by the
- * site rather than by whoever is storing the bytes this month, and it carries
- * no version -- see `android-beta.ts` for why. This route only knows which
- * public names are real and sends the browser on to the current build.
+ * `https://www.eraya.app/downloads/eraya.apk` is what goes in an Instagram bio,
+ * a WhatsApp message and somebody's browser history, so it is owned by the site
+ * rather than by whoever is storing the bytes this month, and it carries no
+ * version -- see `android-app.ts` for why. This route only knows which public
+ * names are real and sends the browser on to the current build.
+ *
+ * It keeps answering after the website's CTA has moved to Google Play, because
+ * these names were promised to people and not to the CTA. `android-app.ts`
+ * explains why those are two different switches.
  *
  * ## Why a redirect rather than streaming the file through the Worker
  *
@@ -28,7 +32,7 @@ import { downloads } from "@/features/marketing/android-beta";
  * claims but nothing honours is the failure this codebase has already had once
  * with `netlify.toml`.
  *
- * 302 and not 301: this target moves with every beta, and a permanent redirect
+ * 302 and not 301: this target moves with every build, and a permanent redirect
  * is cached by browsers indefinitely.
  */
 export async function GET(
@@ -39,7 +43,7 @@ export async function GET(
   const asset = downloads[file];
 
   /*
-   * An unknown filename is a 404 and not a redirect to the beta. A guess that
+   * An unknown filename is a 404 and not a redirect to the app. A guess that
    * silently works teaches people an address the site has not promised to keep
    * answering, and the whole point of this route is that one address is.
    */
@@ -57,7 +61,7 @@ export async function GET(
        * A minute, because the address no longer names a version: after a
        * release is published this is the only thing standing between a tap and
        * the new build. Long enough to absorb a double tap and a link preview,
-       * short enough that shipping a beta is live before anyone is told.
+       * short enough that shipping a build is live before anyone is told.
        */
       "Cache-Control": "public, max-age=60",
       Location: asset,

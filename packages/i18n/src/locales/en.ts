@@ -731,6 +731,8 @@ export const en = {
       primaryCta: "Create your account",
       secondaryCta: "How Eraya works",
       note: "Open across India. Verified members. A considered few, never an endless list.",
+      /* The quiet third line under the hero's two buttons. */
+      androidCta: "Download the Android app",
     },
 
     trust: {
@@ -814,23 +816,37 @@ export const en = {
     },
 
     /*
-     * The Android beta, on the public site and on /beta.
+     * The Android app, on the public site and on /download.
      *
-     * One block for both, because the landing page an Instagram link points at
-     * and the card on the home page are the same offer written once. `{version}`
-     * is passed in from `android-beta.ts` rather than typed into six files, so
+     * One block for both, because the page a link in a bio points at and the
+     * card on the home page are the same offer written once. `{version}` is
+     * passed in from `android-app.ts` rather than typed into six files, so
      * bumping the build cannot leave five languages claiming the old number.
+     *
+     * `platformNote` is the one sentence that stops an iPhone being offered an
+     * APK, and it is said unconditionally rather than shown to some devices and
+     * not others -- see `sections/AndroidApp.tsx` for why there is no sniffing.
+     *
+     * The install steps belong to the `/download` page and say that the
+     * permission Android asks for is about this one install. Nothing here tells
+     * anybody to leave installing from unknown sources switched on.
      */
-    androidBeta: {
-      eyebrow: "Android beta",
-      title: "Eraya Android Beta",
-      lede: "Be among the first to experience Eraya.",
-      cta: "Download Android Beta",
-      version: "Beta version {version}",
-      note: "Android may ask you to allow installation from your browser. Eraya is currently in beta.",
-      /* The /beta page, which stands alone with no header or footer. */
-      pageTitle: "Your next chapter starts here.",
-      pageLede: "Eraya is a trusted community for divorced, separated and widowed people in India. The Android app is in open beta — install it, create your account, and take it at your own pace.",
+    androidApp: {
+      eyebrow: "Android app",
+      title: "Eraya on your phone",
+      lede: "The same Eraya, made for Android. Your account, your conversations and your settings are the same whether you use the app or the website.",
+      cta: "Download for Android",
+      version: "Version {version}",
+      platformNote: "Android only for now. On an iPhone or a computer, Eraya works in your browser.",
+      helpLink: "What to expect when you install",
+      /* The /download page, which stands alone with no header or footer. */
+      pageTitle: "Get Eraya for Android",
+      pageLede: "This is the official Eraya app, published by us and downloaded straight from eraya.app.",
+      stepsTitle: "What happens next",
+      stepOne: "Tap the button above. Your browser downloads the file and then asks whether you want to open it.",
+      stepTwo: "Android may ask you to allow this install from your browser. That question is about this one install, and you can answer it and carry on.",
+      stepThree: "Open Eraya and sign in, or create an account. If you already use Eraya on the website, everything is there waiting for you.",
+      reassurance: "Nothing else about your phone needs changing, and Eraya uninstalls like any other app whenever you want.",
       backToSite: "Visit eraya.app",
     },
     /*
@@ -879,6 +895,7 @@ export const en = {
       about: "About",
       howItWorks: "How it works",
       safety: "Safety",
+      android: "Android app",
       legalTitle: "Legal",
       privacy: "Privacy",
       terms: "Terms",

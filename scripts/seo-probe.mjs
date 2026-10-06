@@ -42,9 +42,10 @@ const CANONICAL_ORIGIN = "https://eraya.app";
 /**
  * Public, and meant to be found.
  *
- * `/beta` is here because it is genuinely public and an Instagram link points
- * straight at it, so it is in the sitemap and has to hold up to the same checks
- * as the rest.
+ * `/download` is here because it is genuinely public and an Instagram link
+ * points straight at it, so it is in the sitemap and has to hold up to the same
+ * checks as the rest. `/beta` is the address it used to have and is deliberately
+ * absent: it 308s here, so it has no `<head>` of its own to check.
  */
 const PUBLIC_PATHS = [
   "/",
@@ -53,7 +54,7 @@ const PUBLIC_PATHS = [
   "/terms",
   "/contact",
   "/pricing",
-  "/beta",
+  "/download",
   "/guides",
   "/guides/dating-after-divorce-india",
   "/guides/dating-after-divorce-with-kids",

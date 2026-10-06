@@ -53,6 +53,13 @@ export const footer: {
         { labelKey: "marketing.footer.howItWorks", href: "#how-it-works" },
         { labelKey: "marketing.footer.safety", href: "#trust" },
         { labelKey: "marketing.guides.nav", href: "/guides" },
+        /*
+         * The Android download, reachable from every page rather than only from
+         * the homepage card and the hero. Somebody who decides they want the app
+         * while reading a guide or the pricing page should not have to go back to
+         * the homepage to find it.
+         */
+        { labelKey: "marketing.footer.android", href: "/download" },
       ],
     },
     {
