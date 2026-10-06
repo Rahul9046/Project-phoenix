@@ -534,6 +534,8 @@ export const bn: Translations = {
       about: "Eraya সম্পর্কে",
       login: "লগ ইন করুন",
       begin: "আপনার যাত্রা শুরু করুন",
+      /* The header's own, short enough to sit beside the primary CTA. */
+      download: "ডাউনলোড",
       signedInAs: "{name} হিসেবে সাইন ইন করা",
       openMenu: "মেনু খুলুন",
       closeMenu: "মেনু বন্ধ করুন",
@@ -636,7 +638,7 @@ export const bn: Translations = {
       lede: "একই Eraya, অ্যান্ড্রয়েডের জন্য তৈরি। আপনি অ্যাপ ব্যবহার করুন বা ওয়েবসাইট, আপনার অ্যাকাউন্ট, আপনার কথাবার্তা আর আপনার সেটিংস একই থাকে।",
       cta: "অ্যান্ড্রয়েডের জন্য ডাউনলোড করুন",
       version: "সংস্করণ {version}",
-      platformNote: "আপাতত শুধু অ্যান্ড্রয়েডে। iPhone বা কম্পিউটারে Eraya আপনার ব্রাউজারেই চলে।",
+      platformNote: "অ্যাপটি আপাতত শুধু অ্যান্ড্রয়েডে পাওয়া যাচ্ছে — iOS শীঘ্রই আসছে। ততদিন Eraya যেকোনো ওয়েব ব্রাউজারে চলে।",
       helpLink: "ইনস্টল করার সময় কী হবে",
       /* The /download page, which stands alone with no header or footer. */
       pageTitle: "অ্যান্ড্রয়েডের জন্য Eraya নিন",

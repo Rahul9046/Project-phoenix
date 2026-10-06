@@ -1,9 +1,24 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Logo } from "@/shared/brand/Logo";
 import { Container } from "@/shared/ui/Container";
+import { InstagramIcon } from "@/shared/ui/PlatformIcon";
 import { footer, site } from "@/features/marketing/content";
 import { getT } from "@/features/i18n/server";
+
+/**
+ * The mark for each social account, looked up by name.
+ *
+ * A lookup rather than a field on `footer.social`, because that list lives in
+ * `content.ts` and content files hold data, not components. A name with no entry
+ * here renders as a plain label and still links -- so adding an account is never
+ * blocked on drawing its icon first, and never silently renders nothing.
+ */
+const socialMarks: Record<string, (props: { className?: string }) => ReactNode> =
+  {
+    Instagram: InstagramIcon,
+  };
 
 export async function SiteFooter() {
   const t = await getT();
@@ -66,18 +81,29 @@ export async function SiteFooter() {
               the `sameAs` these same URLs produce in `schema.ts`.
             */}
             <ul className="mt-5 space-y-3">
-              {footer.social.map((account) => (
+              {footer.social.map((account) => {
+                const Mark = socialMarks[account.name];
+                return (
                 <li key={account.name}>
                   <a
                     href={account.href}
                     target="_blank"
                     rel="me noopener noreferrer"
-                    className="text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
+                    className="inline-flex items-center gap-2.5 text-[0.95rem] text-ink-muted transition-colors hover:text-ink"
                   >
+                    {/*
+                      The mark takes `currentColor`, so it muted-greys with the
+                      label and darkens with it on hover rather than sitting at a
+                      fixed colour the row moves away from.
+                    */}
+                    {Mark ? (
+                      <Mark className="h-[1.15rem] w-[1.15rem] shrink-0" />
+                    ) : null}
                     {account.name}
                   </a>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         </div>

@@ -366,8 +366,22 @@ download that 404s.
 No device sniffing, on purpose -- it cannot be wrong, it tells a desktop visitor
 something useful, and the page is server-rendered on a Worker with a 10 ms CPU
 budget it has already exceeded once. One unconditional sentence does the work:
-*Android only for now. On an iPhone or a computer, Eraya works in your browser.*
-An iPhone is never offered an APK as though it would install.
+
+> The app is currently available on Android only — iOS is coming soon. Until
+> then, Eraya works in any web browser.
+
+An iPhone is never offered an APK as though it would install. An earlier version
+named the iPhone and the browser in one breath and read, to some people, as
+though the download were an option there; availability is now stated first and
+the workaround second.
+
+**That sentence commits Eraya to iOS in public.** It is a product promise made
+deliberately, not a placeholder, and it is the only place the product makes it --
+there is no StoreKit work, no iOS in-app purchase path, and
+[10-payments.md](10-payments.md) notes Apple generally requires its own billing
+for digital goods. Whoever picks iOS up should know the website has already told
+people it is coming. Do not soften or harden this wording without making the
+decision again.
 
 `/download` carries three sentences about the install, because the unfamiliar
 part of a direct install is a system dialog that appears after the download. It

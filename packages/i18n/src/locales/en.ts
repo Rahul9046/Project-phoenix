@@ -717,6 +717,8 @@ export const en = {
       about: "About Eraya",
       login: "Log in",
       begin: "Begin your journey",
+      /* The header's own, short enough to sit beside the primary CTA. */
+      download: "Download",
       signedInAs: "Signed in as {name}",
       openMenu: "Open menu",
       closeMenu: "Close menu",
@@ -825,6 +827,18 @@ export const en = {
      * APK, and it is said unconditionally rather than shown to some devices and
      * not others -- see `sections/AndroidApp.tsx` for why there is no sniffing.
      *
+     * It used to name the iPhone and the browser in one breath, which read to
+     * some people as though the download were an option there. It now states
+     * where the app is available, then what to do until it is available
+     * elsewhere -- availability first, workaround second.
+     *
+     * **It commits Eraya to iOS.** "Coming soon" is a promise on a public page,
+     * and 07-open-questions.md records iOS as a decision rather than a plan --
+     * no StoreKit work exists and the in-app purchase path is unanswered. The
+     * wording was chosen deliberately at that level; it is not a placeholder,
+     * and it should not be softened or hardened without the same decision being
+     * made again.
+     *
      * The install steps belong to the `/download` page and say that the
      * permission Android asks for is about this one install. Nothing here tells
      * anybody to leave installing from unknown sources switched on.
@@ -835,7 +849,7 @@ export const en = {
       lede: "The same Eraya, made for Android. Your account, your conversations and your settings are the same whether you use the app or the website.",
       cta: "Download for Android",
       version: "Version {version}",
-      platformNote: "Android only for now. On an iPhone or a computer, Eraya works in your browser.",
+      platformNote: "The app is currently available on Android only — iOS is coming soon. Until then, Eraya works in any web browser.",
       helpLink: "What to expect when you install",
       /* The /download page, which stands alone with no header or footer. */
       pageTitle: "Get Eraya for Android",

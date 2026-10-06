@@ -2,6 +2,7 @@ import { androidCta } from "@/features/marketing/android-app";
 import { getT } from "@/features/i18n/server";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
+import { AndroidIcon } from "@/shared/ui/PlatformIcon";
 import { Section } from "@/shared/ui/Section";
 import { Eyebrow } from "@/shared/ui/SectionHeading";
 
@@ -81,6 +82,13 @@ export async function AndroidApp() {
             size="lg"
             className="mt-9 w-full sm:w-auto"
           >
+            {/*
+              `text-canvas` is what the filled variant already sets, and the mark
+              inherits it through `currentColor` -- so it is white here without
+              being hardcoded white, which is what lets the same component stay
+              legible on the hero's outlined button.
+            */}
+            <AndroidIcon className="h-5 w-5 shrink-0" />
             {t("marketing.androidApp.cta")}
           </Button>
 

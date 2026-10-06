@@ -534,6 +534,8 @@ export const ta: Translations = {
       about: "Eraya பற்றி",
       login: "உள்நுழையவும்",
       begin: "உங்கள் பயணத்தைத் தொடங்குங்கள்",
+      /* The header's own, short enough to sit beside the primary CTA. */
+      download: "பதிவிறக்கு",
       signedInAs: "{name} ஆக உள்நுழைந்துள்ளீர்கள்",
       openMenu: "பட்டியலைத் திறக்கவும்",
       closeMenu: "பட்டியலை மூடவும்",
@@ -636,7 +638,7 @@ export const ta: Translations = {
       lede: "அதே Eraya, ஆண்ட்ராய்டுக்காக உருவாக்கப்பட்டது. நீங்கள் செயலியைப் பயன்படுத்தினாலும் இணையதளத்தைப் பயன்படுத்தினாலும், உங்கள் கணக்கு, உங்கள் உரையாடல்கள், உங்கள் அமைப்புகள் ஒன்றேதான்.",
       cta: "ஆண்ட்ராய்டுக்காகப் பதிவிறக்குங்கள்",
       version: "பதிப்பு {version}",
-      platformNote: "தற்போது ஆண்ட்ராய்டுக்கு மட்டும். iPhone அல்லது கணினியில் Eraya உங்கள் உலாவியில் இயங்கும்.",
+      platformNote: "செயலி தற்போது ஆண்ட்ராய்டில் மட்டுமே கிடைக்கிறது — iOS விரைவில் வரும். அதுவரை Eraya எந்த வலை உலாவியிலும் இயங்கும்.",
       helpLink: "நிறுவும்போது என்ன நடக்கும்",
       /* The /download page, which stands alone with no header or footer. */
       pageTitle: "ஆண்ட்ராய்டுக்கான Eraya-வைப் பெறுங்கள்",

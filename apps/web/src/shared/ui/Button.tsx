@@ -32,6 +32,15 @@ type ButtonAsLink = SharedProps & {
   href: string;
   onClick?: () => void;
   /**
+   * A hover hint, for a control whose visible label is `sr-only`.
+   *
+   * Only the header's icon-only download button needs one today. It is not a
+   * substitute for an accessible name -- that comes from the `sr-only` text
+   * inside, which a screen reader reads and `title` alone would not reliably
+   * provide.
+   */
+  title?: string;
+  /**
    * The target is a file to save, not a page to go to.
    *
    * Renders a plain anchor and nothing more. It deliberately does **not** set
@@ -87,18 +96,18 @@ export function Button({
   } ${className}`.trim();
 
   if (typeof rest.href === "string") {
-    const { href, onClick, download } = rest as ButtonAsLink;
+    const { href, onClick, download, title } = rest as ButtonAsLink;
 
     if (href.startsWith("#") || download) {
       return (
-        <a href={href} onClick={onClick} className={classes}>
+        <a href={href} onClick={onClick} title={title} className={classes}>
           {children}
         </a>
       );
     }
 
     return (
-      <Link href={href} onClick={onClick} className={classes}>
+      <Link href={href} onClick={onClick} title={title} className={classes}>
         {children}
       </Link>
     );

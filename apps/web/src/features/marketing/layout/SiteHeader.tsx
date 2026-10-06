@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
+import { AndroidIcon } from "@/shared/ui/PlatformIcon";
+import { androidCta } from "@/features/marketing/android-app";
 import { navLinks } from "@/features/marketing/content";
 import { LanguageSwitch } from "@/features/i18n/LanguageSwitch";
 import { useT } from "@/features/i18n/LocaleProvider";
@@ -53,13 +55,13 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-50 border-b border-line/70 bg-canvas/85 backdrop-blur-sm">
-      <Container className="flex h-20 items-center justify-between gap-6">
+      <Container className="flex h-20 items-center justify-between gap-4">
         <Link href="/" aria-label="Eraya — home" className="shrink-0">
           <Logo size="sm" />
         </Link>
 
         <nav aria-label="Primary" className="hidden xl:block">
-          <ul className="flex items-center gap-6">
+          <ul className="flex items-center gap-5">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a
@@ -73,7 +75,20 @@ export function SiteHeader({
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-4 xl:flex">
+        {/*
+          `shrink-0`, and `whitespace-nowrap` on the CTA below.
+
+          Without them flex shrinks this cluster to fit the nav beside it, and
+          the first casualty is the primary CTA: "Begin your journey" was broken
+          across three lines and 88 px tall.
+
+          The gaps above are also a notch tighter than they were -- 4/5/3 rather
+          than 6/6/4 -- because adding a seventh control to this row put it 28 px
+          over. They are tight at every width rather than only below `2xl`: the
+          container is `max-w-6xl`, so it is 1,152 px wide on a 1,280 screen and
+          on a 2,560 one, and a wider viewport buys no extra room to spend.
+        */}
+        <div className="hidden shrink-0 items-center gap-3 xl:flex">
           {/*
             On the public site too, and first in the row.
 
@@ -84,6 +99,47 @@ export function SiteHeader({
           */}
           <LanguageSwitch />
 
+          {/*
+            The app, in the header, for both a visitor and a member.
+
+            It lives here because the homepage card is most of a page down and
+            the hero button is below the fold on a short screen -- somebody who
+            arrives wanting the app should not have to scroll to find out there
+            is one. Outlined rather than filled so the primary CTA beside it is
+            still the loudest thing in the row.
+
+            ## Why the mark carries it and the word is only read aloud
+
+            This row is at its limit. The container is `max-w-6xl`, so it is
+            1,152 px wide on a 1,280 screen and on a 2,560 one, and it already
+            holds a logo, five nav links, a language control, a sign-in link and
+            the primary CTA. Measured at 1,280: English, Hindi and Marathi have
+            room for a labelled button, Bengali goes 75 px over with one, and
+            Tamil and Telugu are 471 px and 90 px over *before* anything is
+            added -- a pre-existing overflow this change did not cause and does
+            not fix.
+
+            So the header gets the mark, which costs about 56 px instead of 150
+            and fits every language, and the word "Download" is `sr-only` -- a
+            screen reader announces it, and the accessible name is a real one
+            rather than a shrug. The fully labelled button lives everywhere with
+            room for it: the hero, the mobile menu, the homepage card, and
+            `/download`.
+
+            `title` as well, so a hover on a desktop says what it is for anybody
+            unsure what the mark means.
+          */}
+          <Button
+            href={androidCta.href}
+            download={androidCta.kind === "direct"}
+            variant="secondary"
+            title={t("marketing.androidApp.cta")}
+            className="shrink-0 px-3"
+          >
+            <AndroidIcon className="h-5 w-5 shrink-0" />
+            <span className="sr-only">{t("marketing.nav.download")}</span>
+          </Button>
+
           {signedIn ? (
             /*
               Names the person, so the answer to "am I still logged in?" is on
@@ -93,7 +149,9 @@ export function SiteHeader({
               <span className="text-[0.95rem] text-ink-muted">
                 {t("marketing.nav.signedInAs", { name: memberName ?? "" })}
               </span>
-              <Button href="/home">{t("home.eyebrow")}</Button>
+              <Button href="/home" className="whitespace-nowrap">
+                {t("home.eyebrow")}
+              </Button>
             </>
           ) : (
             <>
@@ -103,7 +161,9 @@ export function SiteHeader({
               >
                 {t("marketing.nav.login")}
               </Link>
-              <Button href="#begin">{t("marketing.nav.begin")}</Button>
+              <Button href="#begin" className="whitespace-nowrap">
+                {t("marketing.nav.begin")}
+              </Button>
             </>
           )}
         </div>
@@ -179,6 +239,24 @@ export function SiteHeader({
               onClick={() => setOpen(false)}
             >
               {signedIn ? t("home.eyebrow") : t("marketing.nav.begin")}
+            </Button>
+
+            {/*
+              And in the menu, because below `xl` the row above is a hamburger
+              and this is the only place a phone visitor can be shown it without
+              scrolling the page. Full width, under the primary CTA, same order
+              of importance as on the desktop row.
+            */}
+            <Button
+              href={androidCta.href}
+              download={androidCta.kind === "direct"}
+              variant="secondary"
+              size="lg"
+              className="mt-3 w-full"
+              onClick={() => setOpen(false)}
+            >
+              <AndroidIcon className="h-5 w-5 shrink-0" />
+              {t("marketing.androidApp.cta")}
             </Button>
           </Container>
         </div>

@@ -2,6 +2,7 @@ import { androidCta } from "@/features/marketing/android-app";
 import { ErayaMark } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
+import { AndroidIcon } from "@/shared/ui/PlatformIcon";
 import { Eyebrow } from "@/shared/ui/SectionHeading";
 import { getT } from "@/features/i18n/server";
 
@@ -67,6 +68,14 @@ export async function Hero() {
                 size="lg"
                 className="w-full sm:w-auto"
               >
+                {/*
+                  Inherits `text-ink` here rather than being white, because this
+                  is the one outlined download button on the site and a white
+                  mark on canvas would be invisible. `PlatformIcon` takes
+                  `currentColor` precisely so the same component can be white on
+                  the filled buttons and ink on this one.
+                */}
+                <AndroidIcon className="h-5 w-5 shrink-0" />
                 {t("marketing.androidApp.cta")}
               </Button>
 

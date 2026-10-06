@@ -5,6 +5,7 @@ import { site } from "@/features/marketing/content";
 import { getT } from "@/features/i18n/server";
 import { Logo } from "@/shared/brand/Logo";
 import { Button } from "@/shared/ui/Button";
+import { AndroidIcon } from "@/shared/ui/PlatformIcon";
 
 export const metadata: Metadata = {
   title: "Download for Android",
@@ -78,6 +79,7 @@ export default async function DownloadPage() {
         size="lg"
         className="mt-10 w-full max-w-sm sm:w-auto"
       >
+        <AndroidIcon className="h-5 w-5 shrink-0" />
         {t("marketing.androidApp.cta")}
       </Button>
 
