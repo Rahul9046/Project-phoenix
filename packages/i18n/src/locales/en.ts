@@ -823,21 +823,25 @@ export const en = {
      * passed in from `android-app.ts` rather than typed into six files, so
      * bumping the build cannot leave five languages claiming the old number.
      *
-     * `platformNote` is the one sentence that stops an iPhone being offered an
-     * APK, and it is said unconditionally rather than shown to some devices and
-     * not others -- see `sections/AndroidApp.tsx` for why there is no sniffing.
+     * `platformNote` is the one sentence that keeps an APK from being offered to
+     * a device that cannot install it, and it is said unconditionally rather than
+     * shown to some devices and not others -- see `sections/AndroidApp.tsx` for
+     * why there is no sniffing.
      *
-     * It used to name the iPhone and the browser in one breath, which read to
-     * some people as though the download were an option there. It now states
-     * where the app is available, then what to do until it is available
-     * elsewhere -- availability first, workaround second.
+     * **It states the current position and promises nothing.** It names where
+     * the app runs today and that the browser is the other way in, and stops.
+     * Two earlier versions did more than that and both were wrong to. One named
+     * the iPhone and the browser in one breath, which read to some people as
+     * though the download were an option there. The next said "iOS is coming
+     * soon", which fixed that and committed Eraya to a release it has not
+     * planned -- there is no StoreKit work and no iOS in-app purchase path, and
+     * iOS is recorded in 07-open-questions.md as undecided.
      *
-     * **It commits Eraya to iOS.** "Coming soon" is a promise on a public page,
-     * and 07-open-questions.md records iOS as a decision rather than a plan --
-     * no StoreKit work exists and the in-app purchase path is unanswered. The
-     * wording was chosen deliberately at that level; it is not a placeholder,
-     * and it should not be softened or hardened without the same decision being
-     * made again.
+     * So: **no timeline, in any language.** Not "coming soon", not "we are
+     * working on iOS", not "available soon", and not a softer synonym for any of
+     * them. A date the product has not committed to is the same class of claim
+     * as a trust mark the system has not earned. If iOS is ever decided, this
+     * sentence changes because the fact changed, not to warm it up.
      *
      * The install steps belong to the `/download` page and say that the
      * permission Android asks for is about this one install. Nothing here tells
@@ -849,7 +853,7 @@ export const en = {
       lede: "The same Eraya, made for Android. Your account, your conversations and your settings are the same whether you use the app or the website.",
       cta: "Download for Android",
       version: "Version {version}",
-      platformNote: "The app is currently available on Android only — iOS is coming soon. Until then, Eraya works in any web browser.",
+      platformNote: "The app is currently available on Android. You can also use Eraya in your web browser.",
       helpLink: "What to expect when you install",
       /* The /download page, which stands alone with no header or footer. */
       pageTitle: "Get Eraya for Android",

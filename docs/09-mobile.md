@@ -367,21 +367,28 @@ No device sniffing, on purpose -- it cannot be wrong, it tells a desktop visitor
 something useful, and the page is server-rendered on a Worker with a 10 ms CPU
 budget it has already exceeded once. One unconditional sentence does the work:
 
-> The app is currently available on Android only — iOS is coming soon. Until
-> then, Eraya works in any web browser.
+> The app is currently available on Android. You can also use Eraya in your web
+> browser.
 
-An iPhone is never offered an APK as though it would install. An earlier version
-named the iPhone and the browser in one breath and read, to some people, as
-though the download were an option there; availability is now stated first and
-the workaround second.
+An iPhone is never offered an APK as though it would install, and nothing is
+promised about when one might be.
 
-**That sentence commits Eraya to iOS in public.** It is a product promise made
-deliberately, not a placeholder, and it is the only place the product makes it --
-there is no StoreKit work, no iOS in-app purchase path, and
+**That sentence states the current position and commits to nothing, and both
+halves are deliberate.** Two earlier versions did more than that. The first --
+*"Android only for now. On an iPhone or a computer, Eraya works in your
+browser"* -- named the iPhone and the browser in one breath and read, to some
+people, as though the download were an option there. The second fixed that and
+said *"iOS is coming soon"*, which promised a release the product has not
+planned: there is no StoreKit work, no iOS in-app purchase path,
 [10-payments.md](10-payments.md) notes Apple generally requires its own billing
-for digital goods. Whoever picks iOS up should know the website has already told
-people it is coming. Do not soften or harden this wording without making the
-decision again.
+for digital goods, and iOS is recorded as undecided in
+[07-open-questions.md](07-open-questions.md).
+
+**No timeline belongs in this sentence, in any language.** Not "coming soon",
+not "we are working on iOS", not "available soon", and not a softer synonym. A
+date the product has not committed to is the same class of claim as a trust mark
+the system has not earned -- the thing this codebase refuses everywhere else. If
+iOS is decided, the sentence changes because the fact changed.
 
 `/download` carries three sentences about the install, because the unfamiliar
 part of a direct install is a system dialog that appears after the download. It

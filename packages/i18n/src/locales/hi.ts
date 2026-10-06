@@ -639,7 +639,7 @@ export const hi: Translations = {
       lede: "वही Eraya, एंड्रॉइड के लिए बना। आप ऐप इस्तेमाल करें या वेबसाइट, आपका खाता, आपकी बातचीत और आपकी सेटिंग्स एक ही रहती हैं।",
       cta: "एंड्रॉइड के लिए डाउनलोड करें",
       version: "संस्करण {version}",
-      platformNote: "ऐप अभी केवल एंड्रॉइड पर उपलब्ध है — iOS जल्द आ रहा है। तब तक Eraya किसी भी वेब ब्राउज़र में चलता है।",
+      platformNote: "ऐप फ़िलहाल एंड्रॉइड पर उपलब्ध है। आप Eraya को अपने वेब ब्राउज़र में भी इस्तेमाल कर सकते हैं।",
       helpLink: "इंस्टॉल करते समय क्या होगा",
       /* The /download page, which stands alone with no header or footer. */
       pageTitle: "एंड्रॉइड के लिए Eraya पाइए",
