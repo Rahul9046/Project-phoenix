@@ -535,7 +535,7 @@ export const bn: Translations = {
       login: "লগ ইন করুন",
       begin: "আপনার যাত্রা শুরু করুন",
       /* The header's own, short enough to sit beside the primary CTA. */
-      download: "ডাউনলোড",
+      download: "APK ডাউনলোড",
       signedInAs: "{name} হিসেবে সাইন ইন করা",
       openMenu: "মেনু খুলুন",
       closeMenu: "মেনু বন্ধ করুন",

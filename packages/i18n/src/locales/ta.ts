@@ -535,7 +535,7 @@ export const ta: Translations = {
       login: "உள்நுழையவும்",
       begin: "உங்கள் பயணத்தைத் தொடங்குங்கள்",
       /* The header's own, short enough to sit beside the primary CTA. */
-      download: "பதிவிறக்கு",
+      download: "APK பதிவிறக்கம்",
       signedInAs: "{name} ஆக உள்நுழைந்துள்ளீர்கள்",
       openMenu: "பட்டியலைத் திறக்கவும்",
       closeMenu: "பட்டியலை மூடவும்",

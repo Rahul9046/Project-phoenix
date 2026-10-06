@@ -55,7 +55,10 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-50 border-b border-line/70 bg-canvas/85 backdrop-blur-sm">
-      <Container className="flex h-20 items-center justify-between gap-4">
+      <Container
+        measure="bar"
+        className="flex h-20 items-center justify-between gap-4"
+      >
         <Link href="/" aria-label="Eraya — home" className="shrink-0">
           <Logo size="sm" />
         </Link>
@@ -133,11 +136,10 @@ export function SiteHeader({
             href={androidCta.href}
             download={androidCta.kind === "direct"}
             variant="secondary"
-            title={t("marketing.androidApp.cta")}
-            className="shrink-0 px-3"
+            className="shrink-0 whitespace-nowrap"
           >
             <AndroidIcon className="h-5 w-5 shrink-0" />
-            <span className="sr-only">{t("marketing.nav.download")}</span>
+            {t("marketing.nav.download")}
           </Button>
 
           {signedIn ? (

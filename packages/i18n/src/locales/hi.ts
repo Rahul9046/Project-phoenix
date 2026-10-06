@@ -536,7 +536,7 @@ export const hi: Translations = {
       login: "लॉग इन करें",
       begin: "अपनी शुरुआत करें",
       /* The header's own, short enough to sit beside the primary CTA. */
-      download: "डाउनलोड",
+      download: "APK डाउनलोड करें",
       signedInAs: "{name} के रूप में साइन इन",
       openMenu: "मेन्यू खोलें",
       closeMenu: "मेन्यू बंद करें",

@@ -535,7 +535,7 @@ export const te: Translations = {
       login: "లాగ్ ఇన్ అవ్వండి",
       begin: "మీ ప్రయాణం మొదలుపెట్టండి",
       /* The header's own, short enough to sit beside the primary CTA. */
-      download: "డౌన్‌లోడ్",
+      download: "APK డౌన్‌లోడ్",
       signedInAs: "{name} గా సైన్ ఇన్ అయ్యారు",
       openMenu: "మెనూ తెరవండి",
       closeMenu: "మెనూ మూసివేయండి",

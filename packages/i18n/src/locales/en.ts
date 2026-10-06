@@ -718,7 +718,7 @@ export const en = {
       login: "Log in",
       begin: "Begin your journey",
       /* The header's own, short enough to sit beside the primary CTA. */
-      download: "Download",
+      download: "Download the APK",
       signedInAs: "Signed in as {name}",
       openMenu: "Open menu",
       closeMenu: "Close menu",
