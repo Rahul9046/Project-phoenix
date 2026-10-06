@@ -95,7 +95,30 @@ the density claim came from a hardcoded `is_launch_city` seed flag rather than
 from where members actually are. A count cannot drift the way that list could:
 add a city to the table and the page says 494.
 
-### 8. Begin — `Begin`
+### 8. Android app — `AndroidApp`
+*Eraya on your phone.* A sand card on a canvas band, offering the Android
+download. An aside rather than a band of its own: the page alternates canvas and
+sand, and a ninth full band would put two of the same colour side by side
+wherever it landed.
+
+It reads as a product section, not a developer download. There is no "beta"
+anywhere in the copy, and no device detection — one unconditional line says
+Android only, and that Eraya works in the browser on an iPhone or a computer, so
+nobody is offered an APK that cannot install. The install itself is explained on
+`/download` rather than here, because three steps on a homepage card would read
+as a warning to everyone who is not installing anything.
+
+The hero also carries a real download button under a hairline — `secondary`, not
+`primary`, so the filled "Create your account" stays the one dominant control —
+and the footer links `/download` from every page. The card alone was not enough:
+at a 320 px viewport it sits 7,800 px down, which is not somewhere anybody finds
+a download.
+
+Where the button points is one object in `features/marketing/android-app.ts`,
+which is also how it becomes a Google Play link later. See
+[09-mobile.md](09-mobile.md#distribution).
+
+### 9. Begin — `Begin`
 The closing invitation: create an account, or sign in if you already have one.
 
 This was a waitlist form — name, email, city — and every call to action on the
@@ -107,23 +130,36 @@ address and promised to be in touch "as soon as we open".
 The `waitlist` table is kept and its rows with it; it is simply no longer
 reachable from any client. Every CTA on the page now leads to `/signup`.
 
-### 9. Final CTA — `FinalCta`
+### 10. Final CTA — `FinalCta`
 *Your next chapter doesn't have to begin alone.* The mark, the line, one button,
 on the only dark ground on the page. Calm rather than loud — the volume comes
 from contrast and space, not from urgency.
 
-### 10. Footer — `SiteFooter`
-Logo, a sentence of positioning, Eraya links, legal links, social placeholders,
-Phoenix Origins attribution, contact address.
+### 11. Footer — `SiteFooter`
+Logo, a sentence of positioning, Eraya links (including the Android download),
+legal links, social accounts, Phoenix Origins attribution, contact address.
 
-Social accounts do not exist yet, so they are rendered as labelled placeholders
-rather than links to nowhere.
+The social column lists only accounts Eraya actually owns, each one linked. It
+used to name Instagram, LinkedIn and YouTube with "coming soon" beside each,
+because none existed. Instagram now does, so it is a link; the other two were
+removed rather than left promising something with no date behind it. They come
+back when there is something to link to.
+
+Those same URLs are the site's `sameAs` in `schema.ts`, emitted from this one
+list — so the test for adding an entry is "is this account real enough to link
+to", and a structured-data claim cannot drift from what the footer shows.
 
 ## Supporting pages
 
 `/login`, `/privacy`, `/terms`, `/contact` — short, honest pages so no
 navigation link is broken and no legal text is invented. `/login` says plainly
 that accounts are not open yet instead of showing a form that cannot work.
+
+`/download` — the Android download, standing alone outside the `(marketing)`
+group so it gets no header, footer or navigation. Somebody arriving from a link
+in a bio has been asked to do one thing. It carries the download, the
+Android-only line, and three sentences about what the install looks like.
+`/beta` is the address it used to have and 308s here.
 
 ## Deliberate omissions
 
