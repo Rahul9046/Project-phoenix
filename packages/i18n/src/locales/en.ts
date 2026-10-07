@@ -119,8 +119,22 @@ export const en = {
      */
     signIn: {
       title: "Your next chapter.",
+      /*
+       * The first words a newly installed Android app shows anybody, and so
+       * the app's entire equivalent of the homepage hero. `app/index.tsx` is
+       * deliberately not a marketing screen and stays that way; this is the
+       * screen a new install actually reads.
+       *
+       * It already named the three statuses, which is why this is a
+       * strengthening rather than a rewrite: what it lacked was India and the
+       * word community, so the app and the website were describing the same
+       * product in different terms. Shortened to "begin again" rather than the
+       * website's "begin your next chapter" because the title directly above
+       * is already "Your next chapter." -- the desktop sentence pasted whole
+       * would say it twice and cost a line on a 360 px phone.
+       */
       lede:
-        "For people who are divorced, separated or widowed, and ready to meet someone who understands.",
+        "Eraya is a community for divorced, separated and widowed people in India — a place to meet, connect and begin again at your own pace.",
       emailDivider: "or with your email",
       emailHint:
         "We will send you a six-digit code. There is no password to remember.",
@@ -142,7 +156,15 @@ export const en = {
     },
     signup: {
       title: "Welcome to Eraya.",
-      lede: "A trusted space for people beginning a new chapter.",
+      /*
+       * The website's `/signup`, which is where the hero's primary CTA lands.
+       * Somebody who arrived straight on this URL -- from Instagram, a shared
+       * link, a search result -- has never seen the homepage, and "a trusted
+       * space for people beginning a new chapter" told them nothing about who
+       * the account is for. `login` above is left emotional on purpose: that
+       * page is for members who already know.
+       */
+      lede: "For divorced, separated and widowed people in India, beginning the next chapter at their own pace.",
       emailCta: "Continue with email",
       switchPrompt: "Already have an account?",
       switchCta: "Log in",
@@ -736,10 +758,44 @@ export const en = {
       /* Two lines, because the second is set in terracotta on its own. */
       headlineOne: "Every ending can be",
       headlineTwo: "a new beginning.",
-      lede: "Meet people who understand what starting again means.",
+      /*
+       * The one sentence that says what Eraya is and who it is for, and the
+       * reason it is here rather than three sections down.
+       *
+       * This used to read "Meet people who understand what starting again
+       * means." -- true, warmly put, and compatible with a friendship app, a
+       * support group, a grief service or a general dating app. The headline
+       * above it is deliberately emotional and names no audience, so with a
+       * lede that also named none, nothing above the fold answered "what is
+       * this". `docs/04-landing-page.md` had said for months that the hero's
+       * supporting copy names the audience explicitly; the copy had drifted
+       * from the doc.
+       *
+       * So: divorced, separated, widowed -- the words themselves, per
+       * `docs/05-content.md`, not "people in transition". India, because the
+       * product is India-only. Meet and connect, because that is the activity.
+       * Next chapter, because that is the frame. At your own pace, because the
+       * audience's first fear is being rushed.
+       *
+       * The emotion stays in the headline and the eyebrow. Translators: every
+       * locale must keep all four concepts -- the three statuses, India, the
+       * meeting, and the next chapter. "People starting again" is supporting
+       * copy, never the substitute.
+       */
+      lede: "Eraya is a community for divorced, separated and widowed people in India — meet, connect and begin your next chapter at your own pace.",
       primaryCta: "Create your account",
       secondaryCta: "How Eraya works",
-      note: "Open across India. Verified members. A considered few, never an endless list.",
+      /*
+       * This said "Verified members." until the positioning pass, which
+       * `docs/13-seo.md` had flagged as an owner decision rather than a thing
+       * to edit silently: two words implying a trust mark Eraya does not hold.
+       * What is actually checked is a mailbox -- email confirmation is required
+       * on both clients, by code or by the OAuth provider -- while phone
+       * verification is optional and its own badge is withheld unless MSG91
+       * actually confirmed it. So the claim is narrowed to the half that is
+       * true, in the bounded form `docs/05-content.md` already approves.
+       */
+      note: "Open across India. Every member confirms a working email address. A considered few, never an endless list.",
     },
 
     trust: {
@@ -759,8 +815,20 @@ export const en = {
     },
     why: {
       eyebrow: "About Eraya",
-      title: "Built for a different moment in life.",
-      lede: "Most platforms are designed for people starting out. Eraya is designed for people starting again — and that changes almost everything about how it should work.",
+      /*
+       * The `#about` section, and the one place on the page that says what
+       * Eraya is *instead of* -- so it is where the two comparisons a visitor
+       * is already making get answered, rather than in a new section of their
+       * own. "A different moment in life" was the old title and never said
+       * which moment.
+       *
+       * Both categories are described as practices and neither is named or
+       * mocked, which is the rule in `docs/05-content.md`. "Swipe-first" is
+       * used the way `docs/01-product.md` uses "no swiping" -- a description
+       * of a category Eraya is not, never Eraya's own vocabulary.
+       */
+      title: "Built for life after a relationship ends.",
+      lede: "Whether you are divorced, separated or widowed, Eraya is a space to meet people with shared life experience — without the pressure of traditional matrimony or swipe-first dating. Most platforms are built for people starting out; Eraya is built for people starting again.",
       paywallTitle: "No paywall before a first conversation",
       paywallBody: "You should not have to pay to find out whether there is anything to talk about. Starting a meaningful conversation is part of the experience, not the upsell.",
       curiosityTitle: "No engineered curiosity",

@@ -8,8 +8,20 @@ export const site = {
   organization: "Phoenix Origins",
   email: "support@eraya.app",
   tagline: "Every ending can be a new beginning.",
+  /*
+   * The meta description, the Open Graph and Twitter description, and the
+   * `description` on both the Organization and the WebSite node. One sentence
+   * carries all four, so it has to answer "what is this and who is it for"
+   * without a second clause to lean on.
+   *
+   * It is deliberately the same sentence as `marketing.hero.lede` in
+   * `packages/i18n`, give or take "a trusted place": a search result and the
+   * page it opens should not describe the product differently. `site.tagline`
+   * stays the emotional line, because that one is rendered into
+   * `opengraph-image.png` as artwork and cannot be edited in text alone.
+   */
   description:
-    "Eraya is a trusted community for divorced, separated and widowed people in India who are ready for their next chapter.",
+    "Eraya is a community for divorced, separated and widowed people in India — a trusted place to meet, connect and begin your next chapter at your own pace.",
 } as const;
 
 /**

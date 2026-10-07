@@ -231,16 +231,30 @@ guides. Nothing in this architecture prevents them: they would be ordinary pages
 in the `(marketing)` group, added to `publicPaths` in `app/sitemap.ts` the way
 `/pricing` is.
 
-## Two things for the owner to decide
+## One thing for the owner to decide, and one that was
 
 **Seven guides are live, so `/guides` is no longer thin.** Every one of those
 URLs can now be submitted for indexing in Search Console, alongside
 `https://eraya.app/guides` itself. The sitemap carries all eight and did not
 move.
 
-**The homepage hero says "Verified members."** (`marketing.hero.note`). It
-predates this work and was left alone: rewriting approved marketing copy was out
-of scope for both SEO passes. It sits awkwardly beside the rule this project
-otherwise holds to — no trust mark for anything Eraya has not checked — since
-what is actually verified is a mailbox, and sometimes a handset. Worth a decision
-rather than a silent edit.
+**~~The homepage hero says "Verified members."~~ Decided and changed.** The
+positioning pass rewrote `marketing.hero.note` in all six languages, so the
+hero now reads "Every member confirms a working email address" — the bounded
+form [05-content.md](05-content.md) already approves, narrowed to the half that
+is true. Email is confirmed on both clients, by a code or by the OAuth provider;
+phone is optional and its badge is withheld unless MSG91 actually confirmed it,
+which is why the sentence names only the mailbox. The claim a crawler reads now
+matches the claim `common.emailVerified` makes on a profile.
+
+The meta description changed in the same pass and is the one place that now
+carries the full positioning for search and for link previews:
+
+> Eraya is a community for divorced, separated and widowed people in India — a
+> trusted place to meet, connect and begin your next chapter at your own pace.
+
+`site.tagline` was deliberately **not** touched. It is rendered into
+`opengraph-image.png` as artwork and restated in `opengraph-image.alt.txt`, so
+changing the words in text alone would leave the card saying something the page
+does not. The emotional line stays the title; the descriptive line is the
+description.
