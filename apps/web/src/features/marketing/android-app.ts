@@ -69,11 +69,11 @@ const REPOSITORY = "Rahul9046/Project-phoenix";
  */
 const release = {
   /** The build a visitor downloads. Shown to them. */
-  version: "0.1.2",
+  version: "0.1.3",
   /** The git tag of the GitHub release the APK is attached to. */
-  tag: "android-beta-v0.1.2",
+  tag: "android-beta-v0.1.3",
   /** The asset's name on that release, and so the name it is saved under. */
-  asset: "eraya-beta-v0.1.2.apk",
+  asset: "eraya-beta-v0.1.3.apk",
 } as const;
 
 const assetUrl = `https://github.com/${REPOSITORY}/releases/download/${release.tag}/${release.asset}`;

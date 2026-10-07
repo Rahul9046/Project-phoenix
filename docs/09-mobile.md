@@ -426,6 +426,44 @@ anything here: the website ships against the APK already published, and that
 artifact is unchanged -- same signing identity, same `app.eraya.mobile`, same
 `versionCode`.
 
+### Building a release APK
+
+```
+cd apps/mobile/android
+JAVA_HOME=~/.gradle/jdks/eclipse_adoptium-17-amd64-windows.2 \
+  ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
+```
+
+Three things in that command are load-bearing, and none of them is discoverable
+from the repository.
+
+**JDK 17, not whatever `java` resolves to.** Android Studio's bundled JBR is
+25 and the build fails on it. Gradle's toolchain provisioning has already
+downloaded Adoptium 17 into `~/.gradle/jdks/`.
+
+**`-PreactNativeArchitectures` is not optional.** `gradle.properties` lists all
+four architectures, so a plain `assembleRelease` produces a **universal** APK --
+115 MB against 65.7 MB, because it carries `x86` and `x86_64` slices that exist
+only for emulators. That is 49 MB of nothing on a public download link, paid for
+on mobile data by an audience that is entirely on ARM phones. v0.1.2 was built
+ARM-only from the command line and left no trace of it in the repository, which
+is exactly how v0.1.3 nearly shipped at 115 MB. Build the universal APK only
+when something has to run on an emulator, and never publish it.
+
+**`android/` is gitignored**, so `app.json` and the native project drift. The
+version has to be set in both -- `app.json` for the JS side and
+`versionCode`/`versionName` in `app/build.gradle` for the APK -- and
+`npx expo prebuild` must **not** be used to reconcile them, because it can
+regenerate `debug.keystore` and strand every existing install. Edit the two
+files.
+
+Confirm what was built before publishing it:
+
+```
+aapt2 dump badging <apk> | head -1        # package, versionCode, versionName
+unzip -l <apk> | grep -o 'lib/[^/]*' | sort -u   # the ABIs actually inside
+```
+
 ### Signing
 
 `apps/mobile/android/app/build.gradle` points the `release` build type at
