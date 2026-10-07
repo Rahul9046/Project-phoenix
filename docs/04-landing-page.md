@@ -36,9 +36,25 @@ rather than hinting at it. Someone in this situation should recognise themselves
 in the first sentence; someone who is not should understand immediately that the
 page is not for them.
 
-Primary CTA "Begin your journey", secondary "How Eraya works". A line beneath
-notes that Eraya opens in a few cities first, so the city constraint is known
-before anyone invests attention.
+That had drifted. The lede read *"Meet people who understand what starting
+again means"* — true, and equally true of a friendship app, a support group or
+a general dating app, so nothing above the fold said what Eraya is. It now
+reads:
+
+> Eraya is a community for divorced, separated and widowed people in India —
+> meet, connect and begin your next chapter at your own pace.
+
+Four things must survive translation into all six languages: the three statuses,
+India, the meeting, and the next chapter. "People starting again" is supporting
+copy and never the substitute — that is the euphemism
+[05-content.md](05-content.md) rules out. The emotion stays in the headline and
+the eyebrow; the lede is the one place on the page that is plain.
+
+Primary CTA "Create your account", secondary "How Eraya works", and below a
+hairline the Android download as a second, quieter offer. A line beneath notes
+that Eraya is open across India and that every member confirms a working email
+address — the bounded form of that claim, after the hero spent some months
+saying "Verified members" about a product that verifies a mailbox.
 
 Artwork: the approved mark itself, via `ErayaMark`. It is capped well below the
 column width — the tile is a solid terracotta field, and at full width it stops
@@ -56,11 +72,25 @@ Every claim is bounded. "Our team reviews profiles before they go live" — not
 [05-content.md](05-content.md).
 
 ### 4. Why Eraya — `WhyEraya`
-Contrasts Eraya with how conventional platforms behave, without naming or
-attacking anyone. Four points: no paywall before a first conversation, no
-engineered curiosity, no endless collecting, designed around trust.
+Titled *Built for life after a relationship ends.* — which is the section's
+actual subject, where the previous *"a different moment in life"* never said
+which moment. The lede answers the two comparisons a visitor is already making:
 
-Every criticism describes a **practice**, never a competitor. The tone is a
+> Whether you are divorced, separated or widowed, Eraya is a space to meet
+> people with shared life experience — without the pressure of traditional
+> matrimony or swipe-first dating.
+
+This is where the audience is named a second time, and deliberately the only
+other place: the hero states it, this section explains what follows from it, and
+nothing in between repeats it. A visitor who skipped the hero still meets it
+here.
+
+Then four points: no paywall before a first conversation, no engineered
+curiosity, no endless collecting, designed around trust.
+
+Every criticism describes a **practice**, never a competitor. "Swipe-first
+dating" names a category the way [01-product.md](01-product.md) does — a
+description of what Eraya is not, never Eraya's own vocabulary. The tone is a
 statement of what we will not do, not an accusation about who does it.
 
 Carries `id="about"` — it is the honest destination for "About Eraya", since it
