@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -52,10 +53,57 @@ import { useT } from "@/features/i18n/LocaleProvider";
  * Messaging is free, permanently. It is the point of the product, and paywalling
  * it would mean two people who chose each other cannot speak.
  */
+/**
+ * Whether the keyboard is covering the bottom of the screen, on iOS only.
+ *
+ * It exists for one piece of arithmetic. The composer carries
+ * `insets.bottom` so it clears the home indicator, and the
+ * `KeyboardAvoidingView` below lifts the whole view by the keyboard's height
+ * when it opens -- at which point the home indicator is behind the keyboard
+ * and that inset is 34pt of empty canvas wedged between the text field and the
+ * keys. Visible on every iPhone with a gesture bar, and on no Android phone,
+ * which is why it was not caught by the device this was built on.
+ *
+ * `false` for ever on Android, where `behavior` is undefined and the window is
+ * resized by the system instead: there is nothing to correct, no listener is
+ * attached, and the arithmetic below collapses to exactly what shipped.
+ *
+ * `keyboardWillShow` rather than `keyboardDidShow`, so the inset goes at the
+ * same time as the lift rather than a frame after it.
+ */
+function useKeyboardCovering(): boolean {
+  const [covering, setCovering] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+
+    const shown = Keyboard.addListener("keyboardWillShow", () =>
+      setCovering(true),
+    );
+    const hidden = Keyboard.addListener("keyboardWillHide", () =>
+      setCovering(false),
+    );
+
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  return covering;
+}
+
 export default function ConversationScreen() {
   const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const keyboardCovering = useKeyboardCovering();
+  /*
+   * What the bottom of the screen owes the system right now: the home
+   * indicator when the keyboard is down, and nothing when the keyboard is
+   * over it. Always `insets.bottom` on Android.
+   */
+  const bottomInset = keyboardCovering ? 0 : insets.bottom;
   const { session } = useSession();
   const { refresh: refreshActivity } = useActivity();
   const toast = useToast();
@@ -191,9 +239,19 @@ export default function ConversationScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      // On iOS the header sits above the keyboard-avoided area; this offset is
-      // what stops the composer hiding behind the keyboard by exactly the
-      // header's height.
+      /*
+       * Zero, and zero is the answer rather than a value nobody got round to.
+       *
+       * The offset exists to account for however far this view's top edge sits
+       * below the top of the window -- a navigator header, typically. There is
+       * no header here: `headerShown` is false for the whole stack and this
+       * screen draws its own, inside this view and below `insets.top`. So the
+       * view starts at the top of the window and owes the keyboard nothing.
+       *
+       * The comment this replaces said the offset was "exactly the header's
+       * height", which described an intention the 0 beside it did not carry
+       * out. It was right about the mechanism and wrong about this screen.
+       */
       keyboardVerticalOffset={0}
       style={{ flex: 1, backgroundColor: colors.canvas }}
     >
@@ -310,7 +368,7 @@ export default function ConversationScreen() {
           style={{
             paddingHorizontal: space.gutter,
             paddingTop: space.lg,
-            paddingBottom: insets.bottom + space.lg,
+            paddingBottom: bottomInset + space.lg,
             borderTopWidth: 1,
             borderTopColor: colors.line,
             backgroundColor: colors.sand,
@@ -329,7 +387,7 @@ export default function ConversationScreen() {
             gap: space.md,
             paddingHorizontal: space.gutter,
             paddingTop: space.md,
-            paddingBottom: insets.bottom + space.md,
+            paddingBottom: bottomInset + space.md,
             borderTopWidth: 1,
             borderTopColor: colors.line,
             backgroundColor: colors.canvas,

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { routes } from "@/features/auth/routing";
 import { reconcile, type PurchaseOutcome } from "@/features/membership/payments";
+import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Screen } from "@/ui/Screen";
@@ -36,6 +37,14 @@ import type { TFunction } from "@eraya/i18n";
  * is the same use `purchase()` makes of it. The answer on this screen comes
  * from `reconcile`, which asks the server, which asks Razorpay. The order id is
  * a lookup key here, not proof of anything, and it buys nothing on its own.
+ *
+ * On iOS this screen is a redirect and nothing else. The only thing that ever
+ * sends a browser to `eraya://payment` is the website's Razorpay checkout, and
+ * iOS never opens it -- so anybody arriving here has typed the URL, and the
+ * right answer is the membership screen rather than six states of a payment
+ * this build cannot make. The route is not removed: the scheme is registered
+ * app-wide, so removing the file would turn a redirect into an unmatched-route
+ * screen. See features/membership/purchasing.ts.
  */
 
 type State = { kind: "checking" } | { kind: "settled"; outcome: PurchaseOutcome };
@@ -52,6 +61,9 @@ export default function PaymentReturn() {
 
   useEffect(() => {
     if (!orderId) return;
+    // Nothing to reconcile on a platform that cannot start a purchase, and no
+    // reason to ask the server about an order it could not have created.
+    if (!inAppPurchaseAvailable) return;
 
     let active = true;
     void (async () => {
@@ -72,6 +84,10 @@ export default function PaymentReturn() {
    * they can actually do something.
    */
   if (!orderId) return <Redirect href={routes.membership} />;
+
+  // Same answer for the same reason: there is nothing this screen can honestly
+  // say about a payment iOS was never able to begin.
+  if (!inAppPurchaseAvailable) return <Redirect href={routes.membership} />;
 
   /*
    * No analytics fires here. The funnel events are recorded where the purchase
@@ -262,6 +278,22 @@ function noteFor(outcome: PurchaseOutcome, t: TFunction): Note {
         tint: colors.sand,
         title: t("payment.offlineTitle"),
         body: t("payment.offlineBody"),
+        action: t("payment.backToMembership"),
+      };
+
+    /*
+     * Also unreachable, and for a stronger reason than `unavailable`: the only
+     * platform that returns this never renders this screen at all. Handled so
+     * the switch stays exhaustive -- which is what caught it -- and worded as
+     * the fact rather than as a failure, because nothing failed.
+     */
+    case "unsupported":
+      return {
+        icon: "information-circle-outline",
+        tone: colors.inkMuted,
+        tint: colors.sand,
+        title: t("membership.notAvailableTitle"),
+        body: t("membership.notAvailableBody"),
         action: t("payment.backToMembership"),
       };
   }

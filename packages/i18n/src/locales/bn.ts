@@ -807,6 +807,9 @@ export const bn: Translations = {
       statusRefunded: "ফেরত",
       statusUnknown: "অজানা",
       unconfirmedBody: "আমাদের দিকে কিছু মিলছে না, তাই আমরা অনুমান করব না। আপনার অ্যাকাউন্ট থেকে টাকা গিয়ে থাকলে তা হারায়নি — support@eraya.app-এ লিখুন, আমরা মিটিয়ে দেব।",
+    notAvailableTitle: "এখানে Premium পাওয়া যায় না",
+    notAvailableBody:
+      "iPhone-এর জন্য তৈরি Eraya অ্যাপে Premium কেনা যায় না। এ ছাড়া আর কিছুই বদলায় না — নীচে যা যা রয়েছে সবই বিনামূল্যে, যেমন বরাবরই ছিল।",
   },
 
   payment: {
