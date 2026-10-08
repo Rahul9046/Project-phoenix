@@ -10,8 +10,10 @@
     "backgroundColor": "#FBF7F2",
     "primaryColor": "#BD4F33",
     "ios": {
-      "supportsTablet": true,
       "bundleIdentifier": "app.eraya.mobile",
+      "buildNumber": "1",
+      "icon": "./assets/ios-icon.png",
+      "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -40,7 +42,12 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       "expo-web-browser",
       "expo-image",
       "@react-native-community/datetimepicker",
@@ -57,7 +64,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Eraya uses your photos so you can add one to your profile. Nothing is uploaded until you choose it."
+          "photosPermission": "Eraya uses your photos so you can add one to your profile. Nothing is uploaded until you choose it.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ]
     ],

@@ -6,6 +6,10 @@ Android is the first release target. Nothing here is Android-specific: every
 platform difference is a `Platform.select` at the point it matters, and the iOS
 paths are written even where they cannot be tested from a Windows machine.
 
+**iOS has a document of its own: [16-ios.md](16-ios.md).** What the iOS build is
+configured as, the one behaviour that differs between the platforms (Premium
+cannot be bought there), and what has to happen before an iPhone can run it.
+
 ## Running it
 
 ```
@@ -85,7 +89,7 @@ deciding on a half-resolved state.
 | Google | Live |
 | Facebook | Live |
 | Email code | Live — six digits, the primary path on mobile |
-| Apple | **Not configured.** A release blocker for iOS, not for Android |
+| Apple | **Not configured.** Needs a paid Apple Developer account, and may or may not be required at all -- [16-ios.md](16-ios.md) |
 | Phone SMS | **Mocked.** See below |
 
 There is no password field anywhere in this app, deliberately. OAuth opens the
@@ -214,9 +218,15 @@ someone else.
 
 ## Membership
 
-Buyable. Razorpay is integrated and a purchase completes end to end — see
-[10-payments.md](10-payments.md) for the model; this section covers only what
-the app itself does.
+Buyable on Android. Razorpay is integrated and a purchase completes end to end
+— see [10-payments.md](10-payments.md) for the model; this section covers only
+what the app itself does.
+
+**Not buyable on iOS, and that is the only behavioural difference between the
+two platforms.** `inAppPurchaseAvailable` is false there, the plans and the pay
+button are replaced by a localized sentence, and Premium already paid for still
+resolves exactly as it does anywhere else. Everything in the rest of this
+section describes the Android path. See [16-ios.md](16-ios.md).
 
 There is no native Razorpay module, deliberately. Buying opens `/checkout` on
 the website in the system browser, the same way sign-in opens Google, and the
@@ -379,10 +389,14 @@ halves are deliberate.** Two earlier versions did more than that. The first --
 browser"* -- named the iPhone and the browser in one breath and read, to some
 people, as though the download were an option there. The second fixed that and
 said *"iOS is coming soon"*, which promised a release the product has not
-planned: there is no StoreKit work, no iOS in-app purchase path,
+planned: there is still no StoreKit work and no iOS in-app purchase path, and
 [10-payments.md](10-payments.md) notes Apple generally requires its own billing
-for digital goods, and iOS is recorded as undecided in
-[07-open-questions.md](07-open-questions.md).
+for digital goods.
+
+**That sentence does not change because an iOS build is being prepared.** No
+iOS build has been signed, uploaded or installed, and the website may only
+describe what somebody can actually get hold of today. It changes when there is
+a TestFlight or App Store link to put behind it, and not before.
 
 **No timeline belongs in this sentence, in any language.** Not "coming soon",
 not "we are working on iOS", not "available soon", and not a softer synonym. A
@@ -519,6 +533,13 @@ npx tsc --noEmit
 npx eslint .
 npx expo export --platform android     # and --platform ios
 node ../../scripts/security-probe.mjs
+```
+
+And from the repository root, for anything touching the iOS build:
+
+```
+npm run i18n:check
+npm run ios:probe
 ```
 
 And then look at it. A screen is not finished because TypeScript is happy: the

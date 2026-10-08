@@ -1,5 +1,6 @@
 import * as WebBrowser from "expo-web-browser";
 
+import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -82,7 +83,15 @@ export type PurchaseOutcome =
    * `unavailable` because the network was fine and money may well have moved.
    */
   | { status: "unconfirmed" }
-  | { status: "unavailable" };
+  | { status: "unavailable" }
+  /**
+   * This build cannot sell Premium at all -- iOS today. Separate from every
+   * other outcome because nothing was attempted: no order was created, no
+   * browser opened, and no money could have moved. Saying "unavailable" here
+   * would describe a checkout that failed to open, which invites somebody to
+   * try again at something that is never going to work on this platform.
+   */
+  | { status: "unsupported" };
 
 const rupeesFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -157,6 +166,19 @@ type OrderReply = {
  * signature check or from Razorpay's own record of the order.
  */
 export async function purchase(planCode: string): Promise<PurchaseOutcome> {
+  /*
+   * The till is shut on iOS, and this is the last place that is true rather
+   * than the only one.
+   *
+   * The membership screen already offers no plans and no pay button on iOS, so
+   * nothing in the product reaches this line -- which is exactly why the check
+   * belongs here as well. A future screen that offers Premium without knowing
+   * about `inAppPurchaseAvailable` would otherwise open a web checkout for a
+   * digital good inside an App Store build, and the first time anybody found
+   * out would be a rejection. See `purchasing.ts`.
+   */
+  if (!inAppPurchaseAvailable) return { status: "unsupported" };
+
   const created = await invoke<OrderReply>("payments-create-order", {
     planCode,
   });

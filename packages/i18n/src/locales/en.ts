@@ -1116,6 +1116,20 @@ export const en = {
       statusRefunded: "Refunded",
       statusUnknown: "Unknown",
       unconfirmedBody: "Something on our side did not add up, so we are not going to guess. If money has left your account it is not lost — write to support@eraya.app and we will sort it out.",
+    /*
+     * Shown in place of the plans and the pay button where Premium cannot be
+     * bought at all -- iOS today. See features/membership/purchasing.ts.
+     *
+     * It names the platform, states the fact, and stops. No timeline, because
+     * the product has not committed to one; and no "buy it on our website",
+     * both because Apple's Guideline 3.1.1(a) forbids sending somebody to
+     * another purchase mechanism and because a workaround is a worse answer
+     * than the plain one. The same restraint the website's Android-only
+     * sentence is held to.
+     */
+    notAvailableTitle: "Premium is not available here",
+    notAvailableBody:
+      "Premium cannot be bought in the Eraya app for iPhone. Nothing else changes — everything listed below is free, exactly as it has always been.",
   },
 
   payment: {

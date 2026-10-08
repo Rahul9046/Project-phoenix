@@ -806,6 +806,9 @@ export const te: Translations = {
       statusRefunded: "వాపసు",
       statusUnknown: "తెలియదు",
       unconfirmedBody: "మా వైపు ఏదో సరిపోలలేదు, కాబట్టి మేము ఊహించబోము. మీ ఖాతా నుండి డబ్బు వెళ్లి ఉంటే అది పోలేదు — support@eraya.app కు రాయండి, మేము పరిష్కరిస్తాము.",
+    notAvailableTitle: "ఇక్కడ Premium అందుబాటులో లేదు",
+    notAvailableBody:
+      "iPhone కోసం రూపొందించిన Eraya యాప్‌లో Premium కొనుగోలు చేయడం సాధ్యం కాదు. ఇది తప్ప మరేదీ మారదు — కింద ఇచ్చిన అన్నీ ఉచితం, ఎప్పటిలాగే.",
   },
 
   payment: {

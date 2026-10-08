@@ -23,6 +23,7 @@ aspirations — where something is undecided it is listed in
 | [11-moderation-and-analytics.md](11-moderation-and-analytics.md) | The reports queue, who may moderate, and the funnel |
 | [12-email-delivery.md](12-email-delivery.md) | The sign-in email, its rate limit, and what raising it costs |
 | [13-seo.md](13-seo.md) | Indexing, the SEO probe, and how a guide is written and published |
+| [16-ios.md](16-ios.md) | The iOS build: identity, permissions, why Premium is unbuyable there, and what TestFlight still needs |
 | [BUILD_REVIEW_WORKFLOW.md](BUILD_REVIEW_WORKFLOW.md) | Generating the review package for an outside reviewer |
 
 ## Status
@@ -39,6 +40,8 @@ come up rather than implying otherwise:
   nothing in the product may show a "verified number" mark. Real SMS needs DLT
   registration.
 - **Razorpay is in test mode.** No live key is configured; no real money moves.
+  On iOS, Premium is not for sale at all and the app says so --
+  [16-ios.md](16-ios.md). No iOS build has been signed or installed.
 - **Privacy policy and terms are placeholders.** India's DPDP Act applies and
   both app stores require them. This is a launch blocker.
 

@@ -3,6 +3,7 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { recordProductEvent } from "@/features/membership/analytics";
+import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
 import {
   formatPaise,
   getMembership,
@@ -41,6 +42,15 @@ import type { TFunction, TranslationKey } from "@eraya/i18n";
  *
  * The free column stays. Writing down what remains free by name is what makes
  * moving one of them behind the paywall a deliberate act rather than drift.
+ *
+ * On iOS there is no till. The plans, the price and the pay button are replaced
+ * by one sentence saying Premium cannot be bought here -- not a disabled
+ * button, which looks like a fault, and not a link to the website, which Apple
+ * forbids and which would be a worse answer anyway. Everything else on the
+ * screen is unchanged: what Premium adds is still described, what is free is
+ * still named, and a member who already has Premium still sees it as active,
+ * because the entitlement is the server's answer and has no platform in it.
+ * See features/membership/purchasing.ts.
  */
 
 /*
@@ -99,8 +109,14 @@ export default function MembershipScreen() {
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
 
   const load = useCallback(async () => {
+    /*
+     * No catalogue where nothing is for sale. The prices are worked out per
+     * member on the server, and asking for a price this screen will not print
+     * is both a wasted round trip and exactly the kind of call that makes an
+     * iOS build look like it is preparing to charge somebody.
+     */
     const [catalogue, current, history] = await Promise.all([
-      getPlans(),
+      inAppPurchaseAvailable ? getPlans() : Promise.resolve<Plan[]>([]),
       getMembership(),
       getPayments(),
     ]);
@@ -127,6 +143,12 @@ export default function MembershipScreen() {
 
   async function buy() {
     if (!chosen || busy) return;
+    /*
+     * Unreachable: the button that calls this is not rendered on iOS. Here
+     * anyway, and above the analytics event rather than below it, so a
+     * platform that cannot sell Premium never opens a funnel it cannot close.
+     */
+    if (!inAppPurchaseAvailable) return;
 
     setOutcome({ kind: "working" });
     recordProductEvent("payment_checkout_opened", {
@@ -174,6 +196,17 @@ export default function MembershipScreen() {
      */
     if (result.status === "unconfirmed" || result.status === "unavailable") {
       setOutcome({ kind: "unconfirmed" });
+      return;
+    }
+
+    /*
+     * The platform cannot sell Premium -- so nothing was attempted, nothing
+     * could have been charged, and there is no funnel step to record. Back to
+     * idle rather than a note, because the screen is already saying this where
+     * the plans would have been.
+     */
+    if (result.status === "unsupported") {
+      setOutcome({ kind: "idle" });
       return;
     }
 
@@ -225,59 +258,63 @@ export default function MembershipScreen() {
         ))}
       </View>
 
-      <View style={{ marginTop: space.section }}>
-        <Text variant="eyebrow" tone="subtle" style={{ marginBottom: space.md }}>
-          {premium ? t("membership.addMoreTime") : t("marketing.pricing.premiumCta")}
-        </Text>
-
-        {plans === null ? (
-          <LoadingState label={t("membership.loadingPlans")} />
-        ) : (
-          <View style={{ gap: space.md }}>
-            {plans.map((plan) => (
-              <PlanRow
-                key={plan.code}
-                plan={plan}
-                selected={plan.code === selected}
-                disabled={busy}
-                onSelect={() => {
-                  setSelected(plan.code);
-                  setOutcome({ kind: "idle" });
-                  recordProductEvent("payment_plan_selected", {
-                    planCode: plan.code,
-                    amountPaise: plan.pricePaise,
-                    introOfferApplied: plan.introApplies,
-                  });
-                }}
-              />
-            ))}
-          </View>
-        )}
-
-        <Button
-          label={chosen ? `Pay ${formatPaise(chosen.pricePaise)}` : t("membership.choosePlan")}
-          loading={busy}
-          disabled={!chosen || busy}
-          onPress={() => void buy()}
-          style={{ marginTop: space.xl }}
-        />
-
-        {/*
-          Said plainly, and said before payment rather than in a policy nobody
-          opens. There is no mandate behind any of these plans.
-        */}
-        <Text variant="caption" tone="subtle" center style={{ marginTop: space.md }}>
-          One-time payment. Premium ends automatically at the end of the period
-          you choose, and nothing is taken again unless you buy more time.
-        </Text>
-
-        {premium ? (
-          <Text variant="caption" tone="subtle" center style={{ marginTop: space.sm }}>
-            Time you have already paid for is kept. A new period starts when the
-            current one ends.
+      {inAppPurchaseAvailable ? (
+        <View style={{ marginTop: space.section }}>
+          <Text variant="eyebrow" tone="subtle" style={{ marginBottom: space.md }}>
+            {premium ? t("membership.addMoreTime") : t("marketing.pricing.premiumCta")}
           </Text>
-        ) : null}
-      </View>
+
+          {plans === null ? (
+            <LoadingState label={t("membership.loadingPlans")} />
+          ) : (
+            <View style={{ gap: space.md }}>
+              {plans.map((plan) => (
+                <PlanRow
+                  key={plan.code}
+                  plan={plan}
+                  selected={plan.code === selected}
+                  disabled={busy}
+                  onSelect={() => {
+                    setSelected(plan.code);
+                    setOutcome({ kind: "idle" });
+                    recordProductEvent("payment_plan_selected", {
+                      planCode: plan.code,
+                      amountPaise: plan.pricePaise,
+                      introOfferApplied: plan.introApplies,
+                    });
+                  }}
+                />
+              ))}
+            </View>
+          )}
+
+          <Button
+            label={chosen ? `Pay ${formatPaise(chosen.pricePaise)}` : t("membership.choosePlan")}
+            loading={busy}
+            disabled={!chosen || busy}
+            onPress={() => void buy()}
+            style={{ marginTop: space.xl }}
+          />
+
+          {/*
+            Said plainly, and said before payment rather than in a policy nobody
+            opens. There is no mandate behind any of these plans.
+          */}
+          <Text variant="caption" tone="subtle" center style={{ marginTop: space.md }}>
+            One-time payment. Premium ends automatically at the end of the period
+            you choose, and nothing is taken again unless you buy more time.
+          </Text>
+
+          {premium ? (
+            <Text variant="caption" tone="subtle" center style={{ marginTop: space.sm }}>
+              Time you have already paid for is kept. A new period starts when the
+              current one ends.
+            </Text>
+          ) : null}
+        </View>
+      ) : (
+        <Unavailable />
+      )}
 
       {payments.length > 0 ? (
         <View style={{ marginTop: space.region }}>
@@ -318,6 +355,41 @@ export default function MembershipScreen() {
         </View>
       </View>
     </Screen>
+  );
+}
+
+/**
+ * Where the plans would have been, on a platform that cannot sell them.
+ *
+ * A sentence in a card, and nothing else: no disabled button, which reads as a
+ * fault somebody might retry; no price, because quoting one and then refusing
+ * to take it is worse than quoting none; and no way out to another checkout,
+ * which is the specific thing Apple's Guideline 3.1.1(a) forbids and which
+ * would make Eraya look like it were working around a rule rather than
+ * following it.
+ *
+ * `tone="sand"` rather than `danger`: nothing has gone wrong. This is the
+ * product saying what it does, in the member's own language.
+ */
+function Unavailable() {
+  const t = useT();
+
+  return (
+    <Card tone="sand" style={{ marginTop: space.section }}>
+      <View style={{ flexDirection: "row", gap: space.lg }}>
+        <Ionicons
+          name="information-circle-outline"
+          size={iconSize.lg}
+          color={colors.inkMuted}
+        />
+        <View style={{ flex: 1 }}>
+          <Text variant="label">{t("membership.notAvailableTitle")}</Text>
+          <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxs }}>
+            {t("membership.notAvailableBody")}
+          </Text>
+        </View>
+      </View>
+    </Card>
   );
 }
 

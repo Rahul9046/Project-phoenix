@@ -333,9 +333,7 @@ disfavour is how somebody loses three months over a small goodwill adjustment.
 refund that has settled, and withdrawing a membership on the strength of an
 intention that may still fail is the wrong way round.
 
-## Open question: app store billing
-
-**This needs a decision before either app is submitted.**
+## App store billing
 
 Apple and Google generally require their own in-app purchase billing for digital
 goods consumed inside an app, and Razorpay is not that. Eraya Premium is a
@@ -345,11 +343,31 @@ Nothing here is designed around that uncertainty, but the seam is deliberate:
 mobile purchasing goes through one module,
 `apps/mobile/src/features/membership/payments.ts`. Swapping it for store billing
 does not touch the schema, the entitlement model, the stacking rules or the web
-checkout.
+checkout. The answer differs for a "reader" app, for a service consumed outside
+the app, and for one that is neither.
 
-Worth confirming with both stores before release, and worth knowing that the
-answer differs for a "reader" app, for a service consumed outside the app, and
-for one that is neither.
+**The two stores are being answered differently, and separately.**
+
+**Google.** Play Billing, on `feature/play-billing-phase-2a` and its successor.
+Android dispatches to Play Billing instead of Razorpay there, and that branch is
+kept apart from everything else on purpose. Not merged, and no purchase has been
+observed yet. Its own documents -- `14-google-play.md` and
+`15-android-signing-and-distribution.md` -- live on that branch and arrive with
+it.
+
+**Apple.** Premium is **not for sale on iOS at all**, as of the first TestFlight
+preparation. `inAppPurchaseAvailable` in
+`apps/mobile/src/features/membership/purchasing.ts` is false on iOS, and four
+layers read it: `purchase()` refuses before an order is created, the membership
+screen shows a localized sentence where the plans were, `eraya://payment`
+redirects, and `scripts/ios-probe.mjs` asserts each guard sits before the call
+it guards. StoreKit is deliberately not started. Entitlements already paid for
+are unaffected, because they are read from `my_membership()` and no platform
+appears in that path. See [16-ios.md](16-ios.md).
+
+**Neither of those changed anything on this page.** The web checkout, the edge
+functions, the schema, the prices, the stacking rules and the Android Razorpay
+path are all exactly as described above.
 
 ## Going live
 
