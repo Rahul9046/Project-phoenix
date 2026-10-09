@@ -1,7 +1,12 @@
 # Google Play Billing
 
-How Eraya sells Premium on Android, what Google requires, and what has not
-happened yet.
+How Eraya sells Premium in the build distributed through Google Play, what
+Google requires, and what has not happened yet.
+
+**This is one of two Android artifacts, and the distinction matters throughout.**
+The APK people download from eraya.app is sideloaded, is not distributed by Play,
+and keeps the Razorpay browser checkout. Nothing in this document applies to it.
+See [10-payments.md](10-payments.md#android-is-two-artifacts-not-one).
 
 [10-payments.md](10-payments.md) is the canonical document for the payment and
 entitlement model -- pricing, stacking, expiry, refunds, the invariants. This one
@@ -22,6 +27,7 @@ easy to overstate.
 | The five Play products | **Do not exist** |
 | `play_product_id`, `play_intro_product_id` | **NULL on every plan** |
 | Android client (`expo-iap`, `play-billing.ts`) | Written, bundles cleanly. **No purchase ever executed** |
+| `EXPO_PUBLIC_DISTRIBUTION=play` | Declared in the `play` EAS profile. **No build made from it** |
 | Real-time Developer Notifications (Phase 2c) | **Not built** |
 | Play Console configuration | **Blocked**, see below |
 
@@ -34,18 +40,49 @@ observed.
 
 Settled 2026-10-04.
 
-- **Google Play Billing on Android**, because an app distributed through the Play
-  Store must sell digital goods through Play. The web stays on Razorpay.
+- **Google Play Billing in the Play build**, because an app distributed through
+  the Play Store must sell digital goods through Play. That policy binds apps
+  distributed *on Play*; it does not reach the sideloaded APK, which keeps
+  Razorpay. The web stays on Razorpay.
 - **One-time consumable products, not Play subscriptions.** Premium is prepaid and
   nothing renews; a Play subscription would auto-renew, which is the thing the
   product has decided not to do. Consumable rather than non-consumable because a
   member buys a term again and again.
 - **Prices unchanged.** ₹199 introductory and ₹299 standard monthly, ₹699
   quarterly, ₹1,299 half-yearly, ₹2,399 annual.
-- **Android only.** iOS is not answered -- see
-  [07-open-questions.md](07-open-questions.md).
+- **The Play build only.** The Android download is unaffected, and iOS sells
+  nothing at all -- Premium is not for sale there and StoreKit is deliberately
+  not started. See [16-ios.md](16-ios.md).
 - **One entitlement.** A Play purchase grants exactly the Premium a Razorpay
   purchase grants, because it grants it through the same `settle_payment`.
+
+## Which build this is, and how it knows
+
+`usesPlayBilling()` in `apps/mobile/src/features/membership/play-billing.ts`
+guards every entry point in that file, so a build that is not the Play build
+never opens a Billing connection, never registers the purchase listeners and
+never queries a product. It reads `paymentProvider`, which reads
+`distributionChannel`, which reads `EXPO_PUBLIC_DISTRIBUTION` -- inlined into the
+bundle at build time, so there is nothing left to switch once a build exists.
+
+**Absent means `direct`.** A Play build that forgot the variable would sell
+through Razorpay, which is wrong and is caught statically: the `play` profile in
+`apps/mobile/eas.json` declares it, and `npm run payments:probe` asserts that the
+profile still does. The opposite default could not be caught, because it would
+ship to the public download link.
+
+| Build | Command | Provider |
+| --- | --- | --- |
+| Android download | `eas build -p android --profile preview`, or the local Gradle build in [09-mobile.md](09-mobile.md) | Razorpay |
+| Play | `eas build -p android --profile play` | Play Billing |
+| iOS | `eas build -p ios --profile production` | none |
+
+To check what a bundle actually resolved to, without a store:
+
+```
+npm run play:channel          # what the current environment would build
+npm run play:channel -- play  # and what the play profile would build
+```
 
 ## The five products
 

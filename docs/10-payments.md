@@ -111,11 +111,16 @@ not built. Recovery therefore rests on the client asking again — see
 These are the rules that must survive a future change. Each names the code that
 holds it up, so a reader can check rather than trust.
 
-- **Android never falls back to Razorpay for Premium.** `purchase()` in
-  `apps/mobile/src/features/membership/payments.ts` dispatches on
-  `usesPlayBilling()`, which is `Platform.OS === "android"`. It is deliberately
-  not a feature flag: shipping an Android build that opened a web checkout for
-  Premium would breach Play's payments policy, so it must not be switchable.
+- **The Play build never falls back to Razorpay for Premium.** `purchase()` in
+  `apps/mobile/src/features/membership/payments.ts` switches exhaustively on
+  `paymentProvider`, and the `play` case calls only `purchaseOnPlay`. When Play
+  cannot sell, the outcome is `unavailable` or `unconfigured` and no sale
+  happens; there is no path from the Play build to a web checkout, which is what
+  Play's payments policy forbids.
+- **The Android download keeps Razorpay, and no build can switch it at runtime.**
+  `EXPO_PUBLIC_DISTRIBUTION` is inlined at build time and absent means `direct`.
+  Asserted by `apps/mobile/src/features/membership/provider.test.ts`, which is
+  the check that used to be impossible when this was a `Platform.OS` branch.
 - **The web's Razorpay path is unchanged by any of the Play work.** Phase 2a
   (`f9f78bc`) touched no file under `apps/`; Phase 2b (`9c91857`) touched
   `apps/web` only to regenerate `database.types.ts`.

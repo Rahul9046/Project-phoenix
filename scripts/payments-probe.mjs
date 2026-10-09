@@ -271,6 +271,66 @@ console.log("\nThe webhook's JWT exemption is written down");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\nWhich build takes money which way");
+// ---------------------------------------------------------------------------
+// The invariant that used to be unassertable.
+//
+// While the choice between Razorpay and Play Billing was a `Platform.OS`
+// comparison, nothing could see it: both Android artifacts report `android`, so
+// no check could tell that the public APK from eraya.app was about to be pointed
+// at a Billing client Play has never served it. The decision now lives in
+// `EXPO_PUBLIC_DISTRIBUTION`, declared per EAS profile, and that is a file.
+//
+// `apps/mobile/src/features/membership/provider.test.ts` asserts the resolver.
+// This asserts the configuration fed into it, which is the half a unit test
+// cannot reach. Neither can prove a Play purchase works -- see
+// docs/14-google-play.md.
+{
+  const eas = JSON.parse(
+    fs.readFileSync(path.join(root, "apps/mobile/eas.json"), "utf8"),
+  );
+  const profiles = Object.entries(eas.build ?? {});
+  const channelOf = (profile) => profile?.env?.EXPO_PUBLIC_DISTRIBUTION;
+
+  check(
+    "eas.json declares build profiles",
+    profiles.length > 0,
+    JSON.stringify(Object.keys(eas.build ?? {})),
+  );
+
+  // The Play build must say so. A profile that forgot would build a Play upload
+  // selling through Razorpay, which is the payments-policy breach.
+  const play = eas.build?.play;
+  check(
+    "a play profile exists and declares EXPO_PUBLIC_DISTRIBUTION=play",
+    channelOf(play) === "play",
+    play ? "declares " + JSON.stringify(channelOf(play) ?? null) : "no play profile",
+  );
+
+  // And nothing else may. This is the direction that breaks a shipped app: the
+  // preview profile builds the APK shape handed out from eraya.app, and a
+  // `play` value there would make Premium unbuyable for every public install.
+  const stray = profiles.filter(
+    ([name, profile]) => name !== "play" && channelOf(profile) === "play",
+  );
+  check(
+    "no other profile selects Play Billing",
+    stray.length === 0,
+    stray.map(([name]) => name).join(", "),
+  );
+
+  // Every profile saying it out loud is what stops the default from being load
+  // bearing in EAS. Absent still means direct -- that is what the local Gradle
+  // build of the public APK relies on -- but a profile should not depend on it.
+  const silent = profiles.filter(([, profile]) => channelOf(profile) === undefined);
+  check(
+    "every profile declares its distribution channel",
+    silent.length === 0,
+    silent.map(([name]) => name).join(", "),
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log("\nA first purchase");
 // ---------------------------------------------------------------------------
 

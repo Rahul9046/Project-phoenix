@@ -240,11 +240,15 @@ Which of the three a build is, is decided by `EXPO_PUBLIC_DISTRIBUTION` and the
 platform together, through `paymentProvider` --
 [10-payments.md](10-payments.md#android-is-two-artifacts-not-one).
 
-`purchase()` in `features/membership/payments.ts` is the seam. It dispatches on
-`usesPlayBilling()` -- which is `Platform.OS === "android"` -- and the branch is
-on the platform rather than a flag deliberately: an Android build that opened a
-web checkout for Premium would breach Play's payments policy, so it must not be
-switchable. **Android never falls back to Razorpay.**
+`purchase()` in `features/membership/payments.ts` is the seam. It switches on
+`paymentProvider` from `features/membership/purchasing.ts`, exhaustively, so a
+fourth provider cannot be added to the type without this function failing to
+compile. It is not `Platform.OS`: that cannot tell the Android download from the
+Play build, and pointing the download at Play Billing would break purchasing for
+every install the public already has. **The Play build never falls back to
+Razorpay** -- if Play cannot sell, `purchase()` returns `unavailable` or
+`unconfigured` and no sale happens, because quietly opening a web checkout is
+the one thing Play's payments policy forbids.
 
 **iOS: Razorpay, in the browser.** No native Razorpay module, deliberately.
 Buying opens `/checkout` on the website in the system browser, the same way
@@ -483,24 +487,19 @@ directly installed build exactly as it does anywhere else. Being sideloaded
 changes nothing about it, and no Play policy applies to a build Play is not
 distributing.
 
-**This is the part that changes when Play Billing lands, and it lands on its own
-branch.** That work lives on `feature/play-billing-phase-2a` and is **kept
-separate on purpose**: the direct-distribution release is based on `main` at
-`6c2da57` and must not take a merge, rebase or cherry-pick from it. The two
-answer different questions -- this one is how a phone gets the app while Play's
-closed-testing period runs, that one is how a Play-distributed build takes money
--- and tying them together would mean the download could not ship until billing
-was ready.
+**Play Billing no longer changes this part, and that is the point of how it was
+integrated.** The Play work used to live apart on `feature/play-billing-phase-2a`
+precisely because it would have switched this artifact's checkout. It no longer
+would: the two are separate builds of the same source, distinguished by
+`EXPO_PUBLIC_DISTRIBUTION`, and this one does not set it. The APK published here
+takes Razorpay, as it always has, whatever the Play build does.
 
-On that branch Android dispatches to Play Billing instead of Razorpay, and since
-the five Play products do not exist yet, Premium becomes unbuyable in-app with an
-honest disabled state rather than a broken checkout. Android must never fall back
-to Razorpay once that lands; the dispatch is on `Platform.OS`, not a flag,
-because an Android build opening a web checkout would breach Play's payments
-policy.
+Since the five Play products do not exist yet, Premium is unbuyable in the **Play
+build** with an honest disabled state rather than a broken checkout. That state
+is unreachable here, where a selected plan is always buyable.
 
-So a rebuild of the app is **not** a free act today, and it is a payments
-decision rather than a distribution one. It is also not a prerequisite for
+So a rebuild of the app is still **not** a free act, but it is no longer a
+payments decision. It is also not a prerequisite for
 anything here: the website ships against the APK already published, and that
 artifact is unchanged -- same signing identity, same `app.eraya.mobile`, same
 `versionCode`.

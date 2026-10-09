@@ -74,8 +74,48 @@
 
 export type DistributionChannel = "direct" | "play";
 
-export const distributionChannel: DistributionChannel =
-  process.env.EXPO_PUBLIC_DISTRIBUTION === "play" ? "play" : "direct";
+/** Who takes the money. See `purchasing.ts` for what each one means. */
+export type PaymentProvider = "none" | "razorpay" | "play";
+
+/**
+ * The channel decision, as a function of the one value it depends on.
+ *
+ * Separate from the constant below so it can be asserted without a bundler, a
+ * device or a store -- `provider.test.ts` is the check that was impossible while
+ * this was a `Platform.OS` comparison buried in a module that imports
+ * `react-native`. This file deliberately imports nothing.
+ */
+export function distributionChannelFrom(
+  value: string | undefined,
+): DistributionChannel {
+  return value === "play" ? "play" : "direct";
+}
+
+/**
+ * Who takes the money, given a platform and a channel.
+ *
+ * The platform decides whether a build may sell at all, and the channel decides
+ * through what. Both are needed: neither alone distinguishes the three cases,
+ * which is the mistake this function exists to make impossible to repeat.
+ */
+export function paymentProviderFor(
+  platform: string,
+  channel: DistributionChannel,
+): PaymentProvider {
+  if (platform === "ios") return "none";
+  return channel === "play" ? "play" : "razorpay";
+}
+
+/**
+ * This build's channel.
+ *
+ * Read as one whole expression -- Expo inlines `process.env.EXPO_PUBLIC_*` by
+ * matching the literal text at build time, and a computed lookup yields
+ * undefined in a release build while working perfectly in development.
+ */
+export const distributionChannel: DistributionChannel = distributionChannelFrom(
+  process.env.EXPO_PUBLIC_DISTRIBUTION,
+);
 
 /** True only in the build uploaded to Google Play. */
 export const distributedThroughPlay: boolean = distributionChannel === "play";

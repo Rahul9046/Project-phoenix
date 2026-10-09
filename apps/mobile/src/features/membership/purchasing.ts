@@ -1,6 +1,10 @@
 import { Platform } from "react-native";
 
-import { distributedThroughPlay } from "@/features/membership/distribution";
+import {
+  distributionChannel,
+  paymentProviderFor,
+  type PaymentProvider,
+} from "@/features/membership/distribution";
 
 /**
  * Whether Premium can be bought from inside this app, and through what.
@@ -89,10 +93,9 @@ export const inAppPurchaseAvailable: boolean = Platform.OS !== "ios";
  * Exactly one of these is true for any given build, which is the point: the
  * three paths cannot overlap, and no screen has to work out which it is in.
  */
-export type PaymentProvider = "none" | "razorpay" | "play";
+export type { PaymentProvider } from "@/features/membership/distribution";
 
-export const paymentProvider: PaymentProvider = !inAppPurchaseAvailable
-  ? "none"
-  : distributedThroughPlay
-    ? "play"
-    : "razorpay";
+export const paymentProvider: PaymentProvider = paymentProviderFor(
+  Platform.OS,
+  distributionChannel,
+);
