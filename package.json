@@ -39,7 +39,8 @@
     "positioning:probe": "node scripts/positioning-probe.mjs",
     "ios:probe": "node scripts/ios-probe.mjs",
     "ios:probe:fast": "node scripts/ios-probe.mjs --fast",
-    "test": "node --no-warnings --test \"apps/web/src/**/*.test.ts\"",
+    "test": "node --no-warnings --test \"apps/web/src/**/*.test.ts\" \"apps/mobile/src/**/*.test.ts\"",
+    "play:channel": "node scripts/play-channel.mjs",
     "framing:probe": "node --no-warnings scripts/framing-probe.mjs",
     "phone:probe": "node scripts/phone-limits-probe.mjs",
     "age:check": "node --no-warnings scripts/age-eligibility-check.mjs"

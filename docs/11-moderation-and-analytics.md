@@ -107,6 +107,18 @@ reasons, and the third is the one that matters:
 The payment funnel is still recorded by the clients, because those steps happen
 in a payment sheet and never reach the database at all.
 
+Three things about it are worth knowing since Google Play became a second way to
+pay. The event names are **shared across both providers**, so
+`payment_checkout_opened` covers a Play billing sheet as much as a Razorpay
+checkout, and the funnel carries **no provider dimension** — whether to add one
+is undecided. `amountPaise` is Eraya's own intended price, not what Google
+charged, which on Android can differ because Play applies its own tax handling;
+whether to record the charged amount instead is the same open question. And
+`unconfigured` is excluded from `payment_failed`, exactly as `unconfirmed` and
+`unavailable` are: Eraya's own bugs and Eraya's own unfinished configuration must
+not land in the number used to judge whether a provider is losing us money. See
+[10-payments.md](10-payments.md).
+
 | Event | Recorded by |
 | --- | --- |
 | `registration_started` | trigger on `profiles` insert |

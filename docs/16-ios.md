@@ -134,11 +134,19 @@ One value decides it, `apps/mobile/src/features/membership/purchasing.ts`:
 export const inAppPurchaseAvailable: boolean = Platform.OS !== "ios";
 ```
 
-`Platform.OS` and not a flag, for the reason the Play Billing branch dispatches
-on the platform too: this is a property of the store the build is distributed
-through, not a preference anybody might reasonably want to switch. A flag can
-be set wrong, inherited from a stale environment, or left on after a test, and
-the cost of being wrong here is a rejected submission rather than a bug.
+`Platform.OS` and not a flag, because whether a build may sell **at all** is a
+property of the platform: iOS is iOS on every artifact Apple will distribute,
+and there is no iOS build that should behave otherwise. A flag can be set wrong,
+inherited from a stale environment, or left on after a test, and the cost of
+being wrong here is a rejected submission rather than a bug.
+
+Which store takes the money when a build *can* sell is a different question, and
+the platform is the wrong instrument for it -- both Android artifacts report
+`android`. That one is answered by `paymentProvider` in the same file, from
+build-time configuration. An earlier version of this page cited the Play Billing
+branch's `Platform.OS` dispatch as precedent; that dispatch was replaced when
+Play Billing was integrated, for reasons that do not touch iOS. See
+[10-payments.md](10-payments.md#android-is-two-artifacts-not-one).
 
 Four layers read it, because one would be enough right up until somebody added
 a second buy button:

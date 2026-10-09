@@ -92,12 +92,22 @@ paging; expressing interest; mutual connections; messaging; blocking; reporting;
 account deletion. The mobile app (`apps/mobile`) additionally has the account
 area, membership screen and photo management.
 
-**Built but unreachable:** premium. Entitlements exist and are enforced in SQL,
-the plans are priced, and the screen says plainly that it cannot be bought
-because no payment provider is connected.
+**Built and buyable:** premium. Entitlements exist and are enforced in SQL, the
+plans are priced, and a purchase completes end to end through Razorpay on the web
+and on iOS. Razorpay is still in test mode, so no real money has moved.
 
-**Not built:** payments, push notifications, moderation tooling, identity or
-relationship verification, Apple sign-in, and legal privacy/terms documents.
+**Built, and not yet sellable:** premium on Android. An app distributed through
+Google Play must sell digital goods through Play Billing, so the Android client
+buys through Play rather than the web checkout. The client and the server side
+are written, but the Play products do not exist yet -- Google is still verifying
+the developer identity -- so the screen says premium cannot be bought in the app
+at the moment and that nothing has been charged. No Play purchase has been made
+by anybody. See [10-payments.md](10-payments.md) and
+[14-google-play.md](14-google-play.md).
+
+**Not built:** push notifications, moderation tooling, identity or relationship
+verification, Apple sign-in, an iOS in-app purchase path, and legal
+privacy/terms documents.
 
 **The rule that governs all of it:** nothing in the product claims a feature or a
 process that does not exist. Phone verification is real now, so the mark is

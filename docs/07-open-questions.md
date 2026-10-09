@@ -121,6 +121,49 @@ likely to be paying with a foreign card. Enabling international payments is an
 application to Razorpay carrying higher fees and additional compliance.
 Answering it "no" is legitimate; answering it by accident is not.
 
+## Payments and the app stores
+
+The payment and entitlement model is settled and documented in
+[10-payments.md](10-payments.md); Google Play's own surface is
+[14-google-play.md](14-google-play.md). What follows is what those two
+deliberately do **not** answer. None of it is to be resolved by guessing, and
+nothing in the code currently depends on an answer.
+
+**A Play licence tester's purchase grants real Premium.** `payments-play-verify`
+logs `test_purchase: true` and otherwise treats such a purchase as genuine,
+because refusing one would make device testing impossible. Whether to gate that
+in production is a one-line change nobody has decided. The only control over who
+can make such a purchase is the tester list in Play Console, which is why it is
+recorded rather than hidden.
+
+**How far purchase recovery should reach.** A Play purchase can be paid for and
+never verified — the app killed between the sheet closing and the server being
+told. Today a listener runs for the life of the process and a sweep runs when the
+membership screen mounts. Somebody who pays, is killed, and never reopens that
+screen is covered only by the listener. Whether the sweep should also run at
+launch or after sign-in is undecided, and it interacts with Google's three-day
+window: an unacknowledged purchase is refunded automatically after it.
+
+**What a partial refund should do to a prepaid term.** Unchanged and still open.
+`refund.processed` short of the full amount is logged and changes no entitlement;
+`payments.status` has `partially_refunded` waiting for the decision. Guessing in
+the member's disfavour is how somebody loses three months over a goodwill
+adjustment. Play voids are all-or-nothing, so the undecided case remains a
+Razorpay partial.
+
+**Whether the payment funnel should know which provider took the money.** It
+currently does not: all three paths emit the same event names, and `amountPaise`
+is Eraya's intended price rather than what Google charged, which in the Play
+build can differ because Play applies its own tax handling. Adding a provider
+dimension and recording the charged amount are the same decision.
+
+**Approved copy for the Play `unconfigured` state, in six languages.** The
+membership screen says, in English only, that premium cannot be bought in the app
+at the moment and that nothing has been charged. It is two literal strings rather
+than dictionary keys, so `npm run i18n:check` passes while they remain
+untranslated — precisely the failure mode the language checks exist to catch. The
+copy needs approval before translation. It is only reachable in the Play build.
+
 **How the directly downloaded Android build and a Play release relate to each
 other.** Play App Signing and an upload signing configuration still have to be
 set up; neither exists. What identity the Play build will carry, whether the
@@ -140,7 +183,37 @@ What is worth carrying in as input rather than conclusion: the current
 certificate is the universal Android debug certificate rather than a key unique
 to Eraya, and Android's rule that an update must be signed by the same key as
 the install it replaces applies to the direct channel whatever Play does. See
-[09-mobile.md](09-mobile.md#distribution). Do not plan around a guessed answer.
+[09-mobile.md](09-mobile.md#distribution) and
+[15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
+Do not plan around a guessed answer.
+
+### Answered since this page last said otherwise
+
+- **Does iOS open the Razorpay checkout?** No, and this page used to say it did.
+  Premium is not for sale on iOS at all as of the first TestFlight preparation,
+  so there is no Apple purchase path to refuse — and no StoreKit work, which is
+  the part that is still open. See [16-ios.md](16-ios.md).
+- **Does anything assert that the Play build cannot reach Razorpay?** Yes, now.
+  The invariant used to live in a single `Platform.OS` branch that no check
+  could see. It now lives in `paymentProvider`, and
+  `apps/mobile/src/features/membership/provider.test.ts` asserts all three
+  channels resolve to the right provider, that the default is the Razorpay
+  download rather than Play, and that no build exposes another build's path.
+  What a test still cannot prove is that a real Play purchase works.
+
+### Known gaps, not questions
+
+These have answers; the work simply is not done.
+
+- **No Play void reaches the system.** Real-time Developer Notifications,
+  Pub/Sub and `VOIDED_PURCHASE` are Phase 2c and are not built, so a refunded or
+  charged-back Play purchase does not currently take Premium back by itself.
+  `revoke_payment` exists and accepts one; nothing delivers it.
+- **The Play Console work is blocked.** Google is verifying the developer
+  identity, and contact-phone verification along with Android developer and
+  package verification are unavailable until that completes. No product can be
+  created, nothing can be uploaded to a track, and therefore no Play Billing test
+  of any kind is possible yet.
 
 ## Brand — defects in the supplied logo pack
 
@@ -200,8 +273,10 @@ drew it. Re-centring is a one-line change in `ErayaMark`.
 
 - What happens when someone in a launch city clicks through after launch? There
   is no signup flow behind the CTA yet.
-- Pricing is undecided, so the page says nothing about it. The claim "no paywall
-  before a first conversation" does constrain what the model can be.
+- ~~Pricing is undecided~~ — settled and shipped. The plans, their prices and the
+  ₹199 introductory rule are in [10-payments.md](10-payments.md). The claim "no
+  paywall before a first conversation" still constrains the model and is still
+  honoured.
 - "Free revert for the previous profile in a session" is stated as a principle;
   the actual mechanic (how many, how long a session lasts) is unspecified.
 - Moderation capacity is assumed, not planned. "Every report is read by a
