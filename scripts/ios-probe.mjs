@@ -191,9 +191,24 @@ ok(
 );
 
 /* ---------------------------------------------------------------- 4 -------
- * Android, unchanged. The APK is published and its signing identity has to
- * keep working; nothing in the iOS pass may move the package, the versionCode
- * or the permission posture that was reasoned about on its own terms.
+ * Android, unchanged where it matters. The published APK's identity has to
+ * keep working: nothing may move the package or the permission posture that
+ * was reasoned about on its own terms.
+ *
+ * `versionCode` is the one thing that does move, and it moves forward only.
+ * 4 is the APK published on eraya.app, which is built and signed and is not
+ * being rebuilt. 5 was the first App Bundle built for Google Play closed
+ * testing and was never uploaded. 6 is the bundle that carries the reviewer
+ * password sign-in, which is the one a reviewer actually needs, so it is the
+ * one to upload.
+ *
+ * Play requires a versionCode no other upload has used, and it is asserted
+ * exactly rather than loosely because an `autoIncrement` that rewrote it during
+ * a build would make the number in the commit a different number from the one
+ * Play received.
+ *
+ * The iOS version is a separate question and is checked above: 0.1.3 /
+ * buildNumber 1, untouched by any of this.
  */
 console.log("\nAndroid is left alone");
 ok(
@@ -202,8 +217,8 @@ ok(
   app.android?.package,
 );
 ok(
-  app.android?.versionCode === 4,
-  "versionCode is still 4",
+  app.android?.versionCode === 6,
+  "versionCode is 6 -- the Play build carrying reviewer sign-in",
   String(app.android?.versionCode),
 );
 ok(
@@ -213,6 +228,21 @@ ok(
 ok(
   (app.android?.blockedPermissions ?? []).includes("android.permission.RECORD_AUDIO"),
   "RECORD_AUDIO is still blocked explicitly, not only by the picker's option",
+);
+/*
+ * And "Display over other apps", which reached the first Play bundle because
+ * React Native declares it in its debug source set and `expo-dev-client` is a
+ * production dependency. Blocked rather than tolerated: Play lists it on the
+ * store page, and a dating app that can draw over other apps is a question
+ * nobody wants to answer. Asserted here because the only place it is visible is
+ * the merged manifest of a built artifact -- `expo config --type introspect`
+ * cannot see it, so nothing else in this repository would notice its return.
+ */
+ok(
+  (app.android?.blockedPermissions ?? []).includes(
+    "android.permission.SYSTEM_ALERT_WINDOW",
+  ),
+  "SYSTEM_ALERT_WINDOW is blocked -- RN's debug manifest contributes it otherwise",
 );
 
 /* ---------------------------------------------------------------- 5 -------
@@ -226,21 +256,56 @@ ok(
 console.log("\nPremium cannot be bought on iOS");
 const purchasing = read("src", "features", "membership", "purchasing.ts");
 ok(
-  /export const inAppPurchaseAvailable: boolean = Platform\.OS !== "ios";/.test(
+  /export const paymentProvider: PaymentProvider = paymentProviderFor\(\s*Platform\.OS,/.test(
     purchasing,
   ),
-  "the decision is one exported value, derived from Platform.OS",
+  "the decision is one exported value, and the platform is its first input",
+);
+ok(
+  /export const inAppPurchaseAvailable: boolean = paymentProvider !== "none";/.test(
+    purchasing,
+  ),
+  "whether anybody may buy is derived from that one value, not decided twice",
 );
 ok(
   !/process\.env/.test(purchasing),
   "it is not a flag or an environment variable -- those can be set wrong",
 );
 
-const GUARD = 'if (!inAppPurchaseAvailable) return { status: "unsupported" }';
+/*
+ * And iOS's answer does not depend on one.
+ *
+ * `distribution.ts` is where the Android channel is read from the environment,
+ * which is right for Android -- the download and the Play build are two
+ * artifacts that both report `android`. It would be wrong for iOS, where a
+ * mis-set variable would mean a rejected binary. So the platform is answered
+ * before the channel is ever looked at, and that ordering is the assertion.
+ */
+const distribution = read("src", "features", "membership", "distribution.ts");
+ok(
+  guardsBefore(
+    distribution,
+    'if (platform === "ios") return "none";',
+    "switch (channel)",
+  ),
+  "iOS is answered before the channel is consulted, so no variable can open the till",
+);
+
+/*
+ * The guard is a switch on the provider rather than a boolean, so adding a
+ * provider stops the file compiling until somebody says what buying through it
+ * means. `none` is iOS and the Play build; the order and the browser are both
+ * downstream of it.
+ */
+const GUARD = "switch (paymentProvider) {";
 const payments = read("src", "features", "membership", "payments.ts");
 ok(
   /\| \{ status: "unsupported" \}/.test(payments),
   "`unsupported` is a purchase outcome of its own, not folded into `failed`",
+);
+ok(
+  /case "none":\s*\n\s*return \{ status: "unsupported" \};/.test(payments),
+  "a build with no provider returns `unsupported` and attempts nothing",
 );
 ok(
   guardsBefore(payments, GUARD, "payments-create-order"),
@@ -262,18 +327,38 @@ ok(
 
 const membership = read("app", "you", "membership.tsx");
 ok(
-  guardsBefore(membership, "{inAppPurchaseAvailable ? (", "onPress={() => void buy()}"),
-  "the membership screen renders the pay button only inside the iOS guard",
+  guardsBefore(
+    membership,
+    "{purchaseUnavailableReason === null ? (",
+    "onPress={() => void buy()}",
+  ),
+  "the membership screen renders the pay button only where there is a till",
 );
 ok(
-  /<Unavailable \/>/.test(membership),
+  /<Unavailable reason=\{purchaseUnavailableReason\} \/>/.test(membership),
   "the other branch is an explanation, not a disabled button",
 );
 ok(
-  /function Unavailable\(\)/.test(membership) &&
-    /t\("membership\.notAvailableTitle"\)/.test(membership) &&
-    /t\("membership\.notAvailableBody"\)/.test(membership),
+  /function Unavailable\(\{ reason \}/.test(membership) &&
+    /t\(copy\.title\)/.test(membership) &&
+    /t\(copy\.body\)/.test(membership) &&
+    /"membership\.notAvailableTitle"/.test(membership) &&
+    /"membership\.notAvailableBody"/.test(membership),
   "and it is localized, not hard-coded English",
+);
+/*
+ * Two explanations, not one reused.
+ *
+ * iOS cannot sell Premium and nobody has planned otherwise; the Play build
+ * cannot sell it yet. Giving a Play tester the iPhone sentence would be false,
+ * and giving an iPhone member the Play sentence would promise something that
+ * does not exist. The iOS copy is the pair asserted below in all six
+ * languages; this is the check that it is still the pair iOS gets.
+ */
+ok(
+  /reason === "platform"/.test(membership) &&
+    guardsBefore(membership, 'reason === "platform"', '"membership.purchasingPausedTitle"'),
+  "iOS gets the iOS sentence, and the Play build gets its own",
 );
 /* No price may be quoted where none can be taken. */
 ok(
@@ -333,31 +418,49 @@ ok(
 /* ---------------------------------------------------------------- 7 -------
  * Six languages, as everywhere else. A member who does not read English has
  * to be told why there is no price here, in the language they chose.
+ *
+ * Both pairs, because there are two reasons and each gets its own sentence:
+ * `notAvailable*` is iOS, `purchasingPaused*` is the Google Play build until
+ * Play Billing exists. The same three things are asked of each.
  */
 console.log("\nThe unavailable state, in six languages");
 const en = readLocale("en.ts");
-for (const key of ["membership.notAvailableTitle", "membership.notAvailableBody"]) {
-  ok(Boolean(en.get(key)), `en defines ${key}`);
+const UNAVAILABLE_COPY = [
+  { what: "iOS", title: "membership.notAvailableTitle", body: "membership.notAvailableBody" },
+  {
+    what: "the Play build",
+    title: "membership.purchasingPausedTitle",
+    body: "membership.purchasingPausedBody",
+  },
+];
+
+for (const pair of UNAVAILABLE_COPY) {
+  for (const key of [pair.title, pair.body]) {
+    ok(Boolean(en.get(key)), `en defines ${key}`);
+  }
 }
+
 for (const locale of ["hi", "bn", "mr", "te", "ta"]) {
   const dict = readLocale(`${locale}.ts`);
-  const title = dict.get("membership.notAvailableTitle");
-  const body = dict.get("membership.notAvailableBody");
-  ok(Boolean(title) && Boolean(body), `${locale} defines both keys`);
-  ok(
-    title !== en.get("membership.notAvailableTitle") &&
-      body !== en.get("membership.notAvailableBody"),
-    `${locale} is translated, not left in English`,
-  );
-  /*
-   * And it does not offer a way round. "Buy it on our website" is the specific
-   * thing 3.1.1(a) forbids, and it is the sentence a translator would most
-   * naturally reach for.
-   */
-  ok(
-    !/eraya\.app|https?:/i.test(String(body)),
-    `${locale} does not send anybody to a website to buy it`,
-  );
+  for (const pair of UNAVAILABLE_COPY) {
+    const title = dict.get(pair.title);
+    const body = dict.get(pair.body);
+    ok(Boolean(title) && Boolean(body), `${locale} defines both keys for ${pair.what}`);
+    ok(
+      title !== en.get(pair.title) && body !== en.get(pair.body),
+      `${locale} is translated for ${pair.what}, not left in English`,
+    );
+    /*
+     * And it does not offer a way round. "Buy it on our website" is the
+     * specific thing Apple's 3.1.1(a) forbids and the specific thing Play's
+     * payments policy forbids, and it is the sentence a translator would most
+     * naturally reach for.
+     */
+    ok(
+      !/eraya\.app|https?:/i.test(String(body)),
+      `${locale} does not send anybody to a website to buy it (${pair.what})`,
+    );
+  }
 }
 
 /* ---------------------------------------------------------------- 8 -------

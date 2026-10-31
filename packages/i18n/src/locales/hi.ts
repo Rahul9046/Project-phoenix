@@ -77,6 +77,12 @@ export const hi: Translations = {
         "हम आपको छह अंकों का कोड भेजेंगे। कोई पासवर्ड याद रखने की ज़रूरत नहीं।",
       reassurance:
         "Eraya से जुड़ना मुफ़्त है। जब तक आप न चाहें, किसी के साथ कुछ भी साझा नहीं किया जाता, और आप अपना खाता तथा उसमें मौजूद सब कुछ कभी भी मिटा सकते हैं।",
+      passwordOption: "पासवर्ड से साइन इन करें",
+      passwordNote:
+        "केवल ऐप समीक्षा के लिए। बाकी सभी ईमेल पर भेजे गए कोड से, या ऊपर Google या Facebook से साइन इन करते हैं।",
+      passwordLabel: "पासवर्ड",
+      passwordPlaceholder: "आपका पासवर्ड",
+      passwordSubmit: "साइन इन करें",
     },
     entry: {
       unreachableTitle: "हम Eraya तक नहीं पहुँच सके",
@@ -810,6 +816,10 @@ export const hi: Translations = {
     notAvailableTitle: "यहाँ Premium उपलब्ध नहीं है",
     notAvailableBody:
       "iPhone के लिए बने Eraya ऐप में Premium नहीं खरीदा जा सकता। इसके अलावा कुछ नहीं बदलता — नीचे दी गई हर चीज़ मुफ़्त है, जैसी हमेशा रही है।",
+    purchasingPausedTitle:
+      "ऐप के इस संस्करण में Premium नहीं खरीदा जा सकता",
+    purchasingPausedBody:
+      "Eraya ऐप के इस संस्करण में अभी Premium खरीदना उपलब्ध नहीं है। इसके अलावा कुछ नहीं बदलता — नीचे दी गई हर चीज़ मुफ़्त है, और जो Premium आपने पहले ख़रीदा है वह अब भी चालू है।",
   },
 
   payment: {
@@ -919,6 +929,7 @@ export const hi: Translations = {
     sixDigits: "यह छह अंकों का होना चाहिए।",
     signInNetwork: "हम अभी आपको साइन इन नहीं करा सके। कृपया कनेक्शन जाँचकर फिर कोशिश करें।",
     signInFailed: "हम अभी आपको साइन इन नहीं करा सके। कृपया एक पल बाद फिर कोशिश करें।",
+    passwordIncorrect: "यह ईमेल और पासवर्ड मेल नहीं खाते।",
     signInCancelled: "साइन इन रद्द कर दिया गया।",
     invalidEmail: "यह ईमेल पता नहीं लगता।",
     emailRateLimited:

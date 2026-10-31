@@ -3,7 +3,10 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { recordProductEvent } from "@/features/membership/analytics";
-import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
+import {
+  inAppPurchaseAvailable,
+  purchaseUnavailableReason,
+} from "@/features/membership/purchasing";
 import {
   formatPaise,
   getMembership,
@@ -43,14 +46,23 @@ import type { TFunction, TranslationKey } from "@eraya/i18n";
  * The free column stays. Writing down what remains free by name is what makes
  * moving one of them behind the paywall a deliberate act rather than drift.
  *
- * On iOS there is no till. The plans, the price and the pay button are replaced
- * by one sentence saying Premium cannot be bought here -- not a disabled
- * button, which looks like a fault, and not a link to the website, which Apple
- * forbids and which would be a worse answer anyway. Everything else on the
- * screen is unchanged: what Premium adds is still described, what is free is
- * still named, and a member who already has Premium still sees it as active,
- * because the entitlement is the server's answer and has no platform in it.
- * See features/membership/purchasing.ts.
+ * On iOS, and in the Google Play build until Play Billing exists, there is no
+ * till. The plans, the price and the pay button are replaced by one sentence
+ * saying Premium cannot be bought here -- not a disabled button, which looks
+ * like a fault somebody might retry, and not a link to the website, which
+ * Apple forbids outright, which breaches Play's payments policy, and which
+ * would be a worse answer than the honest one in both cases.
+ *
+ * The two cases get different sentences, because they are different facts. iOS
+ * cannot sell Premium and is not about to; the Play build cannot sell it *yet*.
+ * Telling a Play tester the iPhone sentence would be false, and telling an
+ * iPhone member the Play sentence would promise something nobody has planned.
+ *
+ * Everything else on the screen is unchanged in both: what Premium adds is
+ * still described, what is free is still named, a member who already has
+ * Premium still sees it as active with its expiry, and their payments are still
+ * listed -- because the entitlement is the server's answer and has no platform
+ * and no provider in it. See features/membership/purchasing.ts.
  */
 
 /*
@@ -258,7 +270,12 @@ export default function MembershipScreen() {
         ))}
       </View>
 
-      {inAppPurchaseAvailable ? (
+      {/*
+        Keyed off the reason rather than the boolean, so the branch that draws
+        the till and the branch that explains its absence read the same single
+        authority -- and so the explanation cannot be rendered without one.
+      */}
+      {purchaseUnavailableReason === null ? (
         <View style={{ marginTop: space.section }}>
           <Text variant="eyebrow" tone="subtle" style={{ marginBottom: space.md }}>
             {premium ? t("membership.addMoreTime") : t("marketing.pricing.premiumCta")}
@@ -313,7 +330,7 @@ export default function MembershipScreen() {
           ) : null}
         </View>
       ) : (
-        <Unavailable />
+        <Unavailable reason={purchaseUnavailableReason} />
       )}
 
       {payments.length > 0 ? (
@@ -359,20 +376,41 @@ export default function MembershipScreen() {
 }
 
 /**
- * Where the plans would have been, on a platform that cannot sell them.
+ * Where the plans would have been, in a build that cannot sell them.
  *
  * A sentence in a card, and nothing else: no disabled button, which reads as a
  * fault somebody might retry; no price, because quoting one and then refusing
  * to take it is worse than quoting none; and no way out to another checkout,
- * which is the specific thing Apple's Guideline 3.1.1(a) forbids and which
- * would make Eraya look like it were working around a rule rather than
- * following it.
+ * which is the specific thing Apple's Guideline 3.1.1(a) forbids, which is a
+ * breach of Play's payments policy in a Play-distributed build, and which would
+ * make Eraya look like it were working around a rule rather than following it.
+ *
+ * Two sentences for the two reasons, chosen by `purchaseUnavailableReason`
+ * rather than by the platform, so that neither build can be given the other's
+ * copy:
+ *
+ *   platform  -- iOS. Premium is not for sale in the app, and will not be
+ *                until there is a StoreKit purchase to sell it through.
+ *   channel   -- the Google Play build. Purchasing is not available yet,
+ *                because Play Billing is not finished. Said neutrally, with no
+ *                date promised and nowhere else to go.
  *
  * `tone="sand"` rather than `danger`: nothing has gone wrong. This is the
  * product saying what it does, in the member's own language.
  */
-function Unavailable() {
+function Unavailable({ reason }: { reason: "platform" | "channel" }) {
   const t = useT();
+
+  const copy: { title: TranslationKey; body: TranslationKey } =
+    reason === "platform"
+      ? {
+          title: "membership.notAvailableTitle",
+          body: "membership.notAvailableBody",
+        }
+      : {
+          title: "membership.purchasingPausedTitle",
+          body: "membership.purchasingPausedBody",
+        };
 
   return (
     <Card tone="sand" style={{ marginTop: space.section }}>
@@ -383,9 +421,9 @@ function Unavailable() {
           color={colors.inkMuted}
         />
         <View style={{ flex: 1 }}>
-          <Text variant="label">{t("membership.notAvailableTitle")}</Text>
+          <Text variant="label">{t(copy.title)}</Text>
           <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxs }}>
-            {t("membership.notAvailableBody")}
+            {t(copy.body)}
           </Text>
         </View>
       </View>

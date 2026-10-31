@@ -141,6 +141,25 @@ export const en = {
       /* Said before the first tap, not in a policy nobody opens. */
       reassurance:
         "Eraya is free to join. Nothing is shared with anyone until you choose it, and you can delete your account and everything in it at any time.",
+      /*
+       * The password option, drawn only in the Google Play build.
+       *
+       * Eraya has no passwords and this does not change that -- it exists
+       * because a Play reviewer cannot receive an email OTP, and Play's App
+       * access form takes a password. The note says so plainly rather than
+       * leaving a member wondering whether they were supposed to have one.
+       *
+       * Not hidden behind a gesture: Play's own instructions have to be
+       * followable by somebody who has never seen the app, so it has to be
+       * findable. See features/auth/password-sign-in.ts for why the field being
+       * visible is not the security boundary.
+       */
+      passwordOption: "Sign in with a password",
+      passwordNote:
+        "For app review only. Everyone else signs in with the code we email, or with Google or Facebook above.",
+      passwordLabel: "Password",
+      passwordPlaceholder: "Your password",
+      passwordSubmit: "Sign in",
     },
     /*
      * The two screens that exist only to wait: the app's entry point, and
@@ -1130,6 +1149,28 @@ export const en = {
     notAvailableTitle: "Premium is not available here",
     notAvailableBody:
       "Premium cannot be bought in the Eraya app for iPhone. Nothing else changes — everything listed below is free, exactly as it has always been.",
+    /*
+     * The Google Play build, which cannot sell Premium until Play Billing is
+     * finished. A separate pair from `notAvailable*` above because the two
+     * facts are different: Premium is not for sale on iPhone and nobody has
+     * planned otherwise, whereas on Play it is not for sale *yet*.
+     *
+     * "this version of the app" rather than "Google Play", because a member
+     * reading it did not choose a distribution channel and should not have to
+     * learn what one is. No date is promised, and -- as above -- nowhere else
+     * to buy it is named: pointing a Play-distributed build at a web checkout
+     * is the specific thing Play's payments policy forbids.
+     *
+     * The second sentence is the one that matters most to anybody who has
+     * already paid. Entitlements are read from the server with no provider
+     * term in that path, so Premium bought on the website or on the Android
+     * download is still active here, and the copy says so rather than leaving
+     * somebody to wonder.
+     */
+    purchasingPausedTitle:
+      "Premium cannot be bought in this version of the app",
+    purchasingPausedBody:
+      "Buying Premium is not available in this version of the Eraya app yet. Nothing else changes — everything listed below is free, and Premium you have already paid for is still active.",
   },
 
   payment: {
@@ -1247,6 +1288,7 @@ export const en = {
     signInNetwork:
       "We could not sign you in just now. Please check your connection and try again.",
     signInFailed: "We could not sign you in just now. Please try again in a moment.",
+    passwordIncorrect: "That email and password do not match.",
     signInCancelled: "Sign-in was cancelled.",
     invalidEmail: "That does not look like an email address.",
     emailRateLimited:

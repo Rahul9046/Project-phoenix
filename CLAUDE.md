@@ -57,3 +57,17 @@ member-facing function must `revoke execute ... from public, anon` and then
 update or delete policy for anyone, deliberately. Membership is written by
 whatever takes the money, running with the service role. A client that can write
 its own subscription row can award itself premium.
+
+**Never decide how a build takes money from `Platform.OS`.** Android ships as
+two artifacts: the APK downloaded from eraya.app, which is sideloaded and keeps
+the Razorpay browser checkout, and the Google Play build, which must never open
+a web checkout and today sells nothing at all. Both report `android`. The one
+authority is `paymentProvider` in
+`apps/mobile/src/features/membership/purchasing.ts`, built from
+`distributionChannel` in `distribution.ts`, which reads
+`EXPO_PUBLIC_DISTRIBUTION` — inlined at build time, absent meaning `direct` so
+that forgetting it cannot change the artifact the public is running, and any
+unrecognised value meaning `unknown`, which sells nothing. `purchase()` switches
+on it exhaustively; add a provider and the switch stops compiling. Google Play
+Billing itself is **not merged** (PR #152) and no purchase has been observed
+through it. See `docs/10-payments.md`.

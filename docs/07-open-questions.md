@@ -122,25 +122,31 @@ application to Razorpay carrying higher fees and additional compliance.
 Answering it "no" is legitimate; answering it by accident is not.
 
 **How the directly downloaded Android build and a Play release relate to each
-other.** Play App Signing and an upload signing configuration still have to be
-set up; neither exists. What identity the Play build will carry, whether the
-existing key can serve as the upload key, and what the transition means for
-people already running a build downloaded from eraya.app are one question, and
-it stays open until Play is configured deliberately — with Play's own upload
-requirements read at that time rather than inferred now.
+other.** Mostly answered on 2026-10-31, while preparing the first closed-testing
+App Bundle. Two parts are settled and one is not.
 
-The download became **public** on 2026-10-06, offered from `eraya.app/download`
-while Play's closed-testing period runs in parallel. That answers no part of the
-question, but it enlarges the last part: the population a key change would
-strand is now open-ended rather than a list of testers we could contact. The
-existing identity must be preserved in the meantime, and the keystore is backed
-up locally and off-device.
+**Settled: the existing key cannot be the Play upload key.** Not a decision —
+Play rejects an upload signed with the Android debug certificate, and
+`CN=Android Debug` is what the direct APK carries. So Play App Signing holds
+the app signing key, the upload key is a separate new key that EAS manages, and
+`debug.keystore` is untouched. The three certificates are tabulated in
+[09-mobile.md](09-mobile.md#signing).
 
-What is worth carrying in as input rather than conclusion: the current
-certificate is the universal Android debug certificate rather than a key unique
-to Eraya, and Android's rule that an update must be signed by the same key as
-the install it replaces applies to the direct channel whatever Play does. See
-[09-mobile.md](09-mobile.md#distribution). Do not plan around a guessed answer.
+**Settled: the two channels cannot cross.** Different certificates, and Android
+refuses an update signed by a different key, so an install from eraya.app
+cannot become an install from Play without uninstalling first. The data is all
+server-side, so only the session is lost — but testers have to be told, because
+otherwise it presents as a failed update. The download being **public** since
+2026-10-06 is what makes this a notice rather than a message to a known list.
+
+**Still open: what the direct download is _for_, once Play serves the app.**
+Two channels, two certificates and two update paths is a cost that was worth
+paying while Play was unavailable. Whether the APK stays as the answer for
+people who cannot or will not use Play, or is retired once the Play listing is
+public, is a product decision nobody has made. Until it is made, the existing
+identity must be preserved and the keystore stays backed up locally and
+off-device — and `npx expo prebuild` must not be run, because it can regenerate
+`debug.keystore` and strand every existing install.
 
 ## Brand — defects in the supplied logo pack
 

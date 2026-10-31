@@ -348,12 +348,62 @@ the app, and for one that is neither.
 
 **The two stores are being answered differently, and separately.**
 
-**Google.** Play Billing, on `feature/play-billing-phase-2a` and its successor.
-Android dispatches to Play Billing instead of Razorpay there, and that branch is
-kept apart from everything else on purpose. Not merged, and no purchase has been
-observed yet. Its own documents -- `14-google-play.md` and
-`15-android-signing-and-distribution.md` -- live on that branch and arrive with
-it.
+**Google.** Play Billing is built on `feature/play-billing-main-integration`
+(PR #152) and is **not merged**. No purchase has been observed through it, and
+nothing in it is reachable from `main`. Its own documents --
+`14-google-play.md` and `15-android-signing-and-distribution.md` -- live on
+that branch and arrive with it.
+
+What *is* on `main` is the mechanism that decides who takes the money, because
+the first Google Play closed-testing build needed it before Billing was
+finished. There are two Android artifacts and they are not allowed to behave
+the same way:
+
+| Build | `EXPO_PUBLIC_DISTRIBUTION` | Provider |
+| --- | --- | --- |
+| APK from eraya.app | unset, or `direct` | `razorpay` |
+| Google Play | `play` | `none` |
+| iOS | anything | `none` |
+
+`apps/mobile/src/features/membership/distribution.ts` is the authority and
+`purchasing.ts` exports the one value every screen reads. The decision is
+**not** `Platform.OS` -- both Android artifacts report `android`, so the
+platform cannot tell them apart, and the build it would get wrong is the public
+download that people are running today. It is a build-time variable, inlined by
+Metro into the bundle, declared by exactly one EAS profile (`play`) in
+`eas.json`.
+
+**The Play build sells nothing, deliberately.** Play requires digital goods in
+an app distributed on Play to be sold through Play Billing, there is no Billing
+client in that build, and Razorpay is not a fallback -- it is the breach. So
+the membership screen shows one neutral sentence in all six languages where the
+plans would be, and `purchase()` returns `unsupported` without creating an
+order or opening a browser. Entitlement reading is untouched: Premium bought on
+the website or on the Android download is still active, still shows its expiry,
+and still unlocks what it entitles. `provider.test.ts` asserts all of it and
+`npm run play:channel` prints the table above from the real `eas.json`.
+
+Two things about the variable are worth knowing before building anything:
+
+- **Absent means `direct`**, and that is load-bearing. The public APK is built
+  locally with Gradle from a checkout that declares nothing, so a forgotten
+  variable must leave the live behaviour alone. A value that is *present but
+  unrecognised* is treated differently -- it is `unknown`, and it sells nothing,
+  because somebody meant to name a channel and mistyped it.
+- **Metro's transform cache does not key on the value** (measured
+  2026-10-31). Export with `play`, export again for `direct` without `--clear`,
+  and the second bundle still carries `play`. EAS Build is immune -- every
+  cloud build starts cold -- but a local Gradle build is not. Verify the
+  artifact, do not trust the shell:
+
+  ```
+  EXPO_PUBLIC_DISTRIBUTION=play npx expo export --platform android \
+    --no-bytecode --no-minify --clear --output-dir /tmp/play
+  node scripts/play-channel.mjs --bundle /tmp/play --expect play
+  ```
+
+  `--no-bytecode --no-minify` because the question is which string literal the
+  inliner wrote, and Hermes bytecode cannot be read for it.
 
 **Apple.** Premium is **not for sale on iOS at all**, as of the first TestFlight
 preparation. `inAppPurchaseAvailable` in
