@@ -692,6 +692,7 @@ export const te: Translations = {
       safety: "భద్రత",
       android: "ఆండ్రాయిడ్ యాప్",
       legalTitle: "చట్టపరమైనవి",
+      deleteAccount: "మీ ఖాతాను తొలగించండి",
       privacy: "గోప్యత",
       terms: "నిబంధనలు",
       contact: "సంప్రదించండి",

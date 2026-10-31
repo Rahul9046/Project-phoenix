@@ -80,6 +80,11 @@ export const footer: {
         { labelKey: "marketing.footer.privacy", href: "/privacy" },
         { labelKey: "marketing.footer.terms", href: "/terms" },
         { labelKey: "common.legalGuidelines", href: "/safety" },
+        /*
+         * Reachable from every page, because the person who needs it is the
+         * person least likely to still have the app open.
+         */
+        { labelKey: "marketing.footer.deleteAccount", href: "/delete-account" },
         { labelKey: "marketing.footer.contact", href: "/contact" },
       ],
     },

@@ -692,6 +692,7 @@ export const bn: Translations = {
       safety: "নিরাপত্তা",
       android: "অ্যান্ড্রয়েড অ্যাপ",
       legalTitle: "আইনি",
+      deleteAccount: "আপনার অ্যাকাউন্ট মুছুন",
       privacy: "গোপনীয়তা",
       terms: "শর্তাবলি",
       contact: "যোগাযোগ",
