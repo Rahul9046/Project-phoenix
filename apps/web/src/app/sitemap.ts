@@ -37,6 +37,13 @@ const publicPaths = [
   "/privacy",
   "/terms",
   "/contact",
+  /*
+   * How to delete an account, and what deletion does. Listed because Google
+   * Play requires the URL to be publicly reachable and because somebody who has
+   * already uninstalled the app will look for it in a search engine rather than
+   * in a settings screen they no longer have.
+   */
+  "/delete-account",
 ] as const;
 
 /**
