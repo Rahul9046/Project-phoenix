@@ -1130,6 +1130,28 @@ export const en = {
     notAvailableTitle: "Premium is not available here",
     notAvailableBody:
       "Premium cannot be bought in the Eraya app for iPhone. Nothing else changes — everything listed below is free, exactly as it has always been.",
+    /*
+     * The Google Play build, which cannot sell Premium until Play Billing is
+     * finished. A separate pair from `notAvailable*` above because the two
+     * facts are different: Premium is not for sale on iPhone and nobody has
+     * planned otherwise, whereas on Play it is not for sale *yet*.
+     *
+     * "this version of the app" rather than "Google Play", because a member
+     * reading it did not choose a distribution channel and should not have to
+     * learn what one is. No date is promised, and -- as above -- nowhere else
+     * to buy it is named: pointing a Play-distributed build at a web checkout
+     * is the specific thing Play's payments policy forbids.
+     *
+     * The second sentence is the one that matters most to anybody who has
+     * already paid. Entitlements are read from the server with no provider
+     * term in that path, so Premium bought on the website or on the Android
+     * download is still active here, and the copy says so rather than leaving
+     * somebody to wonder.
+     */
+    purchasingPausedTitle:
+      "Premium cannot be bought in this version of the app",
+    purchasingPausedBody:
+      "Buying Premium is not available in this version of the Eraya app yet. Nothing else changes — everything listed below is free, and Premium you have already paid for is still active.",
   },
 
   payment: {

@@ -809,6 +809,10 @@ export const te: Translations = {
     notAvailableTitle: "ఇక్కడ Premium అందుబాటులో లేదు",
     notAvailableBody:
       "iPhone కోసం రూపొందించిన Eraya యాప్‌లో Premium కొనుగోలు చేయడం సాధ్యం కాదు. ఇది తప్ప మరేదీ మారదు — కింద ఇచ్చిన అన్నీ ఉచితం, ఎప్పటిలాగే.",
+    purchasingPausedTitle:
+      "యాప్‌లోని ఈ వెర్షన్‌లో Premium కొనుగోలు చేయడం సాధ్యం కాదు",
+    purchasingPausedBody:
+      "Eraya యాప్‌లోని ఈ వెర్షన్‌లో Premium కొనుగోలు చేయడం ఇంకా అందుబాటులో లేదు. ఇది తప్ప మరేదీ మారదు — కింద ఇచ్చిన అన్నీ ఉచితం, మీరు ఇంతకుముందు కొన్న Premium ఇప్పటికీ చురుకుగా ఉంది.",
   },
 
   payment: {

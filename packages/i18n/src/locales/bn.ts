@@ -810,6 +810,10 @@ export const bn: Translations = {
     notAvailableTitle: "এখানে Premium পাওয়া যায় না",
     notAvailableBody:
       "iPhone-এর জন্য তৈরি Eraya অ্যাপে Premium কেনা যায় না। এ ছাড়া আর কিছুই বদলায় না — নীচে যা যা রয়েছে সবই বিনামূল্যে, যেমন বরাবরই ছিল।",
+    purchasingPausedTitle:
+      "অ্যাপের এই সংস্করণে Premium কেনা যায় না",
+    purchasingPausedBody:
+      "Eraya অ্যাপের এই সংস্করণে এখনও Premium কেনা যায় না। এ ছাড়া আর কিছুই বদলায় না — নীচে যা যা রয়েছে সবই বিনামূল্যে, আর আপনি আগে যে Premium কিনেছেন তা এখনও চালু আছে।",
   },
 
   payment: {

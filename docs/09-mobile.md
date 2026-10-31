@@ -418,21 +418,23 @@ directly installed build exactly as it does anywhere else. Being sideloaded
 changes nothing about it, and no Play policy applies to a build Play is not
 distributing.
 
-**This is the part that changes when Play Billing lands, and it lands on its own
-branch.** That work lives on `feature/play-billing-phase-2a` and is **kept
-separate on purpose**: the direct-distribution release is based on `main` at
-`6c2da57` and must not take a merge, rebase or cherry-pick from it. The two
-answer different questions -- this one is how a phone gets the app while Play's
-closed-testing period runs, that one is how a Play-distributed build takes money
--- and tying them together would mean the download could not ship until billing
-was ready.
+**Which till a build opens is decided by the build, not by the platform.**
+`EXPO_PUBLIC_DISTRIBUTION` names the channel, `distribution.ts` turns it into a
+provider, and `purchasing.ts` exports the one value every screen reads. The
+APK here is `direct` and keeps Razorpay; the Google Play build is `play` and
+sells nothing at all until Play Billing is finished. `Platform.OS` is the wrong
+instrument for this and was replaced with it: both artifacts report `android`,
+and the one the platform check would get wrong is this one, the public
+download. See [10-payments.md](10-payments.md) for the table and the
+Metro-cache hazard that goes with it.
 
-On that branch Android dispatches to Play Billing instead of Razorpay, and since
-the five Play products do not exist yet, Premium becomes unbuyable in-app with an
-honest disabled state rather than a broken checkout. Android must never fall back
-to Razorpay once that lands; the dispatch is on `Platform.OS`, not a flag,
-because an Android build opening a web checkout would breach Play's payments
-policy.
+**Play Billing itself lands on its own branch and has not landed.** That work
+is `feature/play-billing-main-integration` (PR #152), open and unmerged, with
+no purchase observed through it. The direct-distribution release must not take
+a merge, rebase or cherry-pick from it. The two answer different questions --
+this one is how a phone gets the app while Play's closed-testing period runs,
+that one is how a Play-distributed build takes money -- and tying them together
+would mean the download could not ship until billing was ready.
 
 So a rebuild of the app is **not** a free act today, and it is a payments
 decision rather than a distribution one. It is also not a prerequisite for
@@ -478,6 +480,51 @@ aapt2 dump badging <apk> | head -1        # package, versionCode, versionName
 unzip -l <apk> | grep -o 'lib/[^/]*' | sort -u   # the ABIs actually inside
 ```
 
+### Building the Google Play App Bundle
+
+Play takes an `.aab`, not an APK, and it is built in the cloud rather than here
+— EAS holds the upload key, and the artifact has to be signed with it.
+
+```
+cd apps/mobile
+npx eas-cli@latest build --platform android --profile play \
+  --non-interactive --freeze-credentials --clear-cache
+```
+
+Each flag is doing something:
+
+- **`--profile play`** is the only profile that declares
+  `EXPO_PUBLIC_DISTRIBUTION=play`, builds `app-bundle` rather than an APK, and
+  resolves the `production` EAS environment so the Supabase URL, the
+  publishable key and the site URL are the real ones. `npm run play:channel`
+  prints what every profile resolves to.
+- **`--freeze-credentials`** makes the build fail rather than create or change a
+  keystore. Signing changes are never a side effect of asking for a build.
+- **`--clear-cache`** because Metro's transform cache does not key on
+  `EXPO_PUBLIC_*` values. EAS starts cold anyway, so this is belt and braces
+  for the one failure mode that would silently produce a Play build pointed at
+  Razorpay.
+- **`autoIncrement` is off** on this profile. `appVersionSource` is `local`, so
+  an increment would rewrite `app.json` mid-build and the versionCode Play
+  received would not be the one in the commit. Set it in `app.json` by hand and
+  push a commit for it.
+
+`android/` is gitignored, so EAS prebuilds the native project from `app.json` in
+the cloud. The stale `versionCode` in `android/app/build.gradle` is not what
+reaches Play — `app.json` is. Confirm with
+`npx expo config --type introspect` before building.
+
+Verify the artifact before it goes anywhere near the Console:
+
+```
+unzip -p <aab> BUNDLE-METADATA/com.android.tools.build.gradle/app-metadata.properties
+unzip -l <aab> | grep -o 'base/lib/[^/]*' | sort -u    # the ABIs inside
+```
+
+`base/manifest/AndroidManifest.xml` in an AAB is binary; read it with
+`bundletool dump manifest` if the permission set matters, because the Gradle
+manifest merge can add permissions no config file mentions.
+
 ### Signing
 
 `apps/mobile/android/app/build.gradle` points the `release` build type at
@@ -500,10 +547,41 @@ apksigner verify --print-certs <apk>
 
 Anything other than the expected certificate must not go to existing installs.
 
-**Play App Signing and an upload key still have to be set up, and what identity
-the Play build will carry is deliberately undecided.** Nothing in this
-repository depends on the answer. See
-[07-open-questions.md](07-open-questions.md).
+**The Play build cannot carry this identity, and that is settled rather than
+chosen.** Google Play rejects an upload signed with the Android debug
+certificate, and `CN=Android Debug` with a SHA1withRSA signature is exactly
+what this is -- a certificate shipped with the Android SDK, identical on every
+machine, which anybody could sign as. So the question "can the existing key be
+the Play upload key" has the answer no, and no decision had to be made to reach
+it.
+
+What follows from that:
+
+- **Play App Signing holds the app signing key.** Google generates and keeps
+  it; it is not in this repository and never will be.
+- **The upload key is a separate, new key**, used only to prove an upload came
+  from us. EAS Build manages one per project. Nothing about it touches
+  `debug.keystore`.
+- **`debug.keystore` is untouched and must stay so.** It is what keeps every
+  sideloaded install upgradeable, and `npx expo prebuild` must not be run,
+  because it can regenerate it.
+- **The two channels have different certificates, so an install cannot cross
+  between them.** Android refuses an update signed by a different key, so
+  somebody running the eraya.app APK has to uninstall it before installing from
+  Play, and the other way round. Nothing is lost by that -- profile, photos,
+  connections and messages are all server-side, and only the session goes.
+  Testers have to be told, because "update failed" is what it looks like
+  otherwise.
+
+Three certificates get confused here and are worth keeping apart:
+
+| | Who holds it | What it signs |
+| --- | --- | --- |
+| Direct APK certificate | us, `debug.keystore` | the APK on eraya.app |
+| Upload key | us, EAS-managed | the AAB we send to Play |
+| App signing key | Google (Play App Signing) | what Play serves to devices |
+
+See [07-open-questions.md](07-open-questions.md) for what is still open.
 
 ### Switching the website to Google Play
 
