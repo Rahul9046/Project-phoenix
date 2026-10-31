@@ -253,7 +253,8 @@ delete policy for anyone.
 
 ## Android permissions
 
-`android.permissions` is `[]` and `RECORD_AUDIO` is in `blockedPermissions`.
+`android.permissions` is `[]`, and `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW` are
+both in `blockedPermissions`.
 
 The microphone was declared and used by nothing. On a product where people
 decide whether to meet a stranger, an install screen asking for the microphone
@@ -261,9 +262,39 @@ costs trust and buys nothing, and "a library probably wanted it" is not a reason
 a member ever hears. `blockedPermissions` keeps it out even if a future plugin
 adds it back without anyone noticing.
 
+`SYSTEM_ALERT_WINDOW` -- "Display over other apps" -- was blocked on
+2026-10-31, after the first Google Play App Bundle was built and its manifest
+actually read. React Native declares it in its **debug** source set
+(`react-native/ReactAndroid/src/debug/AndroidManifest.xml`) for the redbox and
+dev overlay, and it was reaching the release artifact because `expo-dev-client`
+is a production dependency, so the dev launcher and its manifest get linked in.
+Play accepts it without a declaration form, so nothing was broken -- but it
+appears on the store listing, and a dating app asking to draw over other apps is
+exactly the kind of thing the audience notices and nobody can justify.
+
+**The merged manifest is the only place this is visible.**
+`expo config --type introspect` cannot show it, because the Gradle manifest
+merge is a build step. It was found with
+`bundletool dump manifest --bundle <aab>`, which is now the documented check
+before any upload -- see [Building the Google Play App Bundle](#building-the-google-play-app-bundle).
+
+Blocking works by emitting `tools:node="remove"` for that permission, so the
+merger drops whatever a library contributed. That it works here is not a
+guess: `RECORD_AUDIO` is blocked the same way and is absent from the built
+bundle's manifest.
+
+The deeper fix is to move `expo-dev-client` to `devDependencies`, which would
+take the dev launcher, its manifest and its code out of the release artifact
+and shrink it. That changes the dependency graph and the local dev workflow, so
+it is deliberately a separate decision from blocking one permission.
+
 Photo access stays: `expo-image-picker` carries its own usage string and profile
-photos need it. Camera is deliberately absent -- the app picks from the library
-and never captures directly.
+photos need it. It contributes `READ_EXTERNAL_STORAGE` and
+`WRITE_EXTERNAL_STORAGE`, both capped at `maxSdkVersion="32"`, so on Android 13
+and later neither is requested at all and no `READ_MEDIA_IMAGES` appears --
+which is why Play's Photo and Video Permissions declaration is not triggered.
+Camera is deliberately absent: the app picks from the library and never captures
+directly.
 
 ## Photos
 
