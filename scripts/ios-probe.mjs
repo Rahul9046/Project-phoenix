@@ -197,11 +197,15 @@ ok(
  *
  * `versionCode` is the one thing that does move, and it moves forward only.
  * 4 is the APK published on eraya.app, which is built and signed and is not
- * being rebuilt; 5 is the first Android App Bundle for Google Play closed
- * testing. Play requires a versionCode no other upload has used, so the number
- * had to change -- and it is asserted exactly rather than loosely, because an
- * `autoIncrement` that rewrote it during a build would make the number in the
- * commit a different number from the one Play received.
+ * being rebuilt. 5 was the first App Bundle built for Google Play closed
+ * testing and was never uploaded. 6 is the bundle that carries the reviewer
+ * password sign-in, which is the one a reviewer actually needs, so it is the
+ * one to upload.
+ *
+ * Play requires a versionCode no other upload has used, and it is asserted
+ * exactly rather than loosely because an `autoIncrement` that rewrote it during
+ * a build would make the number in the commit a different number from the one
+ * Play received.
  *
  * The iOS version is a separate question and is checked above: 0.1.3 /
  * buildNumber 1, untouched by any of this.
@@ -213,8 +217,8 @@ ok(
   app.android?.package,
 );
 ok(
-  app.android?.versionCode === 5,
-  "versionCode is 5 -- the first Play build, one past the published APK's 4",
+  app.android?.versionCode === 6,
+  "versionCode is 6 -- the Play build carrying reviewer sign-in",
   String(app.android?.versionCode),
 );
 ok(

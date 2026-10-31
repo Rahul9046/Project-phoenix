@@ -16,6 +16,10 @@ import {
   signInWithProvider,
   type SignInProvider,
 } from "@/features/auth/sign-in";
+import {
+  passwordSignInOffered,
+  signInWithPassword,
+} from "@/features/auth/password-sign-in";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
 import { Button } from "@/ui/Button";
 import { Field } from "@/ui/Input";
@@ -30,8 +34,16 @@ import { Text } from "@/ui/Text";
  * time is a question with no useful answer. It also removes the commonest
  * dead end in a new product: signing up again and being told the account exists.
  *
- * There is no password field anywhere in this app, deliberately. Nothing here
- * ever holds a credential.
+ * There is no password field for members, deliberately. Nothing in the ordinary
+ * flow ever holds a credential.
+ *
+ * The one exception is the Google Play build, which draws a collapsed "Sign in
+ * with a password" option below everything else. It exists because a Play
+ * reviewer cannot receive an email OTP and Play's App access form takes a
+ * password; it is closed by default, labelled as being for app review, and
+ * absent from the sideloaded APK, the web app and iOS. The field being drawn is
+ * not what protects anything -- only one account has a password, and that is a
+ * fact about the server. See features/auth/password-sign-in.ts.
  */
 
 const providerLabelKey: Record<SignInProvider, TranslationKey> = {
@@ -44,8 +56,26 @@ export default function SignIn() {
   const { loading, session, profile } = useSession();
   const t = useT();
   const [email, setEmail] = useState("");
-  const [pending, setPending] = useState<SignInProvider | "email" | null>(null);
+  const [pending, setPending] = useState<
+    SignInProvider | "email" | "password" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * Collapsed until asked for. A reviewer following written instructions will
+   * open it; a member scrolling past has one line of text to ignore rather than
+   * a credential field on a product that does not use credentials.
+   */
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  /*
+   * Its own error, not the one above.
+   *
+   * `error` is rendered under the email field near the top of the screen. A
+   * password failure reported there would appear hundreds of pixels away from
+   * the field that caused it, under a control that did nothing wrong -- and off
+   * screen on a phone, so it would read as nothing happening at all.
+   */
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Someone who is already signed in should never see this screen -- reaching
   // it via back navigation after signing in included.
@@ -80,6 +110,32 @@ export default function SignIn() {
       pathname: routes.checkEmail,
       params: { email: email.trim().toLowerCase() },
     });
+  }
+
+  /*
+   * No navigation on success, deliberately.
+   *
+   * A password sign-in produces a session immediately, so `SessionProvider`
+   * updates and the redirect at the top of this component takes over -- the
+   * same way an OAuth return already works. Pushing a route here as well would
+   * race it.
+   */
+  async function withPassword() {
+    setPending("password");
+    setPasswordError(null);
+
+    const result = await signInWithPassword(email, password);
+
+    if (!result.ok) {
+      setPasswordError(t(result.messageKey));
+      setPending(null);
+      return;
+    }
+
+    // Cleared before the redirect rather than left in state, so the credential
+    // does not sit in memory behind a screen that is about to be replaced.
+    setPassword("");
+    setPending(null);
   }
 
   return (
@@ -213,6 +269,78 @@ export default function SignIn() {
         </Text>
         .
       </Text>
+
+      {/*
+        The reviewer's way in, and the last thing on the screen.
+
+        Below the legal line on purpose. A member has already found everything
+        they need several screens up; this has to be *findable* by somebody
+        following written instructions in Play Console, not prominent. Play's
+        instructions can say "scroll to the bottom of the sign-in screen", and
+        that is enough.
+
+        Rendered only when `passwordSignInOffered` -- the Google Play build.
+        The sideloaded APK, the web preview and iOS get nothing, so their
+        sign-in screens are byte-for-byte what they were.
+      */}
+      {passwordSignInOffered ? (
+        <View style={{ marginTop: space.region }}>
+          {passwordOpen ? (
+            <View style={{ gap: space.md }}>
+              <Text variant="caption" tone="subtle">
+                {t("auth.signIn.passwordNote")}
+              </Text>
+
+              <Field
+                label={t("auth.signIn.passwordLabel")}
+                value={password}
+                onChangeText={(next) => {
+                  setPassword(next);
+                  if (passwordError) setPasswordError(null);
+                }}
+                placeholder={t("auth.signIn.passwordPlaceholder")}
+                error={passwordError}
+                secureTextEntry
+                autoCapitalize="none"
+                autoComplete="current-password"
+                autoCorrect={false}
+                textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={() => void withPassword()}
+              />
+
+              <Button
+                label={t("auth.signIn.passwordSubmit")}
+                variant="secondary"
+                loading={pending === "password"}
+                disabled={
+                  email.trim().length === 0 ||
+                  password.length === 0 ||
+                  pending !== null
+                }
+                onPress={() => void withPassword()}
+              />
+            </View>
+          ) : (
+            /*
+              A text control rather than a Button: a full-width button down here
+              reads as a third way to sign in, which it is not.
+            */
+            <Text
+              variant="caption"
+              tone="accent"
+              center
+              accessibilityRole="button"
+              onPress={() => {
+                setPasswordOpen(true);
+                setPasswordError(null);
+              }}
+            >
+              {t("auth.signIn.passwordOption")}
+            </Text>
+          )}
+        </View>
+      ) : null}
     </Screen>
   );
 }

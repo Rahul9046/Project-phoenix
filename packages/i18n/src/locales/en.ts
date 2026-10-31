@@ -141,6 +141,25 @@ export const en = {
       /* Said before the first tap, not in a policy nobody opens. */
       reassurance:
         "Eraya is free to join. Nothing is shared with anyone until you choose it, and you can delete your account and everything in it at any time.",
+      /*
+       * The password option, drawn only in the Google Play build.
+       *
+       * Eraya has no passwords and this does not change that -- it exists
+       * because a Play reviewer cannot receive an email OTP, and Play's App
+       * access form takes a password. The note says so plainly rather than
+       * leaving a member wondering whether they were supposed to have one.
+       *
+       * Not hidden behind a gesture: Play's own instructions have to be
+       * followable by somebody who has never seen the app, so it has to be
+       * findable. See features/auth/password-sign-in.ts for why the field being
+       * visible is not the security boundary.
+       */
+      passwordOption: "Sign in with a password",
+      passwordNote:
+        "For app review only. Everyone else signs in with the code we email, or with Google or Facebook above.",
+      passwordLabel: "Password",
+      passwordPlaceholder: "Your password",
+      passwordSubmit: "Sign in",
     },
     /*
      * The two screens that exist only to wait: the app's entry point, and
@@ -1269,6 +1288,7 @@ export const en = {
     signInNetwork:
       "We could not sign you in just now. Please check your connection and try again.",
     signInFailed: "We could not sign you in just now. Please try again in a moment.",
+    passwordIncorrect: "That email and password do not match.",
     signInCancelled: "Sign-in was cancelled.",
     invalidEmail: "That does not look like an email address.",
     emailRateLimited:

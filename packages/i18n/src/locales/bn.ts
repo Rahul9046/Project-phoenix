@@ -76,6 +76,12 @@ export const bn: Translations = {
         "আমরা আপনাকে ছয় অঙ্কের একটি কোড পাঠাব। কোনও পাসওয়ার্ড মনে রাখতে হবে না।",
       reassurance:
         "Eraya-তে যোগ দেওয়া বিনামূল্যে। আপনি না চাইলে কারও সঙ্গে কিছুই ভাগ করা হয় না, এবং আপনি যখন খুশি আপনার অ্যাকাউন্ট ও তার সবকিছু মুছে দিতে পারেন।",
+      passwordOption: "পাসওয়ার্ড দিয়ে সাইন ইন করুন",
+      passwordNote:
+        "শুধু অ্যাপ রিভিউয়ের জন্য। অন্য সকলে ইমেলে পাঠানো কোড দিয়ে, বা উপরে Google বা Facebook দিয়ে সাইন ইন করেন।",
+      passwordLabel: "পাসওয়ার্ড",
+      passwordPlaceholder: "আপনার পাসওয়ার্ড",
+      passwordSubmit: "সাইন ইন করুন",
     },
     entry: {
       unreachableTitle: "আমরা Eraya-তে পৌঁছাতে পারলাম না",
@@ -922,6 +928,7 @@ export const bn: Translations = {
     sixDigits: "এটি ছয় সংখ্যার হতে হবে।",
     signInNetwork: "আমরা এখনই আপনাকে সাইন ইন করাতে পারিনি। সংযোগ দেখে আবার চেষ্টা করুন।",
     signInFailed: "আমরা এখনই আপনাকে সাইন ইন করাতে পারিনি। একটু পরে আবার চেষ্টা করুন।",
+    passwordIncorrect: "এই ইমেল আর পাসওয়ার্ড মিলছে না।",
     signInCancelled: "সাইন ইন বাতিল হয়েছে।",
     invalidEmail: "এটি ইমেল ঠিকানা মনে হচ্ছে না।",
     emailRateLimited:
