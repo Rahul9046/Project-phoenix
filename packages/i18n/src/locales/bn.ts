@@ -693,6 +693,7 @@ export const bn: Translations = {
       android: "অ্যান্ড্রয়েড অ্যাপ",
       legalTitle: "আইনি",
       deleteAccount: "আপনার অ্যাকাউন্ট মুছুন",
+      childSafety: "শিশু সুরক্ষা",
       privacy: "গোপনীয়তা",
       terms: "শর্তাবলি",
       contact: "যোগাযোগ",

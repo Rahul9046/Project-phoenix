@@ -44,6 +44,12 @@ const publicPaths = [
    * in a settings screen they no longer have.
    */
   "/delete-account",
+  /*
+   * Eraya's CSAE standards. Google Play requires the URL to be publicly
+   * reachable and it goes into the Child safety standards declaration, so it
+   * must never become a page only somebody with the link can find.
+   */
+  "/child-safety",
 ] as const;
 
 /**

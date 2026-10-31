@@ -693,6 +693,7 @@ export const ta: Translations = {
       android: "ஆண்ட்ராய்டு செயலி",
       legalTitle: "சட்டம்",
       deleteAccount: "உங்கள் கணக்கை நீக்கவும்",
+      childSafety: "குழந்தைப் பாதுகாப்பு",
       privacy: "தனியுரிமை",
       terms: "விதிமுறைகள்",
       contact: "தொடர்பு",

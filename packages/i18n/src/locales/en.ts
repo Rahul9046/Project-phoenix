@@ -989,6 +989,7 @@ export const en = {
       android: "Android app",
       legalTitle: "Legal",
       deleteAccount: "Delete your account",
+      childSafety: "Child safety",
       privacy: "Privacy",
       terms: "Terms",
       contact: "Contact",
