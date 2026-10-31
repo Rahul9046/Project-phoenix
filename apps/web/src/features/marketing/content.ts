@@ -80,6 +80,7 @@ export const footer: {
         { labelKey: "marketing.footer.privacy", href: "/privacy" },
         { labelKey: "marketing.footer.terms", href: "/terms" },
         { labelKey: "common.legalGuidelines", href: "/safety" },
+        { labelKey: "marketing.footer.childSafety", href: "/child-safety" },
         /*
          * Reachable from every page, because the person who needs it is the
          * person least likely to still have the app open.

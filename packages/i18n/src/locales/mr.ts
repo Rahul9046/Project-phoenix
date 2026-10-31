@@ -693,6 +693,7 @@ export const mr: Translations = {
       android: "अँड्रॉइड अ‍ॅप",
       legalTitle: "कायदेशीर",
       deleteAccount: "तुमचे खाते हटवा",
+      childSafety: "बाल सुरक्षा",
       privacy: "खासगीपण",
       terms: "अटी",
       contact: "संपर्क",
