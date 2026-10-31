@@ -239,9 +239,10 @@ NEXT_PUBLIC_SITE_URL            https://eraya.app
 SUPABASE_SECRET_KEY             server only, never NEXT_PUBLIC_
 ```
 
-Razorpay, MSG91 and SMTP values do **not** belong here; they are Supabase edge
-function secrets. Nothing secret is ever prefixed `NEXT_PUBLIC_`: that prefix is
-what puts a value into the browser bundle.
+Razorpay, the Google Play service account
+(`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`), MSG91 and SMTP values do **not** belong
+here; they are Supabase edge function secrets. Nothing secret is ever prefixed
+`NEXT_PUBLIC_`: that prefix is what puts a value into the browser bundle.
 
 `NEXT_PUBLIC_ALLOW_INDEXING` is set to `true` in the deploy workflow, so the
 production deployment is indexable. Everywhere it is unset -- local, previews,

@@ -236,11 +236,29 @@ ok(
   "it is not a flag or an environment variable -- those can be set wrong",
 );
 
-const GUARD = 'if (!inAppPurchaseAvailable) return { status: "unsupported" }';
+/*
+ * The guard moved, and got stronger.
+ *
+ * It used to be `if (!inAppPurchaseAvailable) return ...` at the top of
+ * `purchase()`. Since Google Play Billing was integrated, `purchase()` switches
+ * exhaustively on `paymentProvider` -- `none` on iOS -- so the refusal is a case
+ * of a union the compiler checks rather than an early return somebody could
+ * delete without anything noticing. The outcome type itself moved to
+ * `contract.ts`, which both providers share.
+ */
+const GUARD = 'case "none":';
+const contract = read("src", "features", "membership", "contract.ts");
 const payments = read("src", "features", "membership", "payments.ts");
+const purchasingSrc = read("src", "features", "membership", "purchasing.ts");
+const distribution = read("src", "features", "membership", "distribution.ts");
 ok(
-  /\| \{ status: "unsupported" \}/.test(payments),
+  /\| \{ status: "unsupported" \}/.test(contract),
   "`unsupported` is a purchase outcome of its own, not folded into `failed`",
+);
+ok(
+  /switch \(paymentProvider\)/.test(payments) &&
+    /case "none":\s*\n\s*return \{ status: "unsupported" \};/.test(payments),
+  "purchase() answers iOS from an exhaustive switch on paymentProvider",
 );
 ok(
   guardsBefore(payments, GUARD, "payments-create-order"),
@@ -249,6 +267,10 @@ ok(
 ok(
   guardsBefore(payments, GUARD, "openAuthSessionAsync"),
   "purchase() refuses before any browser could be opened",
+);
+ok(
+  guardsBefore(payments, GUARD, "purchaseOnPlay(planCode)"),
+  "purchase() refuses before Google Play Billing could be reached",
 );
 /*
  * And the Android path is still there. Withdrawing the till on iOS must not
@@ -290,13 +312,23 @@ ok(
 );
 
 /*
- * Nothing was brought in to replace it, either. StoreKit is the eventual
- * answer and is deliberately not started, and Play Billing belongs to a branch
- * this one must not take a merge from.
+ * StoreKit is still not started, and nothing was brought in to start it.
+ *
+ * `expo-iap` IS a dependency now -- it is how the Google Play build sells
+ * Premium -- so its absence can no longer be the assertion. What is asserted
+ * instead is that iOS cannot reach it: every entry point in `play-billing.ts`
+ * is guarded by `usesPlayBilling()`, which is false whenever `paymentProvider`
+ * is not `play`, and on iOS it never is.
+ *
+ * One thing this probe cannot check, recorded rather than left implicit: the
+ * `expo-iap` config plugin links its StoreKit 2 native module on iOS with no
+ * option to exclude the platform, so an iOS *binary* will carry that code once
+ * one is built. It changes no iOS configuration -- the generated `ios` block is
+ * byte-for-byte identical with and without the plugin, which the plist checks
+ * above re-confirm -- and no Eraya code calls it. See docs/16-ios.md.
  */
 const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
 for (const forbidden of [
-  "expo-iap",
   "react-native-iap",
   "expo-in-app-purchases",
   "react-native-purchases",
@@ -306,6 +338,47 @@ for (const forbidden of [
     `no ${forbidden} dependency -- in-app purchase is not started yet`,
   );
 }
+/*
+ * Code, not prose. Both files discuss StoreKit at length -- saying why it is
+ * not started is the point of those comments -- so the comments are stripped
+ * before looking, or the explanation would fail the check it explains.
+ */
+const code = (text) =>
+  text
+    .replace(new RegExp("\\/\\*[\\s\\S]*?\\*\\/", "g"), "")
+    .replace(new RegExp("\\/\\/.*$", "gm"), "");
+ok(
+  !/StoreKit|SKProduct|SKPayment|requestPurchase|finishTransaction/.test(
+    code(payments) + code(purchasingSrc) + code(contract),
+  ),
+  "no StoreKit or store-purchase call appears in the shared purchase path",
+);
+ok(
+  !/expo-iap/.test(payments + purchasingSrc + distribution),
+  "expo-iap is imported only by play-billing.ts, which iOS never enters",
+);
+
+/*
+ * And the one value that could undo all of this.
+ *
+ * `paymentProvider` is what every surface reads. If iOS ever stopped resolving
+ * to `none` -- because somebody keyed it off the distribution channel alone, or
+ * inverted the test -- every check above would still pass while an App Store
+ * build opened a web checkout. The resolver is pure, so it is asserted here
+ * directly; provider.test.ts runs it over every platform and channel pair.
+ */
+ok(
+  /if \(platform === "ios"\) return "none";/.test(distribution),
+  "paymentProviderFor answers none for iOS before it looks at the channel",
+);
+ok(
+  !/process\.env/.test(purchasingSrc),
+  "the iOS decision reads no environment variable -- those can be set wrong",
+);
+ok(
+  /paymentProviderFor\(\s*Platform\.OS,/.test(purchasingSrc),
+  "and it is given the real Platform.OS, not a value from configuration",
+);
 
 /* ---------------------------------------------------------------- 6 -------
  * Phone verification stays where the Android beta left it: asked by nothing.

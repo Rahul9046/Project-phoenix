@@ -109,7 +109,8 @@ no "single"), `gender` (woman, man, non_binary, prefer_not_to_say),
 | `messages` | No `read_at` column, deliberately — see §6 |
 | `member_blocks` | Enforced inside `discover_members` |
 | `member_reports` | Insert-only for the reporter |
-| `membership_plans`, `entitlements`, `subscriptions` | See §5 |
+| `membership_plans`, `entitlements`, `subscriptions` | See §5. `membership_plans` also carries `play_product_id` and `play_intro_product_id` — the Google Play products for a plan, both NULL today, readable through the active-plans select policy |
+| `payments`, `payment_events`, `payment_revocations` | Service role only; no client write policy anywhere. `payments.provider` names which store took the money, `payments.acknowledged_at` records that Google Play was told. A member sees their own history through `my_payments()` |
 | `waitlist` | Retired. No policy grants any client access. Do not build against it |
 
 ## 5. RPCs — the whole member-facing surface
@@ -153,7 +154,10 @@ key that differs between the tiers, and the only one enforced.
 
 Note that `subscriptions` has **no insert, update or delete policy for anyone**
 — it is written only with the service role, by `settle_payment` when money
-arrives and `revoke_payment` when it goes back. And do not read the tier from a
+arrives and `revoke_payment` when it goes back. That holds for both providers:
+`payments-play-verify` reaches the same `settle_payment` the Razorpay webhook
+does, after asking the Android Publisher API what a purchase token actually is. A
+`purchaseToken` handed up by a device is a lookup key and never a grant. And do not read the tier from a
 subscription row's `status`: nothing writes `expired`, so a lapsed term still
 says `active`. Ask `my_membership()`, which applies `current_period_end > now()`
 in Postgres — against Postgres's clock rather than the handset's.
@@ -206,13 +210,26 @@ These are decisions, not implementation details. Each one has a reason.
 
 Do not present any of these as working, in the app or in copy.
 
-- **Phone verification is mocked.** Any six digits are accepted and no SMS is
-  ever sent. `profiles.phone_verified_at` is written by the application itself.
-  Because of this, "Phone verified" is deliberately **not** shown as a trust mark
-  on another member's card — a safety claim must never run ahead of the system.
-  `apps/web/src/features/auth/phone-verification.ts` documents the switch-over.
-- **No payments.** No provider is integrated, so no subscription can be created
-  and premium is unreachable in practice. Never simulate a successful payment.
+- **Phone verification cannot be completed in the app.** It is not mocked and no
+  arbitrary or fixed code is accepted anywhere. The web verifies for real through
+  MSG91's OTP widget; the app uses MSG91's OTP API, which needs a DLT-approved
+  template before MSG91 will deliver in India, so the step currently fails
+  truthfully rather than succeeding. It is optional on both clients and blocks
+  nobody. `profiles.phone_verified_at` is written **only** by the verify edge
+  function holding the service role — a trigger refuses that column to every
+  client, so no app can mark itself verified. A "Phone verified" mark is shown on
+  a member's card, and only for `phone_verified_via = 'msg91'`, which every
+  producer of `member_card` checks through `phone_is_verified()`; reaching the
+  `phone_verified` onboarding stage earns no mark, because it means only that the
+  step is behind somebody. None of this concerns email sign-in.
+- **Payments are integrated. Never simulate a successful payment.** Razorpay
+  settles on the web and on iOS, in test mode -- so a subscription *can* be
+  created, by `settle_payment` running with the service role and by nothing else.
+  Android buys through Google Play Billing, whose server side is built but not
+  deployed and whose products do not exist yet, so a Play purchase cannot
+  currently complete and none ever has. Entitlement comes from the server in both
+  cases: a store's word, a signature, or a token is a claim, never a grant. See
+  [10-payments.md](10-payments.md) and [14-google-play.md](14-google-play.md).
 - **No moderation.** Reports are recorded and nothing reads them. The web app
   therefore blocks the person as well as filing the report, and its wording never
   promises a review. Keep that pairing.

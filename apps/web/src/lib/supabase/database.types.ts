@@ -395,6 +395,8 @@ export type Database = {
           is_recurring: boolean
           name: string
           period_months: number
+          play_intro_product_id: string | null
+          play_product_id: string | null
           price_paise: number
           sort_order: number
           tier: Database["public"]["Enums"]["membership_tier"]
@@ -411,6 +413,8 @@ export type Database = {
           is_recurring?: boolean
           name: string
           period_months: number
+          play_intro_product_id?: string | null
+          play_product_id?: string | null
           price_paise: number
           sort_order?: number
           tier?: Database["public"]["Enums"]["membership_tier"]
@@ -427,6 +431,8 @@ export type Database = {
           is_recurring?: boolean
           name?: string
           period_months?: number
+          play_intro_product_id?: string | null
+          play_product_id?: string | null
           price_paise?: number
           sort_order?: number
           tier?: Database["public"]["Enums"]["membership_tier"]
@@ -618,6 +624,7 @@ export type Database = {
       }
       payments: {
         Row: {
+          acknowledged_at: string | null
           amount_paise: number
           created_at: string
           currency: string
@@ -634,6 +641,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acknowledged_at?: string | null
           amount_paise: number
           created_at?: string
           currency?: string
@@ -650,6 +658,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acknowledged_at?: string | null
           amount_paise?: number
           created_at?: string
           currency?: string
@@ -1063,7 +1072,11 @@ export type Database = {
         Returns: undefined
       }
       begin_payment: {
-        Args: { p_plan_code: string; p_profile: string }
+        Args: {
+          p_plan_code: string
+          p_profile: string
+          p_provider?: Database["public"]["Enums"]["payment_provider"]
+        }
         Returns: {
           amount_paise: number
           currency: string
@@ -1089,7 +1102,11 @@ export type Database = {
         }[]
       }
       claim_payment_event: {
-        Args: { p_event_id: string; p_event_type: string }
+        Args: {
+          p_event_id: string
+          p_event_type: string
+          p_provider?: Database["public"]["Enums"]["payment_provider"]
+        }
         Returns: boolean
       }
       claim_phone_otp_attempt: {

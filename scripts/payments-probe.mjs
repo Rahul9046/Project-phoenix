@@ -271,6 +271,66 @@ console.log("\nThe webhook's JWT exemption is written down");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\nWhich build takes money which way");
+// ---------------------------------------------------------------------------
+// The invariant that used to be unassertable.
+//
+// While the choice between Razorpay and Play Billing was a `Platform.OS`
+// comparison, nothing could see it: both Android artifacts report `android`, so
+// no check could tell that the public APK from eraya.app was about to be pointed
+// at a Billing client Play has never served it. The decision now lives in
+// `EXPO_PUBLIC_DISTRIBUTION`, declared per EAS profile, and that is a file.
+//
+// `apps/mobile/src/features/membership/provider.test.ts` asserts the resolver.
+// This asserts the configuration fed into it, which is the half a unit test
+// cannot reach. Neither can prove a Play purchase works -- see
+// docs/14-google-play.md.
+{
+  const eas = JSON.parse(
+    fs.readFileSync(path.join(root, "apps/mobile/eas.json"), "utf8"),
+  );
+  const profiles = Object.entries(eas.build ?? {});
+  const channelOf = (profile) => profile?.env?.EXPO_PUBLIC_DISTRIBUTION;
+
+  check(
+    "eas.json declares build profiles",
+    profiles.length > 0,
+    JSON.stringify(Object.keys(eas.build ?? {})),
+  );
+
+  // The Play build must say so. A profile that forgot would build a Play upload
+  // selling through Razorpay, which is the payments-policy breach.
+  const play = eas.build?.play;
+  check(
+    "a play profile exists and declares EXPO_PUBLIC_DISTRIBUTION=play",
+    channelOf(play) === "play",
+    play ? "declares " + JSON.stringify(channelOf(play) ?? null) : "no play profile",
+  );
+
+  // And nothing else may. This is the direction that breaks a shipped app: the
+  // preview profile builds the APK shape handed out from eraya.app, and a
+  // `play` value there would make Premium unbuyable for every public install.
+  const stray = profiles.filter(
+    ([name, profile]) => name !== "play" && channelOf(profile) === "play",
+  );
+  check(
+    "no other profile selects Play Billing",
+    stray.length === 0,
+    stray.map(([name]) => name).join(", "),
+  );
+
+  // Every profile saying it out loud is what stops the default from being load
+  // bearing in EAS. Absent still means direct -- that is what the local Gradle
+  // build of the public APK relies on -- but a profile should not depend on it.
+  const silent = profiles.filter(([, profile]) => channelOf(profile) === undefined);
+  check(
+    "every profile declares its distribution channel",
+    silent.length === 0,
+    silent.map(([name]) => name).join(", "),
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log("\nA first purchase");
 // ---------------------------------------------------------------------------
 
@@ -828,6 +888,343 @@ console.log("\nExpiry, through every reader that decides Premium");
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+console.log("\nGoogle Play reaches the same entitlement, by the same door");
+// ---------------------------------------------------------------------------
+//
+// Phase 2a of the store billing work. No Play credentials are needed and no
+// store is contacted: everything a store cannot be asked to prove is here, and
+// the two things Google actually does -- reporting a purchase and consuming it
+// -- are verified in the edge function against the real API, not here.
+//
+// The property under test is that `google_play` is not a second payment system.
+// A Play purchase is a `payments` row like any other, settled by the same
+// `settle_payment`, granting the same term through the same `subscriptions`
+// stacking, revocable by the same `revoke_payment`. If any of that had needed a
+// parallel implementation, this section is where the duplication would show.
+
+const PLAY = "google_play";
+const PLAY_EVENT = `probe_play_event_${me.slice(0, 8)}`;
+
+// ---------------------------------------------------------------------------
+// begin_payment can name a provider, and still defaults to Razorpay
+// ---------------------------------------------------------------------------
+//
+// The default is the backwards-compatibility guarantee the migration rests on:
+// `payments-create-order` is deployed and passes two arguments, so a schema
+// applied before the functions are must leave it writing Razorpay rows.
+
+let playIntent;
+{
+  const begun = await rpc("begin_payment", {
+    p_profile: me, p_plan_code: "premium_quarterly", p_provider: PLAY,
+  });
+  playIntent = Array.isArray(begun.data) ? begun.data[0] : begun.data;
+
+  check(
+    "begin_payment accepts a provider and prices the plan normally",
+    playIntent?.amount_paise === 69900,
+    JSON.stringify(playIntent),
+  );
+
+  const [row] = await (await fetch(
+    `${url}/rest/v1/payments?select=provider,status,intro_offer_applied&id=eq.${playIntent?.payment_id}`,
+    { headers: svc },
+  )).json();
+
+  check(
+    "and writes the row against google_play rather than the column default",
+    row?.provider === PLAY,
+    JSON.stringify(row),
+  );
+
+  // The introductory offer was consumed earlier in this probe, by a Razorpay
+  // purchase. `intro_offer_used` is provider-blind on purpose, so a Play
+  // purchase must not be able to claim it a second time.
+  check(
+    "a Play purchase cannot reclaim an introductory offer spent on the web",
+    row?.intro_offer_applied === false,
+    JSON.stringify(row),
+  );
+
+  const defaulted = await rpc("begin_payment", {
+    p_profile: me, p_plan_code: "premium_quarterly",
+  });
+  const defaultedIntent = Array.isArray(defaulted.data) ? defaulted.data[0] : defaulted.data;
+
+  const [defaultedRow] = await (await fetch(
+    `${url}/rest/v1/payments?select=provider&id=eq.${defaultedIntent?.payment_id}`,
+    { headers: svc },
+  )).json();
+
+  check(
+    "omitting the provider still writes razorpay, so the deployed client is unaffected",
+    defaultedRow?.provider === RZP,
+    JSON.stringify(defaultedRow),
+  );
+
+  // 'none' means "no provider configured" on a subscription and is meaningless
+  // on a charge: such a row could never be settled, because every settlement
+  // path looks a payment up by provider and order id together.
+  const nowhere = await rpc("begin_payment", {
+    p_profile: me, p_plan_code: "premium_quarterly", p_provider: "none",
+  });
+  check(
+    "begin_payment refuses to create a payment for no provider",
+    nowhere.status >= 400,
+    `status ${nowhere.status}: ${JSON.stringify(nowhere.data)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// claim_payment_event is scoped to its provider
+// ---------------------------------------------------------------------------
+//
+// `payment_events` is `primary key (provider, provider_event_id)` and the
+// function that writes it took no provider, so every delivery was claimed in
+// Razorpay's namespace. Two providers' opaque ids share no namespace, and the
+// notification least affordable to drop is a Play void -- the only thing that
+// takes premium back from a refunded member.
+
+{
+  const first = await rpc("claim_payment_event", {
+    p_event_id: PLAY_EVENT, p_event_type: "probe", p_provider: RZP,
+  });
+  check("a delivery can be claimed once", first.data === true, JSON.stringify(first.data));
+
+  const again = await rpc("claim_payment_event", {
+    p_event_id: PLAY_EVENT, p_event_type: "probe", p_provider: RZP,
+  });
+  check(
+    "and not twice for the same provider",
+    again.data !== true,
+    JSON.stringify(again.data),
+  );
+
+  // The regression guard. Before the provider reached the insert, this returned
+  // null -- Google's notification silently discarded as an already-seen
+  // Razorpay one.
+  const otherProvider = await rpc("claim_payment_event", {
+    p_event_id: PLAY_EVENT, p_event_type: "probe", p_provider: PLAY,
+  });
+  check(
+    "the same event id is still claimable under a different provider",
+    otherProvider.data === true,
+    JSON.stringify(otherProvider.data),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A Play purchase grants the same term, and only once
+// ---------------------------------------------------------------------------
+//
+// `provider_order_id` on a Play row is Eraya's own payment id, because Play has
+// no pre-purchase order to name. The purchase token becomes
+// `provider_payment_id`.
+
+const PLAY_ORDER = playIntent.payment_id;
+const PLAY_TOKEN = `probe_play_token_${me.slice(0, 8)}`;
+
+{
+  await rpc("attach_provider_order", { p_payment: PLAY_ORDER, p_order_id: PLAY_ORDER });
+
+  const settledPlay = await rpc("settle_payment", {
+    p_provider: PLAY, p_order_id: PLAY_ORDER,
+    p_provider_payment_id: PLAY_TOKEN, p_status: "paid",
+  });
+  check(
+    "settling a Play purchase grants a term through the same function",
+    settledPlay.data?.outcome === "paid",
+    JSON.stringify(settledPlay.data),
+  );
+
+  const { data: membership } = await rpc("my_membership", {}, asMember);
+  check(
+    "and the member is premium, with no Play-specific entitlement anywhere",
+    membership?.tier === "premium" && membership?.active === true,
+    JSON.stringify(membership),
+  );
+
+  // The same token arriving again: a restore, a retry, or the client and a
+  // future notification racing each other.
+  const twice = await rpc("settle_payment", {
+    p_provider: PLAY, p_order_id: PLAY_ORDER,
+    p_provider_payment_id: PLAY_TOKEN, p_status: "paid",
+  });
+  check(
+    "a duplicate Play settlement grants nothing further",
+    twice.data?.outcome === "already_paid",
+    JSON.stringify(twice.data),
+  );
+
+  const expiryAfterDuplicate = twice.data?.expires_at;
+  check(
+    "and reports the term the first settlement created",
+    expiryAfterDuplicate === settledPlay.data?.expires_at ||
+      micros(expiryAfterDuplicate) === micros(settledPlay.data?.expires_at),
+    `${settledPlay.data?.expires_at} then ${expiryAfterDuplicate}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A Play order is invisible to Razorpay, in both directions
+// ---------------------------------------------------------------------------
+//
+// The mirror of "An order id belongs to a provider" above, which proved a
+// Razorpay order is invisible to Play. Both directions matter: the uniqueness
+// model is `(provider, provider_order_id)`, and a lookup that ignored the
+// provider would be wrong whichever way round the collision happened.
+
+{
+  const asRazorpay = await rpc("settle_payment", {
+    p_provider: RZP, p_order_id: PLAY_ORDER,
+    p_provider_payment_id: PLAY_TOKEN, p_status: "paid",
+  });
+  check(
+    "a Play order cannot be settled as a Razorpay one",
+    asRazorpay.data?.outcome === "unknown_order",
+    JSON.stringify(asRazorpay.data),
+  );
+
+  const revokeAsRazorpay = await rpc("revoke_payment", {
+    p_provider: RZP, p_order_id: PLAY_ORDER, p_kind: "refund",
+  });
+  check(
+    "and cannot be revoked as a Razorpay one",
+    revokeAsRazorpay.data?.outcome === "unknown_order",
+    JSON.stringify(revokeAsRazorpay.data),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A voided Play purchase cannot buy the time back
+// ---------------------------------------------------------------------------
+//
+// `voided` is the Play word and the only thing that differs from a Razorpay
+// refund: same primitive, same idempotency key, same subtraction. The second
+// half is what matters once Real-time Developer Notifications exist -- Google
+// goes on reporting a voided purchase's token, so a client that re-verified
+// would walk back into `settle_payment` with what looks like proof.
+
+{
+  const voided = await rpc("revoke_payment", {
+    p_provider: PLAY, p_order_id: PLAY_ORDER, p_kind: "voided",
+    p_reason: "probe", p_reversal_id: "probe_void_1", p_status: "refunded",
+  });
+  check(
+    "a Play purchase can be voided",
+    voided.data?.outcome === "revoked",
+    JSON.stringify(voided.data),
+  );
+
+  const twice = await rpc("revoke_payment", {
+    p_provider: PLAY, p_order_id: PLAY_ORDER, p_kind: "voided",
+  });
+  check(
+    "and voiding it again changes nothing",
+    twice.data?.outcome === "already_revoked",
+    JSON.stringify(twice.data),
+  );
+
+  const resettle = await rpc("settle_payment", {
+    p_provider: PLAY, p_order_id: PLAY_ORDER,
+    p_provider_payment_id: PLAY_TOKEN, p_status: "paid",
+  });
+  check(
+    "a voided Play purchase cannot be settled back into a term",
+    resettle.data?.outcome === "revoked",
+    JSON.stringify(resettle.data),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The product mapping is absent, and absent fails closed
+// ---------------------------------------------------------------------------
+//
+// Both columns exist and are NULL on every plan, which is the state this phase
+// ships in: no product ids have been invented, so no plan can be bought on Play
+// and `payments-play-begin` refuses before a member reaches a store.
+//
+// The uniqueness of a product id across plans is enforced by two partial
+// indexes in the migration and is deliberately not exercised here: proving it
+// means writing a product id onto a real catalogue row in the one production
+// project, and a probe must not edit the live catalogue to make a point.
+
+{
+  const plans = await (await fetch(
+    `${url}/rest/v1/membership_plans?select=code,play_product_id,play_intro_product_id&order=sort_order`,
+    { headers: svc },
+  )).json();
+
+  check(
+    "every plan carries both Play product columns",
+    Array.isArray(plans) && plans.length > 0 &&
+      plans.every((p) => "play_product_id" in p && "play_intro_product_id" in p),
+    JSON.stringify(plans),
+  );
+
+  const mapped = Array.isArray(plans)
+    ? plans.filter((p) => p.play_product_id !== null || p.play_intro_product_id !== null)
+    : [];
+  check(
+    "and none is populated yet, so Play purchasing is off",
+    mapped.length === 0,
+    JSON.stringify(mapped),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The new endpoints require a JWT, and a member still cannot grant anything
+// ---------------------------------------------------------------------------
+
+{
+  const config = fs.readFileSync(path.join(root, "supabase/config.toml"), "utf8");
+
+  for (const fn of ["payments-play-begin", "payments-play-verify"]) {
+    const block = config.match(
+      new RegExp(`\\[functions\\.${fn}\\]([\\s\\S]*?)(?=\\n\\[|$)`),
+    );
+    check(
+      `${fn} is declared and requires a JWT`,
+      block !== null && !/verify_jwt\s*=\s*false/.test(block[1]),
+      block ? "verify_jwt = false" : "no stanza",
+    );
+  }
+
+  /*
+   * No Play webhook exists yet, and that is deliberate.
+   *
+   * Real-time Developer Notifications are Phase 2c. A stanza appearing here
+   * before the endpoint does would mean something was deployed unreviewed, and
+   * a `verify_jwt = false` function is the one kind worth noticing early.
+   */
+  check(
+    "no Play notification endpoint is configured yet",
+    !/\[functions\.payments-play-rtdn\]/.test(config),
+    "a payments-play-rtdn stanza exists without the endpoint being reviewed",
+  );
+}
+
+for (const [name, fn, args] of [
+  ["create a Play payment for themselves", "begin_payment",
+    { p_profile: me, p_plan_code: "premium_annual", p_provider: PLAY }],
+  ["settle a Play purchase", "settle_payment",
+    { p_provider: PLAY, p_order_id: PLAY_ORDER, p_provider_payment_id: "x", p_status: "paid" }],
+  ["void a Play purchase", "revoke_payment",
+    { p_provider: PLAY, p_order_id: PLAY_ORDER, p_kind: "voided" }],
+  ["claim a Play notification", "claim_payment_event",
+    { p_event_id: "forged", p_event_type: "probe", p_provider: PLAY }],
+]) {
+  const { status } = await rpc(fn, args, asMember);
+  check(`a member cannot ${name}`, status >= 400, `status ${status}`);
+}
+
+// `payment_events` has no profile and so does not cascade with the account.
+await fetch(
+  `${url}/rest/v1/payment_events?provider_event_id=eq.${PLAY_EVENT}`,
+  { method: "DELETE", headers: svc },
+);
 
 // Clean up. Payments and subscriptions cascade from the account.
 await fetch(`${url}/auth/v1/admin/users/${me}`, { method: "DELETE", headers: svc });

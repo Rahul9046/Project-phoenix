@@ -244,3 +244,27 @@ verify_jwt = true
 
 [functions.payments-verify]
 verify_jwt = true
+
+# Google Play, and the same rule for the same reason. Both are called by a
+# signed-in client through `functions.invoke`, and both decide something about
+# one particular member: which product they may buy, and whether a purchase
+# token is theirs. `payments-play-verify` matches the purchase's
+# `obfuscatedProfileId` against a payment row owned by the authenticated caller,
+# so without a verified JWT there is no caller to compare against and anybody
+# could settle anybody's purchase onto their own account.
+#
+# There is no Play webhook here yet. Real-time Developer Notifications arrive
+# from Pub/Sub with no Supabase session, so they will need the exemption the
+# Razorpay webhook has above plus authentication of their own -- that is Phase
+# 2c, and the endpoint deliberately does not exist yet.
+#
+# The exemption is described rather than quoted on purpose: these stanzas are
+# read by `scripts/payments-probe.mjs` with a regex that runs to the next
+# section header, so a comment here that spelled the setting out literally
+# would be captured as part of the preceding stanza and read as that function
+# having verification turned off.
+[functions.payments-play-begin]
+verify_jwt = true
+
+[functions.payments-play-verify]
+verify_jwt = true

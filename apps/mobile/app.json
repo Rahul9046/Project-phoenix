@@ -68,7 +68,8 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "extra": {
       "router": {},

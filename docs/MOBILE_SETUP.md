@@ -84,47 +84,74 @@ Apple's guidelines require its own control rather than a web flow.
 
 ---
 
-## 4. Phone verification — **not a blocker, but visible**
+## 4. Phone verification — **real on the web, not yet possible in the app**
 
-Mocked. No SMS is sent and any six digits are accepted. Every screen that touches
-it says so, and **no member is ever shown a "phone verified" badge**, because
-that would be a safety claim the system cannot support.
+Not mocked, on either client. The provider is MSG91 and nothing accepts an
+arbitrary or fixed code — a deployed project cannot be made to, however its
+secrets are configured.
 
-To switch it on:
+**The web verifies for real.** It uses MSG91's OTP widget, with MSG91's CAPTCHA
+validation enabled, and a real Indian number has been verified on
+`https://eraya.app`. The server exchanges the widget's access token for a
+verified number; the browser never decides the outcome.
 
-1. Choose an SMS provider — in India, Twilio or MSG91. This is a paid service.
-2. Configure it in Supabase, **Authentication → Providers → Phone**, and set
-   `enable_signup = true` under `[auth.sms]` in `supabase/config.toml`.
-3. Replace the two function bodies in
-   `apps/mobile/src/features/onboarding/phone.ts` — the file documents exactly
-   what with — and set `phoneVerificationIsLive = true`. The screens reword
-   themselves from that flag.
-4. Restore the "Phone verified" mark in `apps/mobile/src/ui/Person.tsx` and the
-   web's `MemberPresentation.tsx`. One line in each.
-5. Delete `completePhoneStep` from `features/onboarding/data.ts`. Supabase sets
-   `auth.users.phone_confirmed_at` and a trigger mirrors it.
+**The app cannot complete it yet.** MSG91's widget is a browser SDK and there is
+no honest way to run it in Expo, so the app uses MSG91's OTP API instead — a real
+SMS, checked by MSG91, with `phone_verified_at` written only by an edge function
+holding the service role. That path needs `MSG91_TEMPLATE_ID` alongside the auth
+key, **and the template must be DLT-approved before MSG91 will deliver anything
+in India.** Until it is, the app asks for a real code and fails truthfully rather
+than accepting one.
 
-Note that Indian SMS also requires DLT registration with a telecom operator
-before a template can be sent. Start that early; it takes weeks.
+**It blocks nobody.** Phone verification is optional on both clients since
+2026-09-22: somebody may decline the step, finish onboarding, and come back to it
+from Account → Verification whenever it works.
+
+What remains is configuration, not code: a DLT-registered template, then
+`MSG91_TEMPLATE_ID` as a Supabase edge-function secret. DLT registration goes
+through a telecom operator and takes weeks — start it early.
+
+A **"Phone verified" mark is shown**, and only ever for a number MSG91 actually
+verified: every producer of `member_card` goes through `phone_is_verified()`,
+which requires `phone_verified_via = 'msg91'`. Reaching the `phone_verified`
+onboarding stage earns nothing, because it means only that the step is behind
+somebody. Nothing here concerns email sign-in, which is a separate flow.
 
 ---
 
-## 5. Payments — **blocker for revenue**
+## 5. Payments — integrated, with one blocker
 
-No provider is integrated. The membership screen shows the real plans and says
-plainly that premium cannot be bought yet. **Nothing simulates a successful
-payment**, and nothing should.
+Both providers are built. **Nothing simulates a successful payment**, and nothing
+should — the rule that has not changed is that a subscription row is written
+server-side with the service role and never by a client, because
+`subscriptions` has no insert, update or delete policy for anyone.
 
-When you choose one (Razorpay is the obvious fit for India):
+The model is [10-payments.md](10-payments.md). What still needs configuring:
 
-- The subscription row must be written **server-side, with the service role**.
-  `subscriptions` has no insert, update or delete policy for anyone, deliberately
-  — a client that could write its own subscription could award itself premium.
-- That means a Supabase Edge Function holding the webhook secret, verifying the
-  provider's signature, and writing the row. Not the app.
-- App Store and Play Store both require their own in-app purchase for digital
-  subscriptions, taking 15–30%. That is a commercial decision to make before
-  building either.
+**Razorpay — the web and iOS.** Integrated and settling. Still in **test mode**:
+no live key is set, so no real money can be taken. Going live needs Razorpay KYC,
+a live-mode webhook with its own secret, and `refund.processed` subscribed — the
+full list is in `10-payments.md`.
+
+**Google Play — Android.** An app distributed through Play must sell digital
+goods through Play Billing, so Android buys through Play and never through the
+web checkout. Eraya sells **one-time consumable products**, not Play
+subscriptions, because a term is prepaid and nothing renews. Play's cut applies
+to those one-time products.
+
+Nothing on the Play side is configured, and **the Console work is currently
+blocked while Google verifies the developer identity** — contact-phone
+verification and Android developer/package verification are unavailable until
+that completes. So the five products do not exist, the mapping columns in
+`membership_plans` are NULL, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` is unset, the two
+Play edge functions are undeployed, and **no Play purchase has been made on any
+device**. The app handles that honestly: the button disables and says purchases
+are temporarily unavailable and that nothing has been charged.
+
+The whole Play surface — the five products, the service account, the order of
+operations when the block lifts, and what has and has not been proven — is
+[14-google-play.md](14-google-play.md). Do not invent product ids ahead of
+creating them in Play Console.
 
 ---
 
@@ -148,6 +175,13 @@ notifying people that somebody looked at their profile.
   resolves, a data safety declaration, and a content rating. Play requires
   account deletion to be reachable both in-app and from a web page — in-app is
   done (You → Settings), the web page is not.
+- **Google Play, for selling anything**: the five in-app products, a licence
+  tester list, and a build on an internal testing track. A Play Billing purchase
+  cannot be exercised at all until a build reaches a track, so this is a
+  prerequisite for testing and not only for release. All of it is currently
+  blocked behind developer identity verification — see
+  [14-google-play.md](14-google-play.md). Signing is
+  [15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
 - **App Store**: the developer membership above, screenshots, and an App Privacy
   declaration.
 - Both need a real **privacy policy and terms**. `/privacy` on the web describes
@@ -158,8 +192,15 @@ notifying people that somebody looked at their profile.
 
 ## 8. Getting a build onto a device
 
-`eas.json` defines three profiles. All of them build on Expo's servers, so none
-needs Xcode or Android Studio on the machine that starts them.
+`eas.json` defines four profiles, and all of them build on Expo's servers, so
+none needs Xcode or Android Studio on the machine that starts them.
+
+**The Android betas that have actually been distributed were not built this
+way.** They were built locally with Gradle, which is also where the beta's
+signing identity comes from — a detail that matters more than the build method,
+because existing testers can only be updated by a build carrying the same
+identity. Before producing any Android build, read
+[15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
 
 | Profile | Produces | Needs an Apple/Google account? |
 | --- | --- | --- |
