@@ -1033,12 +1033,29 @@ export type Database = {
         Args: { p_note?: string; p_report: string }
         Returns: undefined
       }
+      admin_list_archived_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          archived_at: string
+          archived_for: string
+          created_at: string
+          description: string
+          id: string
+          is_child_safety: boolean
+          reason_code: string
+          reported_id: string
+          reporter_id: string
+          reviewed_at: string
+          status: string
+        }[]
+      }
       admin_list_reports: {
         Args: { p_filter?: string }
         Returns: {
           created_at: string
           description: string
           id: string
+          is_child_safety: boolean
           reason_code: Database["public"]["Enums"]["report_reason"]
           reported_id: string
           reported_name: string
@@ -1353,6 +1370,7 @@ export type Database = {
         | "spam"
         | "safety_threat"
         | "underage"
+        | "csae"
       report_status: "received" | "reviewing" | "actioned" | "dismissed"
       subscription_status:
         | "pending"
@@ -1566,6 +1584,7 @@ export const Constants = {
         "spam",
         "safety_threat",
         "underage",
+        "csae",
       ],
       report_status: ["received", "reviewing", "actioned", "dismissed"],
       subscription_status: [

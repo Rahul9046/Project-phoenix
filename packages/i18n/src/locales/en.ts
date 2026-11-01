@@ -546,9 +546,17 @@ export const en = {
    * a profile in the app -- and a member who reports from two places must be
    * asked the same question in the same words.
    *
-   * The wording still promises no review, because there is still no queue a
-   * member can be told about. What it does promise is the block, which is real,
-   * immediate, and enforced by the database rather than by this screen.
+   * The wording promises a reading, and nothing beyond one. A moderation queue
+   * has existed since 20260911100100_moderation.sql and `/child-safety` tells
+   * the public that reports "are reviewed by hand, by the operator" -- so the
+   * older copy here, which said there was no moderation team and that nobody
+   * might write back, had become the one place in the product that contradicted
+   * Eraya's own published policy. What is still deliberately absent is any
+   * reply, any response time and any outcome: there is one operator, no rota
+   * and no SLA, and `docs/11` is explicit that copy must not imply review
+   * faster or more certain than that. The block remains the part that is
+   * promised outright, because it is real, immediate, and enforced by the
+   * database rather than by this screen.
    *
    * `reasons` is keyed by the `report_reason` enum in Postgres. The keys are
    * identifiers and are never translated; only the sentences beside them are.
@@ -558,10 +566,28 @@ export const en = {
     body:
       "{name} is blocked the moment you send this — no messages, and neither of you is shown to the other again.",
     note:
-      "Eraya is small and has no moderation team yet, so we cannot promise anyone will write back. The block does not wait for us; it takes effect immediately either way.",
+      "Reports are read by hand. We are small, so we cannot promise a reply or say how long it will take. The block does not wait for us — it takes effect immediately.",
+
+    /*
+     * Shown only when a child-safety reason is chosen, and the only guidance in
+     * this flow that changes what somebody does next.
+     *
+     * Three things, in the order they matter. The police first, because Eraya
+     * cannot reach a child in danger and a report here must never become a
+     * reason to delay the call that can. Then: do not attach the material --
+     * there is deliberately no upload in this flow, and possessing or
+     * transmitting it is an offence even when the intention is to report it.
+     * Then what Eraya does do, which is read it before anything else.
+     *
+     * The numbers are the ones already published on /child-safety rather than
+     * new ones chosen here, so the page and the app cannot drift.
+     */
+    csaeNotice:
+      "If a child is in immediate danger, contact the police first — in India, dial 112, or 1098 for Childline. Do not attach, forward or share suspected material; describe it instead. Child safety reports are read first.",
 
     reasonLabel: "Why are you reporting {name}?",
     reasons: {
+      csae: "Child sexual abuse or exploitation",
       harassment: "Harassment or abusive behaviour",
       inappropriate_content: "Inappropriate or sexual content",
       fake_profile: "Fake or misleading profile",

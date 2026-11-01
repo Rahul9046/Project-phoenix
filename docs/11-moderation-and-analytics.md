@@ -43,6 +43,80 @@ Three actions, and deliberately no fourth:
 There is no "Warn" button, because there is nothing that sends a warning. A
 control that does not do what its label says is worse than a missing feature.
 
+There is no "Remove account" button either, and that one is a gap rather than a
+decision: removal is real but is carried out by hand in the Supabase dashboard.
+`/child-safety` says so in those words, and `docs/17-child-safety.md` §6 has the
+order to do it in — which matters, because removing an account before
+`20261101100300` was deployed destroyed the reports that justified it.
+
+### Child safety reports come first
+
+Added 2026-11-01. `/child-safety` had been telling the public that "a child
+safety report is the highest priority thing in the queue" while
+`admin_list_reports` ordered by open-ness and then by age — so a report that
+somebody is a child sat between two reports about unwanted promotion.
+
+Two things now make the claim true:
+
+- **`csae`** is a report category in its own right (`20261101100100`), offered
+  first in both clients. Before it, the published page had to tell people to
+  choose "Under 18" or "Threats or safety concern" instead.
+- **`admin_list_reports` returns `is_child_safety`** and sorts on it
+  (`20261101100200`). The order is four clauses — open-and-child-safety, then
+  open, then child-safety, then newest — because "child safety first" alone
+  would float a dismissed CSAE report above an open harassment report filed this
+  morning. Priority is about what needs doing.
+
+**The category pair lives in two places on purpose, and they must agree:**
+`reason_code in ('csae', 'underage')` in the database, and `CSAE_REASONS` in
+`packages/i18n/src/report.ts` for the clients. The database decides the queue;
+the shared constant decides which reasons show the emergency notice. A report
+filed as `safety_threat` is not sorted as child safety even if its description
+describes a child — `docs/17` §3 tells the operator to read for that.
+
+### Reports outlive the accounts they were about
+
+`member_reports` cascades from `profiles`, which cascades from `auth.users`. So
+deleting an account used to delete every report filed about it — and
+`delete_my_account()` has no guard, so **a member who had been reported could
+erase the reports about them by pressing a button in the product.** Every other
+deletion route did the same: the dashboard, the admin API, `demo:remove`, and
+the probes.
+
+`20261101100300` fixes it with a `before delete` trigger on `profiles` that
+copies the rows into `member_reports_archive` on the way past. Both directions:
+reports about the departing member and reports they filed, because a report with
+no reporter is still evidence about the person reported.
+
+Three things worth knowing before touching it:
+
+- **It is `before delete`, not `after`.** Referential actions run as AFTER
+  triggers on the referenced table, so BEFORE DELETE on `profiles` is the only
+  point at which `member_reports` is still populated.
+- **A trigger on this table has broken account deletion before.**
+  `20260920120100` added an AFTER DELETE trigger for photographs and deletion
+  started answering "Database error deleting user" with a 500, because a raise
+  inside the cascade takes the transaction with it; it was backed out one
+  migration later. So the archive table has **no constraint that can fail** — no
+  foreign keys, no NOT NULLs beyond the primary key, and the insert carries
+  `on conflict do nothing`. There is deliberately **no exception handler**: a
+  silent failure here loses the evidence the thing exists to preserve, which is
+  the `record_product_event` trap described further down this document.
+- **Deletion is never refused.** Not while suspended, not while a report is
+  open. The investigation record survives instead of the member's right being
+  taken away.
+
+Reading the archive is a fourth view on `/admin/reports` — "Preserved" — behind
+`admin_list_archived_reports()`, which checks `is_moderator()` and **writes a
+`moderation_actions` row on every call** (`archive_viewed`). Reading a departed
+member's report is itself an act worth having on the record, which is why the
+function is not called when any other view is rendered.
+
+Retention is disclosed on `/delete-account` and `/privacy`: safety reports are
+named there as kept, and as the one thing that is **not** unlinked from the
+account. **No retention period is set** — that is an open legal question in
+`docs/17-child-safety.md` §13, and no number has been invented for it.
+
 ### Why the checks are doubled
 
 Every action calls `requireModerator()` in the server action **and** the RPC it

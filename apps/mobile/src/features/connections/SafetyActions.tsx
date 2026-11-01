@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import {
   REPORT_REASONS,
+  isChildSafetyReason,
   reportNeedsDetails,
   reportReasonKey,
   type ReportReasonCode,
@@ -44,11 +45,19 @@ import { useToast } from "@/ui/Toast";
  * The written details are optional for every category except "Something else",
  * which is the one that says nothing by itself.
  *
- * The wording never promises a review. There is no moderation team and no
- * queue, so it says the report is recorded and the person is blocked -- both
- * true -- and nothing about anybody reading it. Afterwards it says both of
- * those things in a panel rather than a toast that slides away: somebody who
- * has just done a difficult thing should be able to read what happened twice.
+ * The wording promises a reading and nothing more. It used to say there was no
+ * moderation team and no queue, which stopped being true when
+ * 20260911100100_moderation.sql built one -- and left this sheet contradicting
+ * Eraya's own published /child-safety page, which tells the public that reports
+ * are reviewed by hand. It now says reports are read by hand, that no reply or
+ * timescale can be promised, and that the block does not wait for either.
+ * Afterwards it says what happened in a panel rather than a toast that slides
+ * away: somebody who has just done a difficult thing should be able to read it
+ * twice.
+ *
+ * Choosing a child-safety reason adds the one piece of guidance in this flow
+ * that changes what somebody does next -- the police first, and do not attach
+ * the material. There is deliberately no attachment here for them to use.
  */
 export function SafetyActions({
   memberId,
@@ -258,6 +267,37 @@ export function SafetyActions({
             />
           ))}
         </View>
+
+        {/*
+          Directly under the choice that produced it, matching the website.
+          `accessibilityLiveRegion` because it arrives after a card is pressed
+          rather than with the sheet, and TalkBack would otherwise never
+          announce the one safety-critical sentence in this flow.
+        */}
+        {reason !== null && isChildSafetyReason(reason) ? (
+          <View
+            accessibilityLiveRegion="polite"
+            style={{
+              flexDirection: "row",
+              gap: space.md,
+              marginTop: space.lg,
+              padding: space.lg,
+              borderRadius: radius.lg,
+              backgroundColor: colors.sand,
+              borderWidth: 1,
+              borderColor: colors.ember,
+            }}
+          >
+            <Ionicons
+              name="warning-outline"
+              size={iconSize.md}
+              color={colors.emberText}
+            />
+            <Text variant="caption" tone="muted" style={{ flex: 1 }}>
+              {t("report.csaeNotice")}
+            </Text>
+          </View>
+        ) : null}
 
         <Field
           label={t("report.detailsLabel")}
