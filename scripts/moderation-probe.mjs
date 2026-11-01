@@ -110,6 +110,8 @@ async function sessionFor(email) {
   const users = await (await fetch(`${url}/auth/v1/admin/users?per_page=500`, { headers: svc })).json();
   const id = users.users.find((u) => u.email === email)?.id;
 
+  if (id) throwawayIds.push(id);
+
   return {
     id,
     headers: {
@@ -120,8 +122,25 @@ async function sessionFor(email) {
   };
 }
 
+const CSAE_TARGET_EMAIL = "moderationcsae@demo.eraya.invalid";
+// Deletes their own account mid-probe, to prove a report about them survives it.
+const LEAVER_EMAIL = "moderationleaver@demo.eraya.invalid";
+// Also deletes, but as the person who filed -- the other half of the cascade.
+const REPORTER_LEAVER_EMAIL = "moderationreporterleaver@demo.eraya.invalid";
+
 const allowlistKey = "moderation_admins";
 let originalAllowlist = null;
+
+/*
+ * Every throwaway profile id, collected as the accounts are made.
+ *
+ * `member_reports_archive` exists precisely so that deleting an account does
+ * not delete the reports about it -- which means the probe's own fixture
+ * reports now outlive the probe. Without this the archive would accumulate a
+ * handful of "Probe fixture" rows on every run, in the one table a moderator
+ * reads to find out what happened to somebody who left.
+ */
+const throwawayIds = [];
 
 try {
   console.log("\nSetting up throwaway accounts");
@@ -509,6 +528,291 @@ try {
   );
 
   // -------------------------------------------------------------------------
+  console.log("\nChild safety: the category, the queue order, and the archive");
+  // -------------------------------------------------------------------------
+  //
+  // Three things that did not exist before 20261101100100..300, each proved
+  // against the live API as the people it is meant to protect and exclude.
+
+  const csaeTarget = await sessionFor(CSAE_TARGET_EMAIL);
+
+  const csaeFiled = await rpc(
+    "report_and_block_member",
+    { p_target: csaeTarget.id, p_reason: "csae" },
+    member.headers,
+  );
+  check(
+    "a csae report files, with no details required",
+    csaeFiled.status < 400,
+    `status ${csaeFiled.status}`,
+  );
+
+  const csaeRows = await reportsAbout(csaeTarget.id);
+  check(
+    "the csae category is stored as its own identifier",
+    csaeRows?.[0]?.reason_code === "csae",
+    JSON.stringify(csaeRows?.[0]).slice(0, 160),
+  );
+
+  // The block still happens. Reporting has always blocked, atomically, and a
+  // new category must not have quietly become an exception to that.
+  const csaeBlock = await blocksBetween(member.id, csaeTarget.id);
+  check(
+    "a csae report blocks the member too, like every other reason",
+    Array.isArray(csaeBlock) && csaeBlock.length === 1,
+    `${csaeBlock?.length} block(s)`,
+  );
+
+  // An identifier adjacent to a real one, to be sure the enum is doing the
+  // refusing rather than a client-side list.
+  const nearMiss = await rpc(
+    "report_and_block_member",
+    { p_target: csaeTarget.id, p_reason: "csae_", p_details: "probe" },
+    member.headers,
+  );
+  check(
+    "an identifier close to csae is still refused by the enum",
+    nearMiss.status >= 400,
+    `status ${nearMiss.status}`,
+  );
+
+  const openQueue = await rpc("admin_list_reports", { p_filter: "open" }, admin.headers);
+  const openRows = Array.isArray(openQueue.data) ? openQueue.data : [];
+
+  check(
+    "the queue marks a csae report as a child safety matter",
+    openRows.some((r) => r.reason_code === "csae" && r.is_child_safety === true),
+    JSON.stringify(openRows.map((r) => [r.reason_code, r.is_child_safety])).slice(0, 200),
+  );
+
+  check(
+    "the queue does not mark an ordinary report as one",
+    openRows
+      .filter((r) => r.reason_code === "other" || r.reason_code === "safety_threat")
+      .every((r) => r.is_child_safety === false),
+    JSON.stringify(openRows.map((r) => [r.reason_code, r.is_child_safety])).slice(0, 200),
+  );
+
+  /*
+   * The ordering invariant, not the position of one row.
+   *
+   * Asserting "the probe's report is first" would be a check that passes on an
+   * empty database and fails the moment a real report exists. What must hold
+   * whatever else is in the queue is that nothing ordinary sits above anything
+   * child-safety.
+   */
+  const firstOrdinary = openRows.findIndex((r) => r.is_child_safety !== true);
+  const lastChildSafety = openRows.reduce(
+    (seen, r, i) => (r.is_child_safety === true ? i : seen),
+    -1,
+  );
+  check(
+    "no ordinary open report sorts above a child safety one",
+    firstOrdinary === -1 || lastChildSafety === -1 || lastChildSafety < firstOrdinary,
+    `last child-safety at ${lastChildSafety}, first ordinary at ${firstOrdinary}`,
+  );
+
+  // `underage` is grouped with `csae` everywhere one is prioritised, and the
+  // grouping lives in the database rather than in either client.
+  //
+  // Filed against `csaeTarget`, not `target`, and deliberately. Reporting
+  // blocks, and the interest-count section further down measures a number a
+  // block silently changes -- which is the same reason REPORTED_EMAIL exists
+  // as a separate account. `csaeTarget` is already blocked by the report above,
+  // and a second report against someone already blocked is a supported path
+  // with its own check.
+  const underageFiled = await rpc(
+    "report_and_block_member",
+    { p_target: csaeTarget.id, p_reason: "underage" },
+    member.headers,
+  );
+  const underageQueue = await rpc("admin_list_reports", { p_filter: "all" }, admin.headers);
+  check(
+    "underage is treated as a child safety matter as well",
+    underageFiled.status < 400 &&
+      (Array.isArray(underageQueue.data) ? underageQueue.data : []).some(
+        (r) => r.reason_code === "underage" && r.is_child_safety === true,
+      ),
+    `status ${underageFiled.status}`,
+  );
+
+  // -------------------------------------------------------------------------
+  // The archive: who may reach it
+  // -------------------------------------------------------------------------
+
+  const memberArchive = await rpc("admin_list_archived_reports", {}, member.headers);
+  check(
+    "a member calling the archive by name is refused",
+    memberArchive.status >= 400,
+    `status ${memberArchive.status}`,
+  );
+
+  const memberArchiveTable = await (
+    await fetch(`${url}/rest/v1/member_reports_archive?select=*`, { headers: member.headers })
+  ).json();
+  check(
+    "a member reading the archive table directly gets nothing",
+    !Array.isArray(memberArchiveTable) || memberArchiveTable.length === 0,
+    JSON.stringify(memberArchiveTable).slice(0, 120),
+  );
+
+  const anonArchive = await rpc("admin_list_archived_reports", {}, {
+    apikey: anon,
+    "Content-Type": "application/json",
+  });
+  check(
+    "a signed-out caller cannot reach the archive",
+    anonArchive.status >= 400,
+    `status ${anonArchive.status}`,
+  );
+
+  // -------------------------------------------------------------------------
+  // The archive: a report outlives the account it was about
+  // -------------------------------------------------------------------------
+
+  const leaver = await sessionFor(LEAVER_EMAIL);
+  const LEAVER_WORDS = "Probe fixture. Reported, then deleted their account.";
+
+  await rpc(
+    "report_and_block_member",
+    { p_target: leaver.id, p_reason: "csae", p_details: LEAVER_WORDS },
+    member.headers,
+  );
+
+  const beforeDeletion = await reportsAbout(leaver.id);
+  check(
+    "a report about the leaving member exists before they delete",
+    Array.isArray(beforeDeletion) && beforeDeletion.length === 1,
+    `${beforeDeletion?.length} report(s)`,
+  );
+
+  /*
+   * The check the whole migration turns on, and the one whose absence let an
+   * earlier trigger on this table reach production broken.
+   *
+   * 20260920120100 added an AFTER DELETE trigger to `profiles` and account
+   * deletion started answering "Database error deleting user" with a 500,
+   * because a raise inside the cascade takes the transaction with it. A trigger
+   * that preserves reports but breaks deletion is not an improvement: it is a
+   * worse bug wearing a better motive.
+   */
+  const deletion = await fetch(`${url}/auth/v1/admin/users/${leaver.id}`, {
+    method: "DELETE",
+    headers: svc,
+  });
+  const deletionBody = await deletion.text();
+  check(
+    "deleting a reported account still succeeds with the archive trigger live",
+    deletion.status < 400,
+    `status ${deletion.status} ${deletionBody.slice(0, 160)}`,
+  );
+
+  const archivedAbout = await (
+    await fetch(
+      `${url}/rest/v1/member_reports_archive?reported_id=eq.${leaver.id}&select=*`,
+      { headers: svc },
+    )
+  ).json();
+  check(
+    "the report is preserved when the reported member deletes their account",
+    Array.isArray(archivedAbout) &&
+      archivedAbout.length === 1 &&
+      archivedAbout[0].reason_code === "csae" &&
+      archivedAbout[0].description === LEAVER_WORDS,
+    JSON.stringify(archivedAbout).slice(0, 200),
+  );
+
+  check(
+    "the archive records whose deletion caused it to be written",
+    archivedAbout?.[0]?.archived_for === leaver.id,
+    `archived_for ${archivedAbout?.[0]?.archived_for}, expected ${leaver.id}`,
+  );
+
+  // The cascade still ran. The archive is a copy taken on the way past, not a
+  // replacement for deletion -- the member's own data really is gone.
+  const originalAfterDeletion = await reportsAbout(leaver.id);
+  check(
+    "the original report row still cascades away with the account",
+    Array.isArray(originalAfterDeletion) && originalAfterDeletion.length === 0,
+    `${originalAfterDeletion?.length} report(s) left`,
+  );
+
+  // The other direction. A report with no reporter is still evidence about the
+  // person reported, so it has to survive the reporter leaving too.
+  const reporterLeaver = await sessionFor(REPORTER_LEAVER_EMAIL);
+  const REPORTER_WORDS = "Probe fixture. Filed this, then deleted their account.";
+
+  // Against `csaeTarget` for the same reason: nothing this section does may
+  // move the interest counts the next section asserts on.
+  await rpc(
+    "report_and_block_member",
+    { p_target: csaeTarget.id, p_reason: "harassment", p_details: REPORTER_WORDS },
+    reporterLeaver.headers,
+  );
+
+  const reporterDeletion = await fetch(`${url}/auth/v1/admin/users/${reporterLeaver.id}`, {
+    method: "DELETE",
+    headers: svc,
+  });
+  const archivedByLeaver = await (
+    await fetch(
+      `${url}/rest/v1/member_reports_archive?reporter_id=eq.${reporterLeaver.id}&select=*`,
+      { headers: svc },
+    )
+  ).json();
+  check(
+    "a report is preserved when the reporter deletes their account",
+    reporterDeletion.status < 400 &&
+      Array.isArray(archivedByLeaver) &&
+      archivedByLeaver.length === 1 &&
+      archivedByLeaver[0].description === REPORTER_WORDS,
+    `status ${reporterDeletion.status}, ${JSON.stringify(archivedByLeaver).slice(0, 160)}`,
+  );
+
+  // -------------------------------------------------------------------------
+  // The archive: reading it, and the record of having read it
+  // -------------------------------------------------------------------------
+
+  const auditBefore = await (
+    await fetch(
+      `${url}/rest/v1/moderation_actions?action=eq.archive_viewed&select=id`,
+      { headers: svc },
+    )
+  ).json();
+
+  const adminArchive = await rpc("admin_list_archived_reports", {}, admin.headers);
+  const adminArchiveRows = Array.isArray(adminArchive.data) ? adminArchive.data : [];
+  check(
+    "an admin can read the preserved reports",
+    adminArchive.status < 400 &&
+      adminArchiveRows.some((r) => r.description === LEAVER_WORDS),
+    `status ${adminArchive.status}, ${adminArchiveRows.length} row(s)`,
+  );
+
+  check(
+    "the preserved csae report is marked as a child safety matter",
+    adminArchiveRows.some(
+      (r) => r.description === LEAVER_WORDS && r.is_child_safety === true,
+    ),
+    JSON.stringify(adminArchiveRows.map((r) => [r.reason_code, r.is_child_safety])).slice(0, 200),
+  );
+
+  const auditAfter = await (
+    await fetch(
+      `${url}/rest/v1/moderation_actions?action=eq.archive_viewed&select=id,actor`,
+      { headers: svc },
+    )
+  ).json();
+  check(
+    "reading the archive is recorded against the moderator who read it",
+    Array.isArray(auditAfter) &&
+      Array.isArray(auditBefore) &&
+      auditAfter.length === auditBefore.length + 1 &&
+      auditAfter.some((row) => row.actor === admin.id),
+    `${auditBefore?.length} -> ${auditAfter?.length} rows`,
+  );
+
+  // -------------------------------------------------------------------------
   console.log("\nThe interest count, and who drops out of it");
   // -------------------------------------------------------------------------
   //
@@ -638,16 +942,113 @@ try {
       headers: svc,
       body: JSON.stringify({ value: originalAllowlist }),
     });
+
+    /*
+     * And prove it went back.
+     *
+     * This probe borrows the thing that decides who can moderate. Restoring it
+     * in a `finally` makes the restore run; it does not make it succeed, and a
+     * PATCH that failed would leave production with a throwaway address as its
+     * only moderator and the real operator locked out of `/admin/reports` --
+     * silently, because every check above would still have passed. The one
+     * state this script must never leave behind is the one it cannot see.
+     *
+     * Counted as a check, because the summary is printed after this block.
+     */
+    const { body: restored } = await (async () => {
+      const response = await fetch(
+        `${url}/rest/v1/ops_config?key=eq.${allowlistKey}&select=value`,
+        { headers: svc },
+      );
+      return { body: await response.text() };
+    })();
+
+    let readBack = null;
+    try {
+      readBack = JSON.parse(restored)?.[0]?.value ?? null;
+    } catch {
+      readBack = null;
+    }
+
+    check(
+      "the moderator allowlist is back exactly as it was found",
+      readBack !== null &&
+        JSON.stringify(readBack) === JSON.stringify(originalAllowlist),
+      `found ${JSON.stringify(readBack)}, expected ${JSON.stringify(originalAllowlist)}`,
+    );
   }
 
   // Remove the throwaway accounts. Their reports and audit rows go with them.
   const users = await (await fetch(`${url}/auth/v1/admin/users?per_page=500`, { headers: svc })).json();
-  for (const email of [ADMIN_EMAIL, MEMBER_EMAIL, TARGET_EMAIL, REPORTED_EMAIL]) {
+  for (const email of [
+    ADMIN_EMAIL,
+    MEMBER_EMAIL,
+    TARGET_EMAIL,
+    REPORTED_EMAIL,
+    CSAE_TARGET_EMAIL,
+    LEAVER_EMAIL,
+    REPORTER_LEAVER_EMAIL,
+  ]) {
     const found = users.users?.find((u) => u.email === email);
     if (found) {
       await fetch(`${url}/auth/v1/admin/users/${found.id}`, { method: "DELETE", headers: svc });
     }
   }
+
+  /*
+   * Sweep the archive, and only now that the accounts are gone.
+   *
+   * This is the probe cleaning up after a feature it has just proved.
+   * `member_reports_archive` keeps a report when the account it names is
+   * deleted -- which is exactly what the loop above does to every fixture
+   * account, so each deletion up there fires `profiles_archive_reports` and
+   * writes fresh rows. Sweeping first and deleting second would therefore
+   * leave behind precisely the rows it set out to remove, and a run would
+   * accumulate "Probe fixture" reports in the one table a moderator reads to
+   * find out what happened to somebody who left.
+   *
+   * It has to come last for a second reason: the earlier deletions inside the
+   * body -- the leaver, the reporter who left, the target removed by the
+   * interest-count section -- have already archived rows, and those ids are in
+   * `throwawayIds` too. One sweep after every deletion covers both.
+   *
+   * Service role, because nothing else can reach the table at all.
+   */
+  for (const id of throwawayIds) {
+    await fetch(
+      `${url}/rest/v1/member_reports_archive?or=(reporter_id.eq.${id},reported_id.eq.${id})`,
+      { method: "DELETE", headers: svc },
+    );
+  }
+
+  /*
+   * And prove the sweep worked, for the same reason as the allowlist above:
+   * the ordering bug this replaced looked correct and left rows behind, so the
+   * fix is worth an assertion rather than a comment. Asks the question the
+   * only way that cannot be fooled -- is any fixture id still in the table.
+   */
+  const remaining = await (async () => {
+    const response = await fetch(
+      `${url}/rest/v1/member_reports_archive?select=id,reporter_id,reported_id`,
+      { headers: svc },
+    );
+    try {
+      const rows = JSON.parse(await response.text());
+      return Array.isArray(rows) ? rows : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const fixtures = new Set(throwawayIds);
+  const left = remaining.filter(
+    (r) => fixtures.has(r.reporter_id) || fixtures.has(r.reported_id),
+  );
+  check(
+    "the probe left no fixture reports in the archive",
+    left.length === 0,
+    `${left.length} left of ${remaining.length} archived row(s)`,
+  );
 }
 
 const passed = results.filter((r) => r.passed).length;

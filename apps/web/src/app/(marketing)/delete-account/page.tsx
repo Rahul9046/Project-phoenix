@@ -29,6 +29,15 @@ export const metadata: Metadata = {
  * account" -- because a page that invents a button name sends somebody looking
  * for something that is not there.
  *
+ * One exception to the cascade, added 2026-11-01 and the reason this page's two
+ * lists changed: `profiles_archive_reports` copies a departing member's safety
+ * reports into `member_reports_archive` before the cascade reaches them. Before
+ * it, a member who had been reported could delete their account and take every
+ * report about them with it. So "reports you made" is no longer in the deleted
+ * list, and reports are now named in the kept list -- in full, identifiers
+ * included, which is the one thing on this page that is deliberately not
+ * unlinked. If that changes, this page changes with it.
+ *
  * The deletion list is the set of tables that cascade from `profiles` and
  * `auth.users`; the retention list is the four columns that are nulled rather
  * than removed. Both were read off the live schema. No timeline is promised
@@ -196,7 +205,7 @@ export default async function DeleteAccountPage() {
                   "Every interest you sent and every interest you received.",
                   "Your connections.",
                   "Your messages — including the copies in the other person's conversation, so the conversation disappears for both of you.",
-                  "Members you blocked, and reports you made.",
+                  "Members you blocked. Reports you made, and reports made about you, are kept — see “What is kept” below.",
                   "Your phone number and its verification, if you added one.",
                   "Your payment history and membership records inside Eraya, including any unused Premium time.",
                 ].map((item) => (
@@ -227,15 +236,17 @@ export default async function DeleteAccountPage() {
                 What is kept, and for how long
               </h2>
               <p className="mt-4 text-[1.02rem] leading-relaxed text-ink-muted">
-                A small amount survives deletion. Where it does, your account is
-                unlinked from it first, so what remains is no longer connected to
-                you:
+                A small amount survives deletion. Most of it is unlinked from
+                your account first, so what remains is no longer connected to
+                you. Safety reports are the exception, and the reason is given
+                below:
               </p>
               <ul className="mt-4 grid gap-2 pl-5">
                 {[
                   "Security and sign-in logs — records that a sign-in was attempted and whether it succeeded. The link to your account is removed, but a masked form of the email address (for example r*******7@gmail.com) stays in the entry. We keep these to investigate abuse and account takeover.",
                   "Product usage counts — records that a screen was opened or a step completed, with the link to your account removed. These are counts, not a history of you.",
-                  "Moderation records, if a report was ever made about you or by you and a moderator acted on it. The link to the people involved is removed. We keep these so that somebody cannot escape a safety decision by deleting and signing up again.",
+                  "Moderation decisions, where a moderator suspended, restored or dismissed something. The link to the people involved is removed. We keep these so that somebody cannot escape a safety decision by deleting and signing up again.",
+                  "Safety reports made about you or by you, if there are any. These are kept in full — the category, what the person wrote, when it was filed, and the account identifiers of both people. Unlike the records above they are not unlinked, because a report with nobody in it cannot be acted on, checked or corrected later. Your name, profile, photographs and messages are not kept with them. Only the operator can read them, and every reading is recorded.",
                 ].map((item) => (
                   <li
                     key={item}

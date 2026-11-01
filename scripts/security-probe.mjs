@@ -454,6 +454,38 @@ console.log("\nReports");
     rows.length === 0,
     queue.slice(0, 120),
   );
+
+  // The same asymmetry, for the reports that outlived the account they were
+  // about. `member_reports_archive` holds the reporter's own words with no
+  // profile left to hide behind them, so a member reaching it would learn
+  // exactly what the table above exists to keep from them -- about somebody
+  // who is no longer here to be asked.
+  //
+  // Both checks are read-only. The RPC raises on `is_moderator()` before it
+  // reaches its audit insert, so calling it as a member writes nothing, which
+  // is what makes it safe to ask here rather than only in the moderation probe.
+  {
+    const { status: archiveStatus, body: archiveBody } = await request(
+      meera.token,
+      "member_reports_archive?select=*",
+    );
+    check(
+      "a member reads nothing from member_reports_archive",
+      archiveStatus >= 400 || archiveBody.replace(/\s/g, "") === "[]",
+      `status ${archiveStatus}: ${archiveBody.slice(0, 120)}`,
+    );
+
+    const { status: readerStatus } = await request(
+      meera.token,
+      "rpc/admin_list_archived_reports",
+      { method: "POST", body: JSON.stringify({}) },
+    );
+    check(
+      "a member calling admin_list_archived_reports is refused outright",
+      readerStatus >= 400,
+      `status ${readerStatus}`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -39,10 +39,31 @@ export const metadata: Metadata = {
  * of those is claimed here, and none of them should be added to this page
  * until the thing itself exists.
  *
- * Every mechanism described below is one that is actually built: the `underage`
- * report reason in both clients, the immediate block that accompanies a report,
- * the moderation queue at `/admin/reports`, and the suspend and remove actions
- * behind it. The in-app steps use the labels the apps really show.
+ * Every mechanism described below is one that is actually built: the `csae` and
+ * `underage` report reasons in both clients, the emergency notice that appears
+ * beside them, the immediate block that accompanies a report, the moderation
+ * queue at `/admin/reports` with child safety reports sorted and marked at the
+ * top of it, the suspend and restore actions behind it, and
+ * `member_reports_archive`, which keeps a report when the account it is about
+ * is deleted. The in-app steps use the labels the apps really show.
+ *
+ * Three sentences on this page were corrected on 2026-11-01 because they had
+ * run ahead of the code, and the corrections are worth recording:
+ *
+ *   - the reporting steps told people to pick "Under 18" or "Threats or safety
+ *     concern", because no category named CSAE existed. One does now;
+ *   - "reading the profile and the messages connected to it" implied a
+ *     reviewing capability in the product. There is none. Review uses
+ *     administrative access, bounded by the procedure in docs/17-child-safety.md
+ *     rather than by code, and the page now says so rather than implying a
+ *     control that is not there;
+ *   - permanent removal is real but is done by hand, not from a button in the
+ *     admin area, and the page now says which.
+ *
+ * Retention after deletion is new on the page because the behaviour is new. It
+ * belongs here as well as on /privacy and /delete-account: somebody reading
+ * this page is deciding whether reporting is worth it, and "the report survives
+ * even if they delete their account" is the part that answers them.
  *
  * If the moderation arrangements change, this page changes with them.
  */
@@ -151,8 +172,9 @@ export default async function ChildSafetyPage() {
                 {[
                   "Open the member's profile, or the conversation with them.",
                   "Tap Report.",
-                  "Under “Why are you reporting…”, choose Under 18 if you believe the member is a child, or Threats or safety concern for any other child safety concern.",
-                  "Add what you know under Tell us more. Anything you can say helps.",
+                  "Under “Why are you reporting…”, choose Child sexual abuse or exploitation. It is the first reason on the list. If your concern is that the member is a child, choose Under 18 instead.",
+                  "Read the notice that appears. If a child is in immediate danger, contact the police before you finish here.",
+                  "Add what you know under Tell us more. Anything you can say helps. Do not attach or forward suspected material — there is no way to attach a file, deliberately.",
                   "Submit with Report & block.  The button names the member you are reporting.",
                 ].map((step) => (
                   <li
@@ -216,11 +238,13 @@ export default async function ChildSafetyPage() {
                 {[
                   "The report is recorded with the reason you chose and anything you wrote, and the member is blocked from contacting you from that moment.",
                   "Reports are reviewed by hand, by the operator, through a moderation area that only an authorised account can open. There is no moderation team and no automated detection.",
-                  "Reviewing a report may mean reading the profile and the messages connected to it.",
+                  "A child safety report is shown at the top of that area and marked as one, above every other report waiting, so it is the first thing read rather than the newest thing read.",
+                  "Reviewing a report may mean reading the reported member's profile and, where the report concerns a conversation, the messages in it. Only the operator can do this, and our internal procedure limits it to the report in hand. It is not something other members can do, and it is not part of the app.",
                   "An account can be suspended immediately, and suspended accounts are shown to nobody.",
-                  "Where the finding warrants it, the account is removed permanently.",
+                  "Where the finding warrants it, the account is removed permanently. Removal is carried out by the operator using administrative access, not from a button in the app.",
                   "Where we are legally required to report what we find to an authority, we will, and we respond to lawful requests from authorities.",
-                  "We may keep relevant information where there is a legitimate or legally required reason to, including after an account is removed.",
+                  "Reports are kept after an account is deleted — including when the member reported deletes their own account. Otherwise a report could be erased by the person it was about. What is kept is the report itself: the category, what was written, when, and the account identifiers. Photographs and messages are not kept with it.",
+                  "We may keep other relevant information where there is a legitimate or legally required reason to, including after an account is removed.",
                 ].map((item) => (
                   <li
                     key={item}

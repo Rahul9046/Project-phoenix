@@ -21,8 +21,17 @@ import type { TranslationKey } from "./types";
  * Order is a product decision, not an alphabet. The reasons somebody reaches
  * for when frightened come first; "Something else" is last because reading
  * past it costs nothing and reaching it too early ends the search.
+ *
+ * Which is why `csae` is first. It is the worst thing on the list and the one
+ * where a few seconds of scrolling is a few seconds somebody spends deciding
+ * whether to bother -- and Google Play's Child Safety Standards expect an
+ * in-app way to report child sexual abuse and exploitation by name, not a
+ * general category somebody has to interpret. Before it existed the published
+ * /child-safety page had to tell people to pick "Under 18" or "Threats or
+ * safety concern" instead, which asked a frightened person to translate.
  */
 export const REPORT_REASONS = [
+  "csae",
   "harassment",
   "inappropriate_content",
   "fake_profile",
@@ -41,6 +50,26 @@ export type ReportReasonCode = (typeof REPORT_REASONS)[number];
  * `reason === "other"` in three files is three places to forget.
  */
 export const OTHER_REASON = "other" satisfies ReportReasonCode;
+
+/**
+ * The reasons that make a report a child-safety report.
+ *
+ * Named once, for the same reason `OTHER_REASON` is: this set decides which
+ * reports get the emergency guidance in both clients and which sort to the top
+ * of the moderation queue, and `reason === "csae" || reason === "underage"`
+ * written out in four places is four places to forget the second one.
+ *
+ * `underage` is here as well as `csae`. A member who believes somebody is a
+ * child is reporting a child-safety matter whether or not they reach for the
+ * word abuse, and the queue must treat it that way. The database agrees: the
+ * ordering in `admin_list_reports` lists both.
+ */
+export const CSAE_REASONS = ["csae", "underage"] as const satisfies readonly ReportReasonCode[];
+
+/** Whether a reason needs the emergency guidance shown beside it. */
+export function isChildSafetyReason(code: ReportReasonCode): boolean {
+  return (CSAE_REASONS as readonly string[]).includes(code);
+}
 
 /** Where a reason's label lives. Typed, so a missing translation will not compile. */
 export function reportReasonKey(code: ReportReasonCode): TranslationKey {

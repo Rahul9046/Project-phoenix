@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 
 import {
   REPORT_REASONS,
+  isChildSafetyReason,
   reportNeedsDetails,
   reportReasonKey,
   type ReportReasonCode,
@@ -46,11 +47,19 @@ import { reportAndBlockMember } from "@/features/members/report";
  * Written details are optional, except for "Something else" -- every other
  * category says what happened by itself, and that one says nothing at all.
  *
- * The wording never promises a review. There is no moderation team and no
- * queue, so it says the report is recorded and the person is blocked -- both
- * true -- and nothing about anyone reading it. What it does now say, once the
- * report is in, is both of those facts plainly: somebody who has just done a
- * frightening thing should not have to infer from a redirect that it worked.
+ * The wording promises a reading and nothing more. It used to say there was no
+ * moderation team and no queue, which stopped being true when
+ * 20260911100100_moderation.sql built one -- and left this screen contradicting
+ * Eraya's own published /child-safety page, which tells the public that reports
+ * are reviewed by hand. It now says reports are read by hand, that no reply or
+ * timescale can be promised, and that the block does not wait for either. All
+ * three are true, and the confirmation afterwards states the two facts that
+ * matter plainly: somebody who has just done a frightening thing should not
+ * have to infer from a redirect that it worked.
+ *
+ * Choosing a child-safety reason adds the one piece of guidance in this flow
+ * that changes what somebody does next -- the police first, and do not attach
+ * the material. There is deliberately no upload here for them to attach it to.
  *
  * Ending a connection appears only where there is one to end. Reporting and its
  * block need no connection at all, which is the whole point of it being here.
@@ -255,6 +264,24 @@ export function MemberSafety({
                 </label>
               ))}
             </div>
+
+            {/*
+              Inside the fieldset and after the list, so it appears directly
+              under the choice that produced it rather than somewhere a reader
+              has to go looking. `role="note"` and `aria-live` because it
+              arrives after the radio is pressed: a screen reader that never
+              announced it would leave the one safety-critical sentence in this
+              flow unread.
+            */}
+            {reason !== null && isChildSafetyReason(reason) ? (
+              <p
+                role="note"
+                aria-live="polite"
+                className="mt-4 rounded-xl border border-ember/40 bg-sand px-4 py-3 text-meta leading-relaxed text-ink-muted"
+              >
+                {t("report.csaeNotice")}
+              </p>
+            ) : null}
           </fieldset>
 
           <label className="mt-6 block">

@@ -12,8 +12,10 @@ import {
 import { en, type Translations } from "./locales/en";
 import type { TFunction, TranslationKey, TranslationVars } from "./types";
 import {
+  CSAE_REASONS,
   OTHER_REASON,
   REPORT_REASONS,
+  isChildSafetyReason,
   reportNeedsDetails,
   reportReasonKey,
   type ReportReasonCode,
@@ -202,8 +204,10 @@ export {
   LOCALES,
   LOCALE_NAMES,
   LOCALE_SCRIPTS,
+  CSAE_REASONS,
   OTHER_REASON,
   REPORT_REASONS,
+  isChildSafetyReason,
   isLocale,
   matchLocale,
   reportNeedsDetails,

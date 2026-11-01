@@ -253,6 +253,7 @@ export const privacyPolicy: LegalDocument = {
           kind: "list",
           items: [
             "Messages you have already sent may remain in the other member's copy of the conversation. We cannot reach into someone else's conversation history and remove what they received",
+            "Safety reports made about you, or by you, are kept after your account is deleted — the category, what was written, when, and the account identifiers of both people. Your profile, photographs and messages are not kept with them. We keep reports because a report that disappears when the person reported deletes their account cannot protect anybody, and because a safety decision has to remain checkable and correctable afterwards. Only the operator can read them",
             "Information we are required to keep for legal, tax, fraud-prevention, security, dispute-resolution or record-keeping reasons is kept for as long as that reason applies",
             "Backups may still contain your information for a period, until they are overwritten or removed through normal processes",
           ],

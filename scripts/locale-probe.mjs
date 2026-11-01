@@ -125,7 +125,15 @@ const FONT_MARKER = {
  * known state of the product rather than something this probe discovered. It
  * is counted and reported, never failed.
  */
-const ENGLISH_BODY = new Set(["/terms", "/privacy"]);
+const ENGLISH_BODY = new Set([
+  "/terms",
+  "/privacy",
+  // Both carry `common.legalEnglishOnly` in the page itself and say so to the
+  // reader. /child-safety is the page a Play reviewer opens, so its chrome
+  // rendering in six languages is worth checking even though its body will not.
+  "/child-safety",
+  "/delete-account",
+]);
 
 /**
  * How much rendered text is enough to draw a conclusion from.
@@ -439,7 +447,18 @@ async function walk(route, cookies, member = null) {
 
 const EMAIL = "localeprobe@demo.eraya.invalid";
 
-const PUBLIC_ROUTES = ["/", "/pricing", "/safety", "/privacy", "/terms", "/contact", "/login", "/signup"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/pricing",
+  "/safety",
+  "/privacy",
+  "/terms",
+  "/child-safety",
+  "/delete-account",
+  "/contact",
+  "/login",
+  "/signup",
+];
 
 const SIGNED_IN_ROUTES = [
   "/home",

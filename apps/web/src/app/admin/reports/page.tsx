@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireModerator } from "@/features/admin/access";
 import { ReportActions } from "@/features/admin/ReportActions";
 import {
+  listArchivedReports,
   listReports,
   reasonLabels,
   statusLabels,
@@ -19,6 +20,18 @@ import {
  * counts to optimise, no queue-clearing pressure. Somebody described being made
  * uncomfortable by a stranger, and the job is to read it and act.
  *
+ * Child safety reports are marked and come first. The ordering is
+ * `admin_list_reports`'s, not this screen's -- but the mark is here, because a
+ * list whose only signal is its order stops signalling the moment somebody
+ * filters or scrolls it.
+ *
+ * "Preserved" is a fourth view rather than a fourth screen. It reads reports
+ * that outlived the account they were about, which `profiles_archive_reports`
+ * copies out before the ON DELETE CASCADE removes them. They carry no actions:
+ * the member is gone, so there is nobody left to suspend. And the function
+ * behind it records every read in `moderation_actions`, which is why it runs
+ * only when this view is asked for and never as part of the main queue.
+ *
  * Not part of the signed-in shell and not linked from anywhere. Reached by
  * typing the address, guarded server-side, and invisible to anyone else --
  * `requireModerator()` answers with a 404 rather than a 403 so the page does not
@@ -30,10 +43,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const FILTERS: { key: ReportFilter; label: string }[] = [
+/**
+ * `archived` is not a `ReportFilter`: it reads a different table through a
+ * different function, so it is deliberately not passed to `admin_list_reports`.
+ */
+type View = ReportFilter | "archived";
+
+const FILTERS: { key: View; label: string }[] = [
   { key: "open", label: "Open" },
   { key: "resolved", label: "Resolved" },
   { key: "all", label: "All" },
+  { key: "archived", label: "Preserved" },
 ];
 
 function when(value: string): string {
@@ -62,9 +82,16 @@ export default async function AdminReportsPage({
 
   const params = await searchParams;
   const raw = Array.isArray(params.filter) ? params.filter[0] : params.filter;
-  const filter: ReportFilter = raw === "resolved" || raw === "all" ? raw : "open";
+  const view: View =
+    raw === "resolved" || raw === "all" || raw === "archived" ? raw : "open";
 
-  const reports = await listReports(filter);
+  // Only one of the two is fetched. `listArchivedReports` writes an audit row
+  // every time it runs, so calling it to render a tab nobody opened would put
+  // reads in the record that never happened.
+  const reports = view === "archived" ? [] : await listReports(view);
+  // `null` is "could not be read", which this screen must not render as
+  // "nothing has been preserved" -- see listArchivedReports.
+  const archived = view === "archived" ? await listArchivedReports() : [];
 
   return (
     <div className="mx-auto w-full max-w-4xl px-5 py-10 sm:px-8 sm:py-14">
@@ -79,9 +106,9 @@ export default async function AdminReportsPage({
           <Link
             key={f.key}
             href={`/admin/reports?filter=${f.key}`}
-            aria-current={filter === f.key ? "page" : undefined}
+            aria-current={view === f.key ? "page" : undefined}
             className={`rounded-full px-4 py-2 text-label transition-colors ${
-              filter === f.key
+              view === f.key
                 ? "bg-ember text-surface"
                 : "border border-line text-ink-muted hover:border-line-strong"
             }`}
@@ -91,10 +118,103 @@ export default async function AdminReportsPage({
         ))}
       </nav>
 
-      {reports.length === 0 ? (
+      {view === "archived" ? (
+        <>
+          <p className="mt-8 rounded-2xl border border-line bg-sand px-5 py-4 text-[0.95rem] leading-relaxed text-ink-muted">
+            Reports about members whose accounts have since been deleted, kept
+            so that deleting an account cannot delete the reports about it.
+            There is nothing to action here — the account is gone. Names are
+            not kept; the identifiers are, and the reporter&rsquo;s own words.
+            Opening this view is recorded.
+          </p>
+
+          {archived === null ? (
+            <div className="mt-6 rounded-2xl border border-ember bg-surface p-8 text-center">
+              <p className="text-ink-muted">
+                The preserved reports could not be read, so this view is not
+                telling you there are none. If the archive has only just been
+                deployed, check that the migration ran.
+              </p>
+            </div>
+          ) : archived.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-line bg-surface p-8 text-center">
+              <p className="text-ink-muted">
+                Nothing preserved. No account with a report against it has been
+                deleted.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-6 space-y-4">
+              {archived.map((row) => (
+                <li
+                  key={row.id}
+                  className={`rounded-2xl border bg-surface p-6 ${
+                    row.isChildSafety
+                      ? "border-ember ring-1 ring-ember/30"
+                      : "border-line"
+                  }`}
+                >
+                  {row.isChildSafety ? (
+                    <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-ember px-3 py-1 text-meta font-medium uppercase tracking-wide text-surface">
+                      Child safety · read first
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                    <div>
+                      <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                        Reason
+                      </p>
+                      <p className="mt-0.5 text-name text-ink">
+                        {reasonLabels[row.reasonCode] ?? row.reasonCode}
+                      </p>
+                      <p className="mt-0.5 font-mono text-meta text-ink-subtle">
+                        {row.reasonCode}
+                      </p>
+                    </div>
+                    <p className="text-meta text-ink-subtle">
+                      Filed {when(row.createdAt)}
+                      <br />
+                      Preserved {when(row.archivedAt)}
+                    </p>
+                  </div>
+
+                  <p className="mt-2 font-mono text-meta text-ink-subtle">
+                    reporter {row.reporterId ?? "—"} · reported{" "}
+                    {row.reportedId ?? "—"}
+                    {row.archivedFor ? (
+                      <>
+                        {" · "}
+                        {row.archivedFor === row.reportedId
+                          ? "the reported member deleted their account"
+                          : "the reporter deleted their account"}
+                      </>
+                    ) : null}
+                  </p>
+
+                  <div className="mt-4">
+                    <p className="text-meta uppercase tracking-wide text-ink-subtle">
+                      Details
+                    </p>
+                    {row.description ? (
+                      <p className="mt-1.5 whitespace-pre-wrap rounded-xl bg-sand px-4 py-3 text-[0.95rem] leading-relaxed text-ink-muted">
+                        {row.description}
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-[0.95rem] italic text-ink-subtle">
+                        None given.
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : reports.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-line bg-surface p-8 text-center">
           <p className="text-ink-muted">
-            {filter === "open"
+            {view === "open"
               ? "Nothing waiting. Every report has been looked at."
               : "Nothing here yet."}
           </p>
@@ -104,8 +224,26 @@ export default async function AdminReportsPage({
           {reports.map((report) => (
             <li
               key={report.id}
-              className="rounded-2xl border border-line bg-surface p-6"
+              className={`rounded-2xl border bg-surface p-6 ${
+                report.isChildSafety
+                  ? "border-ember ring-1 ring-ember/30"
+                  : "border-line"
+              }`}
             >
+              {/*
+                The mark, not just the position.
+                `admin_list_reports` sorts these to the top, but a list whose
+                order is the only signal is a list that stops signalling the
+                moment somebody filters it or scrolls. So the row says what it
+                is, and `is_child_safety` comes from the database -- the same
+                category list that produced the ordering.
+              */}
+              {report.isChildSafety ? (
+                <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-ember px-3 py-1 text-meta font-medium uppercase tracking-wide text-surface">
+                  Child safety · read first
+                </p>
+              ) : null}
+
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
                 <div>
                   <p className="text-meta uppercase tracking-wide text-ink-subtle">
