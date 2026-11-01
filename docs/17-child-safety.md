@@ -21,7 +21,7 @@ The distinction the rest of this document depends on.
 | Reports are read by hand, by the operator | **In practice.** True today, and said in the product and on `/child-safety`. |
 | Child safety reports are marked and sorted to the top of the queue | **In practice.** Enforced by `admin_list_reports`, not by habit. |
 | Reporting blocks the reported member immediately | **In practice.** One transaction, enforced in the database. |
-| A report survives the deletion of either account | **In practice** once `20261101100300` is deployed. **Not yet, until then.** |
+| A report survives the deletion of either account | **In practice.** `20261101100300` applied to production 2026-11-01 and proved there by `npm run moderation:probe` — a reported account deletes successfully, the report is preserved in both directions, and the original row still cascades away. |
 | **Checking the queue once every 24 hours** | **Proposed.** Not yet practised, and not published anywhere. See §2. |
 | **Same-day triage of a child safety report** | **Proposed, internal target.** Deliberately not published — `/child-safety` says no response time, and that stays true until there is a process capable of keeping one. |
 | Removal of an account on a CSAE finding | **In practice**, by hand, via the Supabase dashboard. See §6. |
@@ -193,8 +193,11 @@ outcome of a confirmed finding rather than an escalation beyond it.
    remove files from the `profile-photos` bucket — nothing in SQL can, because
    Supabase refuses direct deletes on `storage.objects`.
 
-**Before 20261101100300 is deployed, step 4 is impossible and step 3 destroys
-the reports that justified it.** Until then, suspend and do not delete.
+`20261101100300` is applied in production as of 2026-11-01, so step 4 works and
+step 3 no longer destroys the reports that justified it. **That was the order
+before it: deleting an account took every report about it along.** If you are
+ever working against a database where the trigger is absent, suspend and do not
+delete.
 
 ### What removal does and does not reach
 
