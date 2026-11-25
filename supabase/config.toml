@@ -189,12 +189,31 @@ enabled = false
 client_id = "env(SUPABASE_AUTH_APPLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_APPLE_SECRET)"
 
-# Live, in Meta's Development mode: only app admins, developers and testers can
-# sign in until Business Verification and App Review are done. The button is
-# shown regardless, because Supabase reports the provider as enabled -- a
-# non-tester who presses it is refused by Facebook, not by Eraya.
+# Off until the Meta app is Live, which needs Business Verification and App
+# Review of the `email` permission.
+#
+# It was `true` with a comment saying a non-tester "is refused by Facebook, not
+# by Eraya", on the reasoning that the refusal is honest and belongs to whoever
+# caused it. The 22-24 November signups settled that argument with evidence:
+# three people pressed the button, none reached Facebook's consent screen, and
+# `auth.identities` has never held a single Facebook identity. Two recovered by
+# trying Google or email within a minute. One did not come back at all.
+#
+# A button that has never worked for anybody is not an honest refusal, it is a
+# dead end on the first screen of the product -- and the one place where the
+# person has no account yet, no history here, and no reason to persist.
+#
+# Turning it off is the whole fix on this side: the web reads the real setting
+# from `/auth/v1/settings` (see features/auth/settings.ts) and stops offering it
+# with no deploy at all, and the app now reads the same setting instead of
+# hardcoding its list. Flip this back to `true` and run `npm run config:push`
+# the day Meta approves -- nothing else has to change.
+#
+# Credentials are left in place. They are correct: Supabase builds a valid
+# dialog URL and Facebook recognises the app ID. What is missing is Meta's
+# approval, not configuration.
 [auth.external.facebook]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
 

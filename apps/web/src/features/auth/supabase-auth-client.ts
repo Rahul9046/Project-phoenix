@@ -1,6 +1,11 @@
 "use client";
 
-import { maskEmail, recordAuthEvent } from "@/features/auth/events";
+import {
+  maskEmail,
+  recordAuthEvent,
+  recordAuthEventBeforeUnload,
+} from "@/features/auth/events";
+import { rememberOAuthHandoff } from "@/features/auth/oauth-handoff";
 import { createClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/supabase/env";
 import { verifyPhoneCode, sendPhoneCode } from "@/features/auth/phone-verification";
@@ -44,15 +49,24 @@ function toAuthError(error: unknown, fallback: string): AuthError {
 }
 
 /** Only these two have provider events; Apple is not configured. */
-function recordProviderOutcome(
-  provider: SocialProviderId,
-  ok: boolean,
-  reason?: string,
-) {
+function recordProviderFailure(provider: SocialProviderId, reason: string) {
   if (provider !== "google" && provider !== "facebook") return;
-  recordAuthEvent(ok ? `${provider}_auth_success` : `${provider}_auth_failure`, {
-    reason,
-  });
+  recordAuthEvent(`${provider}_auth_failure`, { reason });
+}
+
+/**
+ * The button was pressed and the browser is about to leave.
+ *
+ * Not a success. Whether one follows is `/auth/callback`'s to report, and until
+ * 2026-11-25 nobody reported it at all: this moment was recorded as
+ * `${provider}_auth_success` with `reason: "handoff"`, which is how three
+ * Facebook sign-ins that never happened came to be counted as three that did.
+ */
+async function recordProviderRequested(provider: SocialProviderId) {
+  if (provider !== "google" && provider !== "facebook") return;
+  // Awaited, briefly: the page is about to be navigated away by the provider
+  // handoff. See `recordAuthEventBeforeUnload`.
+  await recordAuthEventBeforeUnload(`${provider}_auth_requested`);
 }
 
 export const supabaseAuthClient: AuthClient = {
@@ -64,6 +78,16 @@ export const supabaseAuthClient: AuthClient = {
   async signInWithSocial(provider: SocialProviderId) {
     const supabase = createClient();
 
+    /*
+     * Written before the call, not after. `signInWithOAuth` navigates the page
+     * as soon as it has a URL, and anything queued behind it may never run --
+     * so the cookie that tells `/auth/callback` which provider this round trip
+     * belongs to has to exist first. Setting it is synchronous and cannot
+     * throw; see `oauth-handoff.ts`.
+     */
+    rememberOAuthHandoff(provider);
+    await recordProviderRequested(provider);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -73,17 +97,17 @@ export const supabaseAuthClient: AuthClient = {
     });
 
     if (error) {
-      recordProviderOutcome(provider, false, "handoff_failed");
+      recordProviderFailure(provider, "handoff_failed");
       throw toAuthError(error, "Could not reach the sign-in provider.");
     }
 
     /*
-     * Recorded as a success at the point of handing off, because this promise
-     * does not meaningfully resolve: the browser leaves for the provider and
-     * the session is established later by the callback route. Whether the
-     * person completes it there is the callback's story to tell.
+     * Nothing is recorded here. This promise does not meaningfully resolve --
+     * the browser is already leaving for the provider -- and the outcome is
+     * established later by the callback route, which is the only witness to
+     * whether a session was actually created. Claiming a success at this point
+     * is the bug this comment replaced.
      */
-    recordProviderOutcome(provider, true, "handoff");
   },
 
   /**

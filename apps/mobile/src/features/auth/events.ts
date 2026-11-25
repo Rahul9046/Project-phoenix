@@ -28,8 +28,19 @@ export type AuthEvent =
   | "email_auth_requested"
   | "email_auth_success"
   | "email_auth_failure"
+  /*
+   * `requested` is the button being pressed; `success` means a session exists.
+   *
+   * They were one name until 2026-11-25, when three `facebook_auth_success`
+   * rows turned out to mean three people had been handed off to Facebook and
+   * none had ever come back. `requested` greatly exceeding `success + failure`
+   * is the signature of a provider that never returns anybody, and no single
+   * event can show it.
+   */
+  | "google_auth_requested"
   | "google_auth_success"
   | "google_auth_failure"
+  | "facebook_auth_requested"
   | "facebook_auth_success"
   | "facebook_auth_failure";
 

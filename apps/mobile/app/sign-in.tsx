@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 
@@ -11,7 +11,7 @@ import { useT } from "@/features/i18n/LocaleProvider";
 import { nextRouteFor, routes } from "@/features/auth/routing";
 import { ProviderIcon } from "@/features/auth/ProviderIcon";
 import {
-  availableProviders,
+  fetchAvailableProviders,
   sendEmailSignIn,
   signInWithProvider,
   type SignInProvider,
@@ -46,6 +46,24 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState<SignInProvider | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * Which providers to show is read from the project, not hardcoded -- see
+   * `fetchAvailableProviders`. Starting empty rather than with a guess: a
+   * button that appears and then vanishes is worse than one that arrives a
+   * moment late, because the vanishing one can be pressed first.
+   */
+  const [providers, setProviders] = useState<readonly SignInProvider[]>([]);
+
+  useEffect(() => {
+    let current = true;
+    void fetchAvailableProviders().then((available) => {
+      if (current) setProviders(available);
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   // Someone who is already signed in should never see this screen -- reaching
   // it via back navigation after signing in included.
@@ -112,7 +130,7 @@ export default function SignIn() {
       </View>
 
       <View style={{ gap: space.md }}>
-        {availableProviders.map((provider) => (
+        {providers.map((provider) => (
           <Button
             key={provider}
             label={t(providerLabelKey[provider])}

@@ -21,8 +21,19 @@ export type AuthEvent =
   | "email_auth_requested"
   | "email_auth_success"
   | "email_auth_failure"
+  /*
+   * `requested` is the button being pressed; `success` means a session exists.
+   *
+   * They were one name until 2026-11-25, when three `facebook_auth_success`
+   * rows turned out to mean three people had been handed off to Facebook and
+   * none had ever come back. `requested` greatly exceeding `success + failure`
+   * is the signature of a provider that never returns anybody, and no single
+   * event can show it.
+   */
+  | "google_auth_requested"
   | "google_auth_success"
   | "google_auth_failure"
+  | "facebook_auth_requested"
   | "facebook_auth_success"
   | "facebook_auth_failure";
 
@@ -43,6 +54,41 @@ export function maskEmail(email: string): string {
 
   if (name.length <= 2) return `${name[0]}*${domain}`;
   return `${name[0]}${"*".repeat(name.length - 2)}${name[name.length - 1]}${domain}`;
+}
+
+/**
+ * The same event, but waited for — only where the page is about to be unloaded.
+ *
+ * `recordAuthEvent` below is fire-and-forget, which is right everywhere the tab
+ * stays put. It is wrong immediately before `signInWithOAuth`, which navigates
+ * the page as soon as it has a URL: an in-flight `fetch` is not guaranteed to
+ * survive a navigation, so the handoff event — the denominator that makes
+ * `requested` vs `success + failure` mean anything — would be dropped by an
+ * unknown fraction of browsers. A funnel whose denominator is approximate
+ * cannot answer the question it was built to answer.
+ *
+ * Bounded, because the member is waiting. The button already shows a spinner,
+ * so a few hundred milliseconds is invisible; a Supabase outage must not hold
+ * the sign-in open, so the race resolves either way after `budgetMs` and the
+ * handoff proceeds regardless.
+ */
+export async function recordAuthEventBeforeUnload(
+  event: AuthEvent,
+  options: { identifier?: string; reason?: string; budgetMs?: number } = {},
+): Promise<void> {
+  const budgetMs = options.budgetMs ?? 1_000;
+  try {
+    await Promise.race([
+      createClient().rpc("record_auth_event", {
+        event_name: event,
+        masked_identifier: options.identifier ?? undefined,
+        reason: options.reason ?? undefined,
+      }),
+      new Promise((resolve) => setTimeout(resolve, budgetMs)),
+    ]);
+  } catch {
+    // Never a reason to stop a sign-in.
+  }
 }
 
 export function recordAuthEvent(

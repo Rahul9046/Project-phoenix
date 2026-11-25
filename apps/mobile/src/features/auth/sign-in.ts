@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import type { Provider } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
+import { supabaseConfig } from "@/lib/supabase/env";
 import { maskEmail, recordAuthEvent } from "@/features/auth/events";
 import type { TranslationKey } from "@eraya/i18n";
 
@@ -32,19 +33,64 @@ WebBrowser.maybeCompleteAuthSession();
 
 export type SignInProvider = Extract<Provider, "google" | "facebook" | "apple">;
 
+const ALL_PROVIDERS: readonly SignInProvider[] = ["google", "facebook", "apple"];
+
 /**
- * Which providers this build should offer.
+ * Which providers to offer, asked rather than assumed.
  *
- * Mirrors `supabase/config.toml`. Apple is `enabled = false` there, and stays
- * false here until credentials actually exist -- see docs/MOBILE_SETUP.md for
- * what has to be configured. Note that iOS App Store review requires Sign in
- * with Apple once any other social provider ships, so this is a release blocker
- * for iOS and not for Android.
+ * This was a hardcoded `["google", "facebook"]` until 2026-11-25, which is a
+ * copy of `supabase/config.toml` that nothing keeps in step with it. When
+ * Facebook was turned off at the project -- because the Meta app is still in
+ * Development mode and no Facebook sign-in has ever completed -- the web
+ * dropped its button within the settings cache's five minutes and this app
+ * carried on showing one. A hardcoded list cannot be switched off without
+ * shipping a release to every installed copy, and the installed copies are
+ * exactly who would still be pressing it.
+ *
+ * `signInWithOAuth` does not fail when a provider is disabled: it opens a
+ * browser tab on a raw JSON error from Supabase. So not offering the button is
+ * the only real guard, the same conclusion the web reached in
+ * `features/auth/settings.ts`.
+ *
+ * Apple is included in the list asked about but is `enabled = false` on the
+ * project, so it comes back absent. That is the correct way for it to be
+ * missing -- enabling it becomes a config push rather than a code change. Note
+ * iOS App Store review requires Sign in with Apple once any other social
+ * provider ships, so it is a release blocker for iOS and not for Android.
  */
-export const availableProviders: readonly SignInProvider[] = [
-  "google",
-  "facebook",
-];
+export async function fetchAvailableProviders(): Promise<
+  readonly SignInProvider[]
+> {
+  try {
+    const response = await fetch(`${supabaseConfig.url}/auth/v1/settings`, {
+      headers: { apikey: supabaseConfig.publishableKey },
+    });
+
+    if (!response.ok) return FALLBACK_PROVIDERS;
+
+    const settings = (await response.json()) as {
+      external?: Record<string, boolean>;
+    };
+
+    return ALL_PROVIDERS.filter(
+      (provider) => settings.external?.[provider] === true,
+    );
+  } catch {
+    // A phone with no signal has not learned that Facebook is off. Offering
+    // Google is better than offering nothing and stranding somebody on a screen
+    // with only an email field, and a provider that turns out to be disabled
+    // fails the way it always did rather than worse.
+    return FALLBACK_PROVIDERS;
+  }
+}
+
+/**
+ * What to show when the setting cannot be read.
+ *
+ * Google only. It is the provider that works, carries the overwhelming
+ * majority of sign-ins, and is not waiting on anybody's review.
+ */
+const FALLBACK_PROVIDERS: readonly SignInProvider[] = ["google"];
 
 /**
  * The address the provider sends the browser back to.
@@ -186,8 +232,20 @@ export async function signInWithProvider(
   });
 
   if (error || !data?.url) {
+    recordProviderOutcome(provider, false, "handoff_failed");
     return { ok: false, messageKey: GENERIC };
   }
+
+  /*
+   * The button was pressed and the tab is about to open. Counted separately
+   * from the outcome, because the two differ and the gap is the diagnosis: on
+   * the web, where this event did not exist, three Facebook attempts that never
+   * came back were recorded as three successes. This app has always reported
+   * its real outcomes -- it exchanges the code itself, so it can -- but without
+   * a denominator a provider that refuses everybody looks like a provider
+   * nobody uses.
+   */
+  recordProviderRequested(provider);
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
     // Keeps the tab visually part of Eraya rather than a bare browser chrome.
@@ -228,6 +286,12 @@ function recordProviderOutcome(
     ok ? `${provider}_auth_success` : `${provider}_auth_failure`,
     { reason },
   );
+}
+
+/** The handoff, which is not yet an outcome. Same exclusion for Apple. */
+function recordProviderRequested(provider: SignInProvider) {
+  if (provider === "apple") return;
+  recordAuthEvent(`${provider}_auth_requested`);
 }
 
 /**
