@@ -27,9 +27,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function readEnv() {
   const env = {};
-  for (const line of fs
-    .readFileSync(path.join(root, "apps/web/.env.local"), "utf8")
-    .split(/\r?\n/)) {
+  const file = path.join(root, "apps/web/.env.local");
+  if (!fs.existsSync(file)) return env;
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
     if (!line.includes("=") || line.trim().startsWith("#")) continue;
     const at = line.indexOf("=");
     env[line.slice(0, at).trim()] = line.slice(at + 1).trim();
@@ -38,10 +38,65 @@ function readEnv() {
 }
 
 const env = readEnv();
-const URL_BASE = env.NEXT_PUBLIC_SUPABASE_URL;
+
+/*
+ * Where this probe points, and why it can be told.
+ *
+ * It used to read `apps/web/.env.local` and nothing else, which meant the only
+ * way to run it anywhere but production was to edit the production env file --
+ * so in practice it only ever ran against production, creating and deleting
+ * throwaway auth users in the one project real members use.
+ *
+ * The environment now wins, so a local Supabase stack can be named without
+ * touching that file:
+ *
+ *   SUPABASE_URL=http://127.0.0.1:54321 \
+ *   SUPABASE_ANON_KEY=<local anon> \
+ *   SUPABASE_SERVICE_ROLE_KEY=<local service role> \
+ *   npm run security
+ *
+ * That needs `npx supabase start`, which needs Docker. Until Docker exists on
+ * the machine this is a door with nothing behind it -- but it is the door, and
+ * leaving it shut was why nine assertions went unverified rather than being
+ * moved somewhere they could be run safely. `npm run security:invariants`
+ * covers the structure meanwhile, and needs nothing at all.
+ */
+/*
+ * `||` and not `??`, deliberately.
+ *
+ * `SUPABASE_SECRET_KEY` is present but empty in `apps/web/.env.local`, and an
+ * empty string is not nullish -- so `??` stops there and never reaches
+ * `SUPABASE_SERVICE_ROLE_KEY`, which is the one with a value in it. Written
+ * with `??` first, this probe resolved no service key at all and refused to
+ * start. A declared-but-blank variable is exactly what the fallback chain is
+ * for, so every link in it falls through on empty.
+ */
+const URL_BASE = process.env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON =
-  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SERVICE = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_ANON_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SERVICE =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  env.SUPABASE_SECRET_KEY ||
+  env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!URL_BASE || !ANON || !SERVICE) {
+  console.error(
+    "No target. Set SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY,\n" +
+      "or provide apps/web/.env.local.",
+  );
+  process.exit(1);
+}
+
+/*
+ * Say which project is about to be written to, every time.
+ *
+ * This probe creates and deletes auth users. Against production that is a
+ * deliberate act, and the one thing that must never happen is somebody running
+ * it believing it is pointed somewhere else.
+ */
+console.log(`target: ${URL_BASE}\n`);
 
 const admin = createClient(URL_BASE, SERVICE, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -892,6 +947,36 @@ console.log("\nDeleting an account takes the photographs with it");
 
     check("the photograph is there before deletion", (await filesUnder(id)).length === 1);
 
+    /*
+     * Something for the theft below to actually steal.
+     *
+     * Until 2026-11-25 this block attacked meera's folder without ever putting
+     * a file in it. `filesUnder(meera.id)` was 0 before the attempt as well as
+     * after, so `stillThere.length > 0` could never hold -- and Storage answers
+     * a bulk delete with 200 even when RLS silently filters every row, so the
+     * `theft.status >= 400` half could not hold either.
+     *
+     * The assertion therefore failed identically whether the policy was
+     * perfect or entirely absent, which is worse than not asserting it: it
+     * reads as a standing security failure and is in fact a measurement of
+     * nothing. It was one of the nine that had gone unverified.
+     */
+    const meeraFile = `${meera.id}/probe-theft-target.jpg`;
+    const planted = await fetch(`${bucketUrl}/${meeraFile}`, {
+      method: "POST",
+      headers: {
+        apikey: ANON,
+        Authorization: `Bearer ${meera.token}`,
+        "Content-Type": "image/jpeg",
+      },
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    });
+    check(
+      "meera has a photograph for the theft attempt to target",
+      planted.status < 400 && (await filesUnder(meera.id)).length === 1,
+      `status ${planted.status}`,
+    );
+
     // The authority the member is given is their own folder and no more. Worth
     // asserting here rather than assuming, because the deletion flow below
     // relies on exactly this policy.
@@ -901,11 +986,27 @@ console.log("\nDeleting an account takes the photographs with it");
       body: JSON.stringify({ prefixes: [`${meera.id}/`] }),
     });
     const stillThere = await filesUnder(meera.id);
+    /*
+     * Survival is the property, not the status code. A 200 here means Storage
+     * accepted the request and deleted the rows the caller was entitled to
+     * delete -- which must be none of meera's.
+     */
     check(
       "a member cannot delete another member's photo files",
-      stillThere.length > 0 || theft.status >= 400,
+      stillThere.length === 1,
       `status ${theft.status}, ${stillThere.length} of meera's file(s) left`,
     );
+
+    // Put meera's folder back the way it was found, whatever happened above.
+    await fetch(`${bucketUrl}`, {
+      method: "DELETE",
+      headers: {
+        apikey: SERVICE,
+        Authorization: `Bearer ${SERVICE}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prefixes: [meeraFile] }),
+    });
 
     // What the app does, in the order the app does it: clear the folder through
     // the Storage API, then delete the account.
