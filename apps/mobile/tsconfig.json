@@ -12,6 +12,19 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
+    /*
+     * `node` so `provider.test.ts` can import `node:test`. The payment-provider
+     * decision is pure -- a platform string and a channel string in, a provider
+     * out -- and it is deliberately kept in a module that imports nothing, so a
+     * check can run it under Node without a bundler, a device or a store. That
+     * check is the thing that was impossible while the decision was a
+     * `Platform.OS` comparison; see features/membership/distribution.ts.
+     *
+     * Listing it does not shadow Expo's own types: those arrive through the
+     * `include` below (`.expo/types`, `expo-env.d.ts`) and from each package's
+     * own declarations, not from automatic @types discovery.
+     */
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }

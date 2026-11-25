@@ -218,33 +218,94 @@ someone else.
 
 ## Membership
 
-Buyable on Android. Razorpay is integrated and a purchase completes end to end
-— see [10-payments.md](10-payments.md) for the model; this section covers only
-what the app itself does.
+Two ways to pay and one refusal, chosen by the build rather than by the
+platform. See [10-payments.md](10-payments.md) for the model and
+[14-google-play.md](14-google-play.md) for Play's own surface; this section
+covers only what the app itself does.
 
-**Not buyable on iOS, and that is the only behavioural difference between the
-two platforms.** `inAppPurchaseAvailable` is false there, the plans and the pay
-button are replaced by a localized sentence, and Premium already paid for still
-resolves exactly as it does anywhere else. Everything in the rest of this
-section describes the Android path. See [16-ios.md](16-ios.md).
+**Buyable on the Android download, through Razorpay.** Integrated, and a purchase
+completes end to end. This is the artifact the public is running, it is
+sideloaded rather than distributed by Play, and nothing in the Play work changes
+it.
 
-There is no native Razorpay module, deliberately. Buying opens `/checkout` on
-the website in the system browser, the same way sign-in opens Google, and the
-browser hands back to `eraya://payment`. Card details never touch this app, and
-the only things crossing back are an order id and a signature that is useless
-without the key secret.
+**Buyable in the Play build, through Play Billing** -- and never through
+Razorpay. Not yet provable: no Play purchase has been made. See
+[14-google-play.md](14-google-play.md).
 
-That means the app must be told where the website is, through
-`EXPO_PUBLIC_SITE_URL`. Unset, no payment sheet opens and nothing says why. A
-dev client reads it from `.env.local`; **EAS builds do not**, and take it from
-EAS environment variables instead. This is the one setting whose absence looks
-identical to somebody choosing not to pay.
+**Not buyable on iOS at all.** `inAppPurchaseAvailable` is false there, the plans
+and the pay button are replaced by a localized sentence, and Premium already paid
+for still resolves exactly as it does anywhere else. See [16-ios.md](16-ios.md).
+
+Which of the three a build is, is decided by `EXPO_PUBLIC_DISTRIBUTION` and the
+platform together, through `paymentProvider` --
+[10-payments.md](10-payments.md#android-is-two-artifacts-not-one).
+
+`purchase()` in `features/membership/payments.ts` is the seam. It switches on
+`paymentProvider` from `features/membership/purchasing.ts`, exhaustively, so a
+fourth provider cannot be added to the type without this function failing to
+compile. It is not `Platform.OS`: that cannot tell the Android download from the
+Play build, and pointing the download at Play Billing would break purchasing for
+every install the public already has. **The Play build never falls back to
+Razorpay** -- if Play cannot sell, `purchase()` returns `unavailable` or
+`unconfigured` and no sale happens, because quietly opening a web checkout is
+the one thing Play's payments policy forbids.
+
+**iOS: Razorpay, in the browser.** No native Razorpay module, deliberately.
+Buying opens `/checkout` on the website in the system browser, the same way
+sign-in opens Google, and the browser hands back to `eraya://payment`. Card
+details never touch this app, and the only things crossing back are an order id
+and a signature that is useless without the key secret.
+
+That path must be told where the website is, through `EXPO_PUBLIC_SITE_URL`.
+Unset, no payment sheet opens and nothing says why. A dev client reads it from
+`.env.local`; **EAS builds do not**, and take it from EAS environment variables
+instead. This is the one setting whose absence looks identical to somebody
+choosing not to pay. It is not on the Android purchase path at all.
+
+**Android: Google Play Billing, natively.** `expo-iap` 5.8.2, with the whole
+client in `features/membership/play-billing.ts`. The static import is safe on web
+and iOS because the native module sits behind a lazy proxy -- proven by exporting
+both bundles, not assumed.
+
+Prices on Android are **Google's own localised strings**, read from Play.
+Premium's paise figure from the catalogue is the fallback. Play takes the money
+and applies its own tax handling, so showing Eraya's figure beside a sheet that
+says something else would make us the ones who were wrong. Display only: a term
+is granted on what the server verifies, never on anything a price string says.
+
+The Play product ids come from `membership_plans`, and which of a plan's two
+columns applies is taken from the catalogue's `introApplies` -- the server's
+answer about this member's history, not a rule reimplemented here. The client
+never invents, chooses or edits an id.
 
 The app never concludes that a payment succeeded. It reports what it saw and the
-server answers, from a signature check or from Razorpay's own record. Six
-outcomes rather than a boolean, because money can leave an account while the
-confirmation does not arrive: `unconfirmed` in particular is kept apart from
-`failed` so a fault of ours is never described as somebody's bank declining.
+server answers -- from a signature check, from Razorpay's own record of the
+order, or, on Android, from the Android Publisher API. **Seven** outcomes rather
+than a boolean, because money can leave an account while the confirmation does
+not arrive:
+
+- `unconfirmed` is kept apart from `failed`, so a fault of ours is never
+  described as somebody's bank declining.
+- `unconfigured` is Android-only and means a plan has no Play product to sell, so
+  **nobody was charged**. The button disables and the screen says purchases are
+  temporarily unavailable rather than inviting a second attempt that cannot work.
+  This is the state every plan is in today, because the Play products do not
+  exist yet.
+
+Neither is recorded as `payment_failed`: Eraya's own bugs and Eraya's own
+unfinished configuration must not appear in the number that judges a provider.
+
+A Play purchase can also arrive when nobody is waiting for it -- the app killed
+between the sheet closing and verification, or a deferred payment settling later.
+A `purchaseUpdatedListener` runs for the life of the process rather than the life
+of a screen, and `recoverPlayPurchases()` sweeps on the membership screen for
+anything left unverified. Play keeps handing such a purchase back until it is
+consumed and Google refunds it after three days, which is what makes the sweep
+worth having. Whether it should also run at launch is an open question.
+
+**No Play purchase has ever been executed** -- not on a device, not by a licence
+tester. The Android client is written and bundles cleanly; that is all that has
+been established.
 
 Entitlements are read by name from the `entitlements` table, never inferred from
 `tier === "premium"` in a component. The client decides what the UI offers; the
@@ -254,6 +315,14 @@ delete policy for anyone.
 ## Android permissions
 
 `android.permissions` is `[]` and `RECORD_AUDIO` is in `blockedPermissions`.
+
+That describes what `app.json` declares, not the whole merged manifest.
+`expo-iap` carries `com.android.vending.BILLING` in its own library manifest, and
+Gradle merges library manifests at build time, so the built app is **expected** to
+request it. Introspection shows nothing that would strip it -- an empty
+`android.permissions` produces no blanket removal, and only `blockedPermissions`
+emits a removal node. But **no build has been produced and `prebuild` has not been
+run**, so the merged manifest has not been observed. Expected, not verified.
 
 The microphone was declared and used by nothing. On a product where people
 decide whether to meet a stranger, an install screen asking for the microphone
@@ -418,24 +487,19 @@ directly installed build exactly as it does anywhere else. Being sideloaded
 changes nothing about it, and no Play policy applies to a build Play is not
 distributing.
 
-**This is the part that changes when Play Billing lands, and it lands on its own
-branch.** That work lives on `feature/play-billing-phase-2a` and is **kept
-separate on purpose**: the direct-distribution release is based on `main` at
-`6c2da57` and must not take a merge, rebase or cherry-pick from it. The two
-answer different questions -- this one is how a phone gets the app while Play's
-closed-testing period runs, that one is how a Play-distributed build takes money
--- and tying them together would mean the download could not ship until billing
-was ready.
+**Play Billing no longer changes this part, and that is the point of how it was
+integrated.** The Play work used to live apart on `feature/play-billing-phase-2a`
+precisely because it would have switched this artifact's checkout. It no longer
+would: the two are separate builds of the same source, distinguished by
+`EXPO_PUBLIC_DISTRIBUTION`, and this one does not set it. The APK published here
+takes Razorpay, as it always has, whatever the Play build does.
 
-On that branch Android dispatches to Play Billing instead of Razorpay, and since
-the five Play products do not exist yet, Premium becomes unbuyable in-app with an
-honest disabled state rather than a broken checkout. Android must never fall back
-to Razorpay once that lands; the dispatch is on `Platform.OS`, not a flag,
-because an Android build opening a web checkout would breach Play's payments
-policy.
+Since the five Play products do not exist yet, Premium is unbuyable in the **Play
+build** with an honest disabled state rather than a broken checkout. That state
+is unreachable here, where a selected plan is always buyable.
 
-So a rebuild of the app is **not** a free act today, and it is a payments
-decision rather than a distribution one. It is also not a prerequisite for
+So a rebuild of the app is still **not** a free act, but it is no longer a
+payments decision. It is also not a prerequisite for
 anything here: the website ships against the APK already published, and that
 artifact is unchanged -- same signing identity, same `app.eraya.mobile`, same
 `versionCode`.
