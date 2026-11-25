@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "app.eraya.mobile",
-      "versionCode": 4,
+      "versionCode": 6,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "backgroundColor": "#BD4F33",
@@ -29,7 +29,8 @@
       },
       "permissions": [],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "web": {

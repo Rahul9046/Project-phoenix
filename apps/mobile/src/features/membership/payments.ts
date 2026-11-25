@@ -1,6 +1,6 @@
 import * as WebBrowser from "expo-web-browser";
 
-import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
+import { paymentProvider } from "@/features/membership/purchasing";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -85,11 +85,12 @@ export type PurchaseOutcome =
   | { status: "unconfirmed" }
   | { status: "unavailable" }
   /**
-   * This build cannot sell Premium at all -- iOS today. Separate from every
-   * other outcome because nothing was attempted: no order was created, no
-   * browser opened, and no money could have moved. Saying "unavailable" here
+   * This build cannot sell Premium at all -- iOS, and the Google Play build
+   * until Play Billing exists. Separate from every other outcome because
+   * nothing was attempted: no order was created, no browser opened, no Billing
+   * client connected, and no money could have moved. Saying "unavailable" here
    * would describe a checkout that failed to open, which invites somebody to
-   * try again at something that is never going to work on this platform.
+   * try again at something this build is not going to do.
    */
   | { status: "unsupported" };
 
@@ -159,26 +160,51 @@ type OrderReply = {
 };
 
 /**
- * The whole purchase, start to finish.
+ * Who takes the money, and therefore which purchase this is.
+ *
+ * A switch rather than an `if`, and exhaustive rather than defaulted: add a
+ * provider to `PaymentProvider` and this stops compiling until somebody says
+ * what buying through it means. The alternative -- a boolean and a fallthrough
+ * -- is how a build ends up opening the wrong checkout, because the wrong
+ * checkout is whatever the last `else` happened to be.
+ *
+ * `none` is iOS, the Google Play build and any build whose channel could not be
+ * read. Nothing is attempted for any of them: no order is created, no browser
+ * opens, no Billing client connects, and so no money can move. That is what
+ * `unsupported` means, and it is why it is distinct from `unavailable`, which
+ * describes a checkout that was meant to open and did not.
+ *
+ * This check is the last place the till is shut rather than the only one. The
+ * membership screen already offers no plans and no pay button where
+ * `inAppPurchaseAvailable` is false, so nothing in the product reaches the
+ * `none` branch -- which is exactly why it belongs here as well. A future
+ * screen that offered Premium without consulting `purchasing.ts` would
+ * otherwise open a web checkout for a digital good inside an App Store build or
+ * a Play-distributed one, and the first anybody would hear of it is a
+ * rejection or a policy breach.
+ */
+export async function purchase(planCode: string): Promise<PurchaseOutcome> {
+  switch (paymentProvider) {
+    case "none":
+      return { status: "unsupported" };
+    case "razorpay":
+      return purchaseThroughRazorpay(planCode);
+  }
+}
+
+/**
+ * The whole purchase, start to finish, through the website's Razorpay checkout.
+ *
+ * This is the Android APK downloaded from eraya.app and nothing else -- see
+ * `distribution.ts` for why that is a narrower statement than "Android".
  *
  * Every branch that could end in "we think you paid" instead asks the server
  * again. The client's view of a payment is a hint; the answer comes from a
  * signature check or from Razorpay's own record of the order.
  */
-export async function purchase(planCode: string): Promise<PurchaseOutcome> {
-  /*
-   * The till is shut on iOS, and this is the last place that is true rather
-   * than the only one.
-   *
-   * The membership screen already offers no plans and no pay button on iOS, so
-   * nothing in the product reaches this line -- which is exactly why the check
-   * belongs here as well. A future screen that offers Premium without knowing
-   * about `inAppPurchaseAvailable` would otherwise open a web checkout for a
-   * digital good inside an App Store build, and the first time anybody found
-   * out would be a rejection. See `purchasing.ts`.
-   */
-  if (!inAppPurchaseAvailable) return { status: "unsupported" };
-
+async function purchaseThroughRazorpay(
+  planCode: string,
+): Promise<PurchaseOutcome> {
   const created = await invoke<OrderReply>("payments-create-order", {
     planCode,
   });
