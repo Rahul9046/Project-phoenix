@@ -474,32 +474,112 @@ Only the exact string `true` opens it. Not `1`, not `yes`, not `TRUE`, and not
 `true` with a space around it — a value nobody intended must never be read as
 permission to charge. Asserted in `sales.test.ts`.
 
-### One residual exposure
+### One residual exposure, and the remediation that actually works
 
-`payments` holds abandoned test-mode rows at status `created` from before the
-till shut, and their order ids are still valid at Razorpay. Eraya's own
-`/checkout` page refuses while `premiumOnSale` is false, so the website is no
-longer a route to paying one — but somebody holding an order id and the public
-test key id could in principle drive Razorpay directly and then call
-`payments-verify`.
+`payments` holds abandoned test-mode rows at status `created`, and their order
+ids are still valid at Razorpay. Eraya's own `/checkout` refuses while
+`premiumOnSale` is false, so the website is no longer a route to paying one —
+but the owner of such an order could drive Razorpay's own checkout directly
+with the order id and the public test key id, pay it with a published test
+card, and then call `payments-verify`.
 
-Closing them is a one-line update and is **not** done automatically, because it
-writes to production rows:
+As of 2026-11-25 there are exactly two, both created on 2026-11-22:
+
+| order id | profile | amount | note |
+| --- | --- | --- | --- |
+| `order_U3EBiDW1WSUmIv` | `346fdb39…` | ₹299 | abandoned 15s after this member's ₹199 intro purchase settled |
+| `order_U3IdNF4APXKdzp` | `e1935e8d…` | ₹199 | intro-priced, abandoned |
+
+#### Setting the status to `cancelled` does NOT close this
+
+An earlier version of this section proposed exactly that, and it was wrong.
+`settle_payment` looks the row up by `(provider, provider_order_id)` with **no
+status predicate**, and short-circuits on only two things: a row in
+`payment_revocations`, and `status = 'paid'`. A row sitting at `cancelled`
+falls straight through to the grant branch and extends the member's term.
+
+So an `update … set status = 'cancelled'` is cosmetic. It makes the member's
+payment history read correctly and changes nothing about whether the order can
+still be settled. Worse than useless: it looks like a fix.
+
+#### `revoke_payment` is the mechanism
+
+A `payment_revocations` row is the only durable block, and it is checked first
+— ahead of `already_paid`, ahead of everything. Both settlement entry points
+reach the grant exclusively through `settle_payment` (`payments-verify` on the
+member's own call, `payments-webhook` on a Razorpay-signed delivery), so one
+revocation closes both.
+
+For a row that is not `paid`, `revoke_payment` takes its `no_grant_to_revoke`
+branch: it records the revocation, sets the status, and **does not touch the
+subscription**, because no term was ever granted. It is idempotent — one
+revocation per payment, enforced by a unique index.
 
 ```sql
--- Owner-approved only. Closes abandoned test-mode orders so none can be
--- settled later. Touches no paid row and no subscription.
-update public.payments
-   set status = 'cancelled', failed_at = now()
- where status = 'created'
-   and paid_at is null;
+-- OWNER-APPROVED ONLY. Blocks settlement of the two abandoned test-mode
+-- orders. Grants nothing, withdraws no membership, touches no subscription:
+-- both rows are at 'created', so the no_grant_to_revoke branch is taken.
+select public.revoke_payment(
+         'razorpay'::public.payment_provider,
+         'order_U3EBiDW1WSUmIv',
+         'voided',
+         'Abandoned test-mode order, voided before the free public launch.',
+         null,
+         null,
+         'cancelled'::public.payment_status
+       );
+
+select public.revoke_payment(
+         'razorpay'::public.payment_provider,
+         'order_U3IdNF4APXKdzp',
+         'voided',
+         'Abandoned test-mode order, voided before the free public launch.',
+         null,
+         null,
+         'cancelled'::public.payment_status
+       );
 ```
 
-Check what it would touch first:
+`revoke_payment` is revoked from `public`, `anon` and `authenticated`, so this
+runs as the service role — the SQL editor or an admin RPC, not from a client.
+
+Before, to see what would be touched:
 
 ```sql
+select provider_order_id, status, amount_paise, paid_at
+  from public.payments order by created_at;
+```
+
+After, to prove what happened:
+
+```sql
+-- both voided, and neither carries a term change
+select p.provider_order_id, p.status, r.kind,
+       r.previous_period_end, r.resulting_period_end
+  from public.payments p
+  left join public.payment_revocations r on r.payment_id = p.id
+ where p.provider_order_id in ('order_U3EBiDW1WSUmIv', 'order_U3IdNF4APXKdzp');
+-- expect: status 'cancelled', kind 'voided', both period_end columns null
+
+-- the two paid rows and both subscriptions are untouched
 select status, count(*) from public.payments group by 1;
+select profile_id, status, current_period_end
+  from public.subscriptions order by current_period_end;
 ```
+
+Introductory eligibility is unaffected: `intro_offer_used` counts only rows at
+`status = 'paid'`, so voiding a `created` row neither consumes nor restores
+anybody's first-month price.
+
+#### What this deliberately does not do
+
+It does not revoke the two **paid** memberships. One expired on 2026-11-04 and
+one runs to 2026-12-22, and whether either was a real purchase or a test-card
+purchase cannot be determined from the database — `live_mode` does not exist
+until `20261125110100` is applied, and the key secret is not readable outside
+the functions. Withdrawing a member's paid term on an inference is not a
+trade this file is willing to make. See the deployment report for the full
+argument.
 
 ## Going live
 
