@@ -226,10 +226,25 @@ ok(
 console.log("\nPremium cannot be bought on iOS");
 const purchasing = read("src", "features", "membership", "purchasing.ts");
 ok(
-  /export const inAppPurchaseAvailable: boolean = Platform\.OS !== "ios";/.test(
+  /export const inAppPurchaseAvailable: boolean =\s*premiumOnSale && Platform\.OS !== "ios";/.test(
     purchasing,
   ),
-  "the decision is one exported value, derived from Platform.OS",
+  "the decision is one exported value, and Platform.OS is a term in it",
+);
+/*
+ * The commercial state and the store rule are separate terms of one `&&`, and
+ * this asserts that iOS keeps its own.
+ *
+ * `premiumOnSale` is false today because Razorpay refused to activate the
+ * account, so iOS and Android are both shut and either term alone would appear
+ * to be doing the work. The day a provider is approved, `premiumOnSale`
+ * becomes true -- and if somebody had collapsed the two into one flag by then,
+ * that edit would silently open a web checkout for a digital good inside an
+ * App Store build. Which is a rejected binary, found out from Apple.
+ */
+ok(
+  /Platform\.OS !== "ios"/.test(purchasing),
+  "and no commercial flag can be flipped into selling on iOS",
 );
 ok(
   !/process\.env/.test(purchasing),
@@ -269,11 +284,25 @@ ok(
   /<Unavailable \/>/.test(membership),
   "the other branch is an explanation, not a disabled button",
 );
+/*
+ * Localized, and the key is still chosen in the component rather than written
+ * out in English.
+ *
+ * Two reasons may shut the till now -- nothing is on sale anywhere, and iOS
+ * could not sell it even if it were -- so the component picks between two key
+ * pairs instead of naming one. The property worth asserting is unchanged: both
+ * strings come from `t()` under `membership.`, which is what makes them exist
+ * in all six languages. `npm run i18n:check` is what proves they do.
+ */
 ok(
   /function Unavailable\(\)/.test(membership) &&
-    /t\("membership\.notAvailableTitle"\)/.test(membership) &&
-    /t\("membership\.notAvailableBody"\)/.test(membership),
+    /t\(`membership\.\$\{reason\}Title`\)/.test(membership) &&
+    /t\(`membership\.\$\{reason\}Body`\)/.test(membership),
   "and it is localized, not hard-coded English",
+);
+ok(
+  /const reason = premiumOnSale \? "notAvailable" : "notOnSale";/.test(membership),
+  "iOS keeps its own sentence for when Premium does go on sale",
 );
 /* No price may be quoted where none can be taken. */
 ok(
