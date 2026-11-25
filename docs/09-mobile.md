@@ -87,7 +87,7 @@ deciding on a half-resolved state.
 | Method | State |
 | --- | --- |
 | Google | Live |
-| Facebook | Live |
+| Facebook | **Off at the project** — the Meta app is in Development mode. The source reads the provider list from `/auth/v1/settings` rather than hardcoding it, but **builds up to v0.1.3 predate that** and still show the button (it now fails in-app). Restoring the provider later needs no release; removing it from installed builds does |
 | Email code | Live — six digits, the primary path on mobile |
 | Apple | **Not configured.** Needs a paid Apple Developer account, and may or may not be required at all -- [16-ios.md](16-ios.md) |
 | Phone SMS | **Mocked.** See below |

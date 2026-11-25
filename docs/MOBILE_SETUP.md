@@ -76,8 +76,13 @@ You will need:
 3. In Supabase, **Authentication → Providers → Apple**: the Services ID, Team
    ID, Key ID and the key contents.
 4. Set `enabled = true` under `[auth.external.apple]` in
-   `supabase/config.toml`, run `supabase config push`, and add `"apple"` to
-   `availableProviders` in `apps/mobile/src/features/auth/sign-in.ts`.
+   `supabase/config.toml` and run `npm run config:push` (never
+   `supabase config push` directly — see CLAUDE.md). Since 2026-11-25 both
+   clients read the enabled providers from `/auth/v1/settings` rather than
+   hardcoding them, and Apple is already in the list they ask about — so no code
+   edit is involved. The website picks it up within five minutes; the app picks
+   it up on any build made after that change, which as of this writing has not
+   been released.
 
 On iOS, also install `expo-apple-authentication` and use the native button —
 Apple's guidelines require its own control rather than a web flow.

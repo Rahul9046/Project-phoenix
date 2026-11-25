@@ -1221,7 +1221,52 @@ export function trackedSurfaces() {
       ...Object.keys(webPkg.devDependencies ?? {}),
     ].sort(),
     guides,
+    authEvents: authEventVocabulary(),
   };
+}
+
+/**
+ * The authentication event vocabulary, read from the constraint that enforces it.
+ *
+ * Tracked from 2026-11-25, and added for the same reason as the five above: it
+ * moved while this document said nothing, because it was not a surface at all.
+ * `analyticsEvents` covers `product_events` and never covered `auth_events`, so
+ * the names the sign-in funnel is measured in could change -- or be measured
+ * wrongly -- with no row anywhere reporting it.
+ *
+ * That is not hypothetical. `facebook_auth_success` was written at the moment
+ * the browser was handed off to Facebook rather than when a session existed,
+ * and the resulting three "successful" Facebook sign-ins against zero Facebook
+ * identities went unnoticed until somebody compared the two by hand. The split
+ * into `*_auth_requested` and `*_auth_success` is a change to this vocabulary,
+ * and a reviewer should be told when it changes again.
+ *
+ * Read from the last `auth_events_known_event` constraint in migration order,
+ * because a later migration drops and recreates it -- the same rule
+ * `analyticsEvents` applies to `product_events_known_event`, and for the same
+ * reason: the constraint is what the database will actually accept, whatever any
+ * TypeScript union says it sends.
+ */
+function authEventVocabulary() {
+  const dirPath = join(ROOT, "supabase/migrations");
+  if (!existsSync(dirPath)) return [];
+
+  const sql = readdirSync(dirPath)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => read(`supabase/migrations/${f}`))
+    .join("\n");
+
+  const constraints = [
+    ...sql.matchAll(/constraint auth_events_known_event check \(\s*event in \(([^)]*)\)/g),
+  ];
+  if (!constraints.length) return [];
+
+  return [
+    ...constraints[constraints.length - 1][1].matchAll(/'([a-z_]+)'/g),
+  ]
+    .map((m) => m[1])
+    .sort();
 }
 
 /**
