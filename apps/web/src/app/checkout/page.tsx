@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { premiumOnSale } from "@/features/membership/availability";
 import { CheckoutHandback } from "@/features/membership/CheckoutHandback";
 
 /**
@@ -16,6 +17,22 @@ import { CheckoutHandback } from "@/features/membership/CheckoutHandback";
  * created and priced by the server for a member who was authenticated at the
  * time, and an order id alone buys nothing. What comes back is verified against
  * the key secret before a single day of membership is granted.
+ *
+ * ## While nothing is for sale
+ *
+ * It answers 404, for the same reason `payments-create-order` refuses: there is
+ * no payment provider. That is belt and braces rather than the safeguard --
+ * with the server refusing to create orders, no client can arrive here with a
+ * fresh one, so this page is already unreachable by the only route that leads
+ * to it.
+ *
+ * What it does close is the stale one. `payments` holds abandoned test-mode
+ * rows from before the till shut, each with an order id that is still valid at
+ * Razorpay, and this page will open a checkout sheet for any well-formed pair
+ * handed to it in a query string. Somebody holding one of those ids could pay
+ * it with a published test card and have `payments-verify` grant a real
+ * membership term for money that never existed. Refusing here costs nothing
+ * and removes Eraya's own page from that path.
  */
 
 /** Razorpay's own id shape. Anything else never reaches the page. */
@@ -49,6 +66,14 @@ function one(value: string | string[] | undefined): string {
 
 export default async function CheckoutPage(props: PageProps<"/checkout">) {
   const params = await props.searchParams;
+
+  /*
+   * Nothing is for sale, so there is nothing to hand back to. Checked before
+   * the parameters are even read: whether Eraya is selling does not depend on
+   * what a query string says, and answering identically to a malformed request
+   * tells a caller nothing about which order ids are real.
+   */
+  if (!premiumOnSale) notFound();
 
   const orderId = one(params.order_id);
   const keyId = one(params.key_id);

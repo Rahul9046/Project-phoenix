@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { membershipCopy } from "@/features/account/content";
 import type { ProductEvent } from "@/features/membership/analytics";
+import { premiumOnSale } from "@/features/membership/availability";
 import { createClient } from "@/lib/supabase/client";
 import { PrimaryButton } from "@/shared/ui/PrimaryButton";
 
@@ -24,6 +26,15 @@ import { PrimaryButton } from "@/shared/ui/PrimaryButton";
  * because the price depends on who is asking — the introductory ₹199 applies
  * only to somebody who has not used it — and one call answering that for both
  * clients is what keeps the rule in a single place.
+ *
+ * None of which happens while Premium is not for sale. Razorpay refused to
+ * activate the account — they do not onboard matrimony platforms — so there is
+ * no provider, and this component renders one honest sentence instead: no
+ * catalogue call, no Razorpay script, no order. The purchase below it is kept
+ * whole and unreached, because the next provider will want exactly this flow
+ * and a deleted one would have to be rewritten from the same reasoning. See
+ * `availability.ts`, and `supabase/functions/_shared/sales.ts` for the check
+ * that actually enforces it.
  */
 
 type Plan = {
@@ -82,7 +93,43 @@ function loadCheckout(): Promise<boolean> {
   });
 }
 
+/**
+ * The purchase, or the reason there is not one.
+ *
+ * A dispatcher with no hooks of its own, so the branch can be taken before any
+ * effect runs. `Purchase` below mounts only when Premium is actually for sale,
+ * which is what keeps `membership_catalogue` unasked and Razorpay's script
+ * unloaded on a screen that cannot sell anything — a payment provider's script
+ * on a page about somebody's relationships is a third party watching them read
+ * about themselves, and loading it to offer nothing would be the worst of both.
+ */
 export function PremiumCheckout({ premium }: { premium: boolean }) {
+  if (!premiumOnSale) return <Unavailable />;
+
+  return <Purchase premium={premium} />;
+}
+
+/**
+ * Said plainly, where somebody expecting a price will read it.
+ *
+ * The same thing the public pricing page has always said, in the one place
+ * that used to contradict it. No disabled button: a control that cannot be
+ * used reads as a fault to retry, and there is nothing here to retry.
+ */
+function Unavailable() {
+  return (
+    <div className="rounded-xl border border-line bg-sand px-4 py-4 sm:px-5">
+      <p className="font-medium text-ink">
+        {membershipCopy.paymentsUnavailableTitle}
+      </p>
+      <p className="mt-1 text-[0.95rem] leading-relaxed text-ink-muted">
+        {membershipCopy.paymentsUnavailableBody}
+      </p>
+    </div>
+  );
+}
+
+function Purchase({ premium }: { premium: boolean }) {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);

@@ -1,5 +1,6 @@
 import { membershipCopy } from "@/features/account/content";
 import { AppPage, DetailRow, Panel, Pill } from "@/features/app-shell/AppPage";
+import { premiumOnSale } from "@/features/membership/availability";
 import { formatRenewalDate } from "@/features/membership/format";
 import {
   loadMembership,
@@ -141,9 +142,17 @@ export default async function MembershipPage() {
         </div>
 
         <Panel title={membershipCopy.plansTitle}>
-          <p className="mt-1.5 text-[0.95rem] text-ink-muted">
-            {membershipCopy.plansLede}
-          </p>
+          {/*
+            The lede describes buying -- fixed prices, cancelling -- so it is
+            withheld while nothing can be bought. `PremiumCheckout` says what
+            is true instead, and two sentences disagreeing about whether
+            Premium is for sale is the exact fault being fixed here.
+          */}
+          {premiumOnSale ? (
+            <p className="mt-1.5 text-[0.95rem] text-ink-muted">
+              {membershipCopy.plansLede}
+            </p>
+          ) : null}
 
           <div className="mt-5">
             <PremiumCheckout premium={isPremium} />
