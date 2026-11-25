@@ -1155,6 +1155,24 @@ export const en = {
      * than the plain one. The same restraint the website's Android-only
      * sentence is held to.
      */
+    /*
+     * Shown in place of the plans and the pay button where Premium is not for
+     * sale at all -- everywhere, today. Razorpay refused merchant activation
+     * because they do not onboard matrimony platforms, so there is no provider
+     * behind any checkout on any platform.
+     *
+     * Deliberately distinct from `notAvailableTitle` above, which is about iOS
+     * and will go on being true after this one stops being. This states a
+     * commercial fact, promises no date, and names no other way to buy --
+     * there is not one, and inventing a workaround on an Apple build is the
+     * specific thing Guideline 3.1.1(a) forbids.
+     *
+     * The last sentence is the one that matters to the person reading it: what
+     * they can already do is unaffected. See features/membership/purchasing.ts.
+     */
+    notOnSaleTitle: "Premium is not on sale yet",
+    notOnSaleBody:
+      "Eraya is still choosing how payments are handled, so Premium cannot be bought anywhere today and nothing here will charge you. Everything listed below is free, exactly as it has always been.",
     notAvailableTitle: "Premium is not available here",
     notAvailableBody:
       "Premium cannot be bought in the Eraya app for iPhone. Nothing else changes — everything listed below is free, exactly as it has always been.",

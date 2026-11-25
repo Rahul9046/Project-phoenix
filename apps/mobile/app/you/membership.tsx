@@ -3,7 +3,10 @@ import { Pressable, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { recordProductEvent } from "@/features/membership/analytics";
-import { inAppPurchaseAvailable } from "@/features/membership/purchasing";
+import {
+  inAppPurchaseAvailable,
+  premiumOnSale,
+} from "@/features/membership/purchasing";
 import {
   formatPaise,
   getMembership,
@@ -43,14 +46,19 @@ import type { TFunction, TranslationKey } from "@eraya/i18n";
  * The free column stays. Writing down what remains free by name is what makes
  * moving one of them behind the paywall a deliberate act rather than drift.
  *
- * On iOS there is no till. The plans, the price and the pay button are replaced
- * by one sentence saying Premium cannot be bought here -- not a disabled
- * button, which looks like a fault, and not a link to the website, which Apple
- * forbids and which would be a worse answer anyway. Everything else on the
- * screen is unchanged: what Premium adds is still described, what is free is
- * still named, and a member who already has Premium still sees it as active,
- * because the entitlement is the server's answer and has no platform in it.
- * See features/membership/purchasing.ts.
+ * Where there is no till, the plans, the price and the pay button are replaced
+ * by one sentence saying so -- not a disabled button, which looks like a fault,
+ * and not a link to the website, which Apple forbids and which would be a worse
+ * answer anyway. Everything else on the screen is unchanged: what Premium adds
+ * is still described, what is free is still named, and a member who already has
+ * Premium still sees it as active, because the entitlement is the server's
+ * answer and has no platform in it.
+ *
+ * There are two reasons the till may be shut and the screen says which. Premium
+ * is not on sale anywhere today, because Razorpay refused to activate the
+ * account; and it could not be sold on iOS even if it were, because Apple
+ * requires in-app purchase for digital goods. The second outlives the first,
+ * which is why they are not one flag. See features/membership/purchasing.ts.
  */
 
 /*
@@ -371,8 +379,17 @@ export default function MembershipScreen() {
  * `tone="sand"` rather than `danger`: nothing has gone wrong. This is the
  * product saying what it does, in the member's own language.
  */
+/**
+ * Why there is nothing to buy.
+ *
+ * The commercial reason is checked first and reads for everybody, including on
+ * an iPhone -- "not on sale anywhere" is the more complete truth of the two and
+ * saying "not here" beside it would imply there is a "there". When Premium does
+ * go on sale, iOS falls back to its own sentence and nothing else moves.
+ */
 function Unavailable() {
   const t = useT();
+  const reason = premiumOnSale ? "notAvailable" : "notOnSale";
 
   return (
     <Card tone="sand" style={{ marginTop: space.section }}>
@@ -383,9 +400,9 @@ function Unavailable() {
           color={colors.inkMuted}
         />
         <View style={{ flex: 1 }}>
-          <Text variant="label">{t("membership.notAvailableTitle")}</Text>
+          <Text variant="label">{t(`membership.${reason}Title`)}</Text>
           <Text variant="bodySm" tone="muted" style={{ marginTop: space.xxs }}>
-            {t("membership.notAvailableBody")}
+            {t(`membership.${reason}Body`)}
           </Text>
         </View>
       </View>
