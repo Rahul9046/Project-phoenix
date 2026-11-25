@@ -90,8 +90,8 @@ ok(
   String(app.ios?.buildNumber),
 );
 ok(
-  app.version === "0.1.3",
-  "marketing version is the shipped 0.1.3, shared with Android",
+  app.version === "0.1.4",
+  "marketing version is the shipped 0.1.4, shared with Android",
   app.version,
 );
 ok(app.name === "Eraya", "display name is Eraya", app.name);
@@ -201,9 +201,16 @@ ok(
   "the Android package is untouched",
   app.android?.package,
 );
+/*
+ * Pinned on purpose, and bumped deliberately with each release.
+ *
+ * The point of this assertion is not that the number is 5 -- it is that an iOS
+ * change cannot move the Android versionCode without somebody noticing. A
+ * release bumps it here and in `app.json` together, in the same commit.
+ */
 ok(
-  app.android?.versionCode === 4,
-  "versionCode is still 4",
+  app.android?.versionCode === 5,
+  "versionCode is still 5",
   String(app.android?.versionCode),
 );
 ok(
@@ -421,8 +428,8 @@ if (fast) {
 
   if (plist) {
     ok(
-      plist.CFBundleShortVersionString === "0.1.3",
-      "CFBundleShortVersionString is 0.1.3",
+      plist.CFBundleShortVersionString === "0.1.4",
+      "CFBundleShortVersionString is 0.1.4",
       plist.CFBundleShortVersionString,
     );
     ok(plist.CFBundleVersion === "1", "CFBundleVersion is 1", plist.CFBundleVersion);
