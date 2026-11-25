@@ -25,6 +25,7 @@
     "seed:list": "node scripts/seed-profile.mjs --list",
     "seed:remove": "node scripts/seed-profile.mjs --remove",
     "security": "node scripts/security-probe.mjs",
+    "security:invariants": "node scripts/security-invariants.mjs",
     "auth:capacity": "node scripts/auth-capacity.mjs",
     "payments:probe": "node scripts/payments-probe.mjs",
     "payments:invariants": "node scripts/payment-invariants.mjs",
