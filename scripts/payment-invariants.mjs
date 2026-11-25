@@ -524,6 +524,126 @@ section("iOS sells nothing, and no payment change may alter that");
 }
 
 // ---------------------------------------------------------------------------
+section("The till is shut, and no client can open it");
+// ---------------------------------------------------------------------------
+//
+// Razorpay refused merchant activation, so Eraya has no payment provider --
+// while test credentials remain configured in production, which means the
+// endpoint would otherwise create genuine test-mode orders for anybody signed
+// in. `payments_live_enabled` does not cover this: it gates live mode only, by
+// design and said so in its own migration, and this is test mode.
+//
+// What these assert is the *structure* of the refusal, which is the part that
+// can be checked without Deno: that the gate exists, defaults closed, sits
+// ahead of both the provider and the database, and that no client is trusted
+// to enforce it. Whether production actually refuses an order is established
+// by deploying the function and by the smoke test in the deployment plan --
+// never by this file.
+
+{
+  const sales = read("supabase/functions/_shared/sales.ts");
+
+  /*
+   * Comments blanked, offsets preserved.
+   *
+   * These checks compare the positions of three calls, and this file's own
+   * rule is that a check must not pass -- or fail -- because a word appears
+   * somewhere in a file. The guard below is documented in prose that names
+   * `config()` and `p_live_mode` several paragraphs before either is called,
+   * so indexing the raw text measures the comment rather than the code.
+   * Replacing each comment with spaces of the same length keeps every
+   * remaining index exactly where it is in the real file.
+   */
+  const order = read("supabase/functions/payments-create-order/index.ts")
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => " ".repeat(m.length))
+    .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length));
+
+  check(
+    "only the exact string true opens the till",
+    /value === "true"/.test(sales),
+    "a lenient parse of this value is permission to charge people",
+  );
+
+  check(
+    "an unset variable leaves the till shut",
+    /Deno\.env\.get\("PAYMENTS_SALES_OPEN"\)/.test(sales) &&
+      !/\?\?\s*"true"/.test(sales),
+    "no default may stand in for a deliberate decision to sell",
+  );
+
+  // The ordering is the whole invariant. Each index is the position of a call
+  // in the one function that can begin a payment.
+  const gate = order.indexOf("salesOpen()");
+  const provider = order.indexOf("config()");
+  const begin = order.indexOf('.rpc("begin_payment"');
+  const createOrder = order.indexOf("createOrder({");
+
+  check(
+    "the till is checked before the provider is read",
+    gate !== -1 && provider !== -1 && gate < provider,
+    "configured credentials are not evidence that anything may be sold",
+  );
+
+  check(
+    "the till is checked before any payment row is written",
+    gate !== -1 && begin !== -1 && gate < begin,
+    "a payment row is the thing an order hangs on; none may exist",
+  );
+
+  check(
+    "the till is checked before an order is created at the provider",
+    gate !== -1 && createOrder !== -1 && gate < createOrder,
+  );
+
+  /*
+   * `begin_payment` is called with `p_live_mode`, which migration
+   * 20261125110100 adds and which production does not have. Shut, the call is
+   * unreachable; open without the migration, every order fails. So the gate
+   * being ahead of it is also what makes this function safe to deploy alone.
+   */
+  check(
+    "the un-applied migration's parameter sits behind the gate",
+    gate !== -1 && order.indexOf("p_live_mode") > gate,
+    "deploying this function must not depend on 20261125110100",
+  );
+
+  check(
+    "settlement is not gated, so payments in flight can still finish",
+    !/salesOpen/.test(read("supabase/functions/payments-verify/index.ts")) &&
+      !/salesOpen/.test(read("supabase/functions/payments-webhook/index.ts")),
+    "reconciliation and refunds must survive the till being shut",
+  );
+
+  // Neither client is trusted with this, but both must stop offering what the
+  // server will refuse -- and each must do it from one place, not per screen.
+  const webAvailability = read("apps/web/src/features/membership/availability.ts");
+  const mobilePurchasing = read("apps/mobile/src/features/membership/purchasing.ts");
+
+  check(
+    "the website offers no purchase while nothing is for sale",
+    /export const premiumOnSale = false/.test(webAvailability),
+  );
+
+  check(
+    "the app offers no purchase while nothing is for sale",
+    /export const premiumOnSale: boolean = false/.test(mobilePurchasing) &&
+      /premiumOnSale && Platform\.OS !== "ios"/.test(mobilePurchasing),
+    "and the iOS rule must survive independently of the commercial one",
+  );
+
+  check(
+    "the browser checkout handback is closed with the till",
+    /premiumOnSale/.test(read("apps/web/src/app/checkout/page.tsx")),
+    "stale test-mode order ids are still valid at Razorpay",
+  );
+
+  check(
+    "no client decides the catalogue is purchasable on its own",
+    /premiumOnSale/.test(read("apps/web/src/features/membership/PremiumCheckout.tsx")),
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log(
   `\n${passed} of ${passed + failures.length} invariants hold.`,
 );

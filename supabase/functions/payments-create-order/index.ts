@@ -1,5 +1,6 @@
 import { config, createOrder, isLiveMode } from "../_shared/razorpay.ts";
 import { admin, callerId, CORS, json, log } from "../_shared/request.ts";
+import { salesOpen } from "../_shared/sales.ts";
 
 /**
  * Starting a purchase.
@@ -13,6 +14,12 @@ import { admin, callerId, CORS, json, log } from "../_shared/request.ts";
  * the intended payment down, and only then create the order at Razorpay. What
  * was meant is recorded before the provider knows anything, so the two can be
  * compared afterwards.
+ *
+ * And before any of that, whether Eraya is selling at all. This endpoint is the
+ * only place a payment can begin -- every client and every installed build
+ * reaches a provider through here and nowhere else -- which makes it the one
+ * place a closed till can be enforced for clients that will never be updated.
+ * See `_shared/sales.ts`.
  */
 
 Deno.serve(async (request) => {
@@ -21,6 +28,35 @@ Deno.serve(async (request) => {
 
   const profile = await callerId(request);
   if (!profile) return json({ status: "unauthenticated" }, 401);
+
+  /*
+   * The till, before the provider and before the database.
+   *
+   * First of the three checks on purpose, and the ordering is load-bearing in
+   * two separate ways.
+   *
+   * It has to precede `config()` because test credentials are configured in
+   * production and Razorpay has refused to activate the account -- so a
+   * configured provider is not evidence that anything may be sold, and the
+   * question "is Eraya selling" must be answered before the question "which
+   * account would it sell through".
+   *
+   * It has to precede `begin_payment` because that call passes `p_live_mode`,
+   * which migration 20261125110100 adds and which production does not have
+   * yet. With the till shut this line returns before the RPC and the missing
+   * parameter is unreachable; the migration is a prerequisite for re-opening
+   * sales, not for deploying this. `_shared/sales.ts` has the whole argument.
+   *
+   * Reported as `unavailable` rather than as an error: it is a deliberate
+   * commercial state, and it is the one status both clients already render as
+   * "Premium cannot be bought right now" instead of as a fault somebody should
+   * retry. An older Android build reaching this gets the same answer as the
+   * current website, having created nothing, at no provider, in no mode.
+   */
+  if (!salesOpen()) {
+    log("payment_sales_closed", {});
+    return json({ status: "unavailable" });
+  }
 
   const settings = config();
   if (!settings) {

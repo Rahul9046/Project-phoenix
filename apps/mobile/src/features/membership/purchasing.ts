@@ -32,6 +32,40 @@ import { Platform } from "react-native";
  * one.
  *
  * ---------------------------------------------------------------------------
+ * Why nowhere can, today
+ * ---------------------------------------------------------------------------
+ * Razorpay has refused merchant activation: they do not onboard dating or
+ * matrimony platforms. So the Android path above describes a checkout with no
+ * merchant behind it. An eligibility enquiry is out with Cashfree and has not
+ * been answered, and the public launch is not waiting on it -- Eraya goes out
+ * free, on the web first.
+ *
+ * `premiumOnSale` is that fact, kept separate from the iOS rule rather than
+ * folded into it, because the two are different kinds of closed and will not
+ * reopen together. The iOS one is a property of the store and ends when
+ * StoreKit is built; this one is a commercial state and ends when a provider
+ * approves Eraya. Collapsing them into a single `false` would lose which is
+ * which, and the screen would have to guess which sentence to show.
+ *
+ * It is a committed constant and not an `EXPO_PUBLIC_` variable on purpose.
+ * The server is the enforcement and is an environment variable there, so the
+ * till can be shut in seconds without a deploy. A client cannot be changed in
+ * seconds at all -- an APK on somebody's phone is final until they install
+ * another one -- so the value of a runtime switch here is nil, and the cost of
+ * one is a build whose commercial state is not visible in its own source.
+ *
+ * ---------------------------------------------------------------------------
+ * None of this is a safeguard
+ * ---------------------------------------------------------------------------
+ * Nothing a phone believes stops a payment. The build already installed on
+ * somebody's phone -- v0.1.3, with `inAppPurchaseAvailable` true on Android --
+ * does not read this file and goes on offering plans and a pay button. It
+ * cannot complete a purchase, because `payments-create-order` refuses to
+ * create an order at all, for every client at once and for every build this
+ * repository will never be able to update. That is the control. See
+ * `supabase/functions/_shared/sales.ts`.
+ *
+ * ---------------------------------------------------------------------------
  * What this does NOT change
  * ---------------------------------------------------------------------------
  * Premium that has already been paid for. Entitlements are read from the
@@ -50,4 +84,15 @@ import { Platform } from "react-native";
  * cost of it being wrong on iOS is a rejected submission rather than a bug.
  * `Platform.OS` cannot be wrong.
  */
-export const inAppPurchaseAvailable: boolean = Platform.OS !== "ios";
+/**
+ * Whether Eraya has a payment provider at all. See above.
+ *
+ * Flipping this to `true` is not sufficient on its own: the server has to be
+ * opened too (`PAYMENTS_SALES_OPEN`), and migration `20261125110100` has to be
+ * applied before that. See `docs/10-payments.md`.
+ */
+export const premiumOnSale: boolean = false;
+
+/** Whether Premium can be bought from inside this app, on this platform. */
+export const inAppPurchaseAvailable: boolean =
+  premiumOnSale && Platform.OS !== "ios";

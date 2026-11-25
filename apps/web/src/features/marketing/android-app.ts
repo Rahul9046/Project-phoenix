@@ -8,11 +8,13 @@
  *
  * ## Two channels, and why they are separate from the release
  *
- * Eraya is distributed directly today, from a release of this repository, while
- * Google Play's mandatory closed-testing period runs. When the public Play
- * listing exists, the website's CTA should point at the store instead -- and
- * that has to be a small, obvious edit rather than a redesign, because it is a
- * content change that happens once and must not wait on engineering.
+ * Eraya is distributed directly today, from a release of this repository. There
+ * is no Google Play listing and no closed test running: Play requires a signed
+ * upload whose identity is still an open decision, so the store is not a
+ * channel yet in any form. When a public listing does exist, the website's CTA
+ * should point at it instead -- and that has to be a small, obvious edit rather
+ * than a redesign, because it is a content change that happens once and must
+ * not wait on engineering.
  *
  * So `channel` decides where the CTA sends somebody, and `release` records
  * which APK the `/downloads` addresses resolve to. They are deliberately not
