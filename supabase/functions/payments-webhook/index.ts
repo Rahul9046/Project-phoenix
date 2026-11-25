@@ -1,4 +1,4 @@
-import { verifyWebhookSignature } from "../_shared/razorpay.ts";
+import { config, isLiveMode, verifyWebhookSignature } from "../_shared/razorpay.ts";
 import { admin, json, log } from "../_shared/request.ts";
 
 /**
@@ -101,6 +101,21 @@ Deno.serve(async (request) => {
 
   const db = admin();
 
+  /*
+   * Which Razorpay this function is configured for.
+   *
+   * Razorpay signs test-mode and live-mode webhooks with whichever secret the
+   * endpoint was registered under, so a verified signature does not say which
+   * environment the event came from. The mode is therefore taken from this
+   * function's own key and handed to `settle_payment`, which refuses to settle
+   * a payment row created in the other environment. The practical case this
+   * guards is the switch-over: a live endpoint receiving a retry of an old
+   * test-mode delivery, or a stale test endpoint left registered after going
+   * live.
+   */
+  const settings = config();
+  const live = settings ? isLiveMode(settings.keyId) : false;
+
   const { data: claimed } = await db.rpc("claim_payment_event", {
     p_event_id: eventId,
     p_event_type: eventType,
@@ -153,6 +168,7 @@ Deno.serve(async (request) => {
       p_order_id: orderId,
       p_provider_payment_id: extractPaymentId(payload),
       p_status: "paid",
+      p_live_mode: live,
     });
 
     if (error) {
@@ -162,10 +178,22 @@ Deno.serve(async (request) => {
       return json({ status: "error" }, 500);
     }
 
-    log("webhook_settled", {
-      event: eventType,
-      outcome: String((settled as { outcome?: string })?.outcome ?? ""),
-    });
+    const outcome = String((settled as { outcome?: string })?.outcome ?? "");
+
+    log("webhook_settled", { event: eventType, outcome });
+
+    /*
+     * Acknowledged, not retried. A delivery for the other environment will
+     * never become settleable here, so asking Razorpay to try again would be
+     * an endless retry over a decision already made -- but it is logged loudly
+     * because in normal operation it should never happen, and if it does it
+     * means two endpoints are registered or one was left behind after the
+     * switch to live.
+     */
+    if (outcome === "mode_mismatch") {
+      log("webhook_mode_mismatch", { event: eventType, live });
+    }
+
     return json({ status: "ok" });
   }
 
@@ -175,6 +203,7 @@ Deno.serve(async (request) => {
       p_order_id: orderId,
       p_provider_payment_id: extractPaymentId(payload),
       p_status: "failed",
+      p_live_mode: live,
     });
     log("webhook_failed_payment", { event: eventType });
     return json({ status: "ok" });

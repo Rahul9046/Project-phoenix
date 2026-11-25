@@ -1,4 +1,10 @@
-import { fetchOrderPayments, verifyCheckoutSignature } from "../_shared/razorpay.ts";
+import {
+  config,
+  fetchOrderPayments,
+  isLiveMode,
+  verifyCheckoutSignature,
+} from "../_shared/razorpay.ts";
+import { confirmAnyCapture, confirmCapture } from "../_shared/capture.ts";
 import { admin, callerId, CORS, json, log } from "../_shared/request.ts";
 
 /**
@@ -60,7 +66,7 @@ Deno.serve(async (request) => {
    */
   const { data: owned } = await db
     .from("payments")
-    .select("id, status, profile_id")
+    .select("id, status, profile_id, amount_paise, currency")
     .eq("provider", PROVIDER)
     .eq("provider_order_id", orderId)
     .eq("profile_id", profile)
@@ -70,6 +76,17 @@ Deno.serve(async (request) => {
     log("payment_verify_foreign_order", {});
     return json({ status: "unknown_order" });
   }
+
+  /*
+   * What we recorded intending to charge, and which Razorpay we are talking to.
+   *
+   * Both are read from our side -- the `payments` row written before Razorpay
+   * was ever called, and this function's own key -- never from the request.
+   */
+  const expectedPaise = Number(owned.amount_paise);
+  const expectedCurrency = String(owned.currency);
+  const settings = config();
+  const live = settings ? isLiveMode(settings.keyId) : false;
 
   // Settled already, by the webhook or an earlier call. Nothing to redo.
   if (owned.status === "paid") {
@@ -106,11 +123,66 @@ Deno.serve(async (request) => {
         p_order_id: orderId,
         p_provider_payment_id: null,
         p_status: "failed",
+        p_live_mode: live,
       });
       return json({ status: "invalid_signature" });
     }
 
-    confirmedPaymentId = paymentId;
+    /*
+     * A valid signature is proof of authenticity, not proof of capture.
+     *
+     * It says Razorpay issued this payment id against this order and nobody
+     * forged it. It says nothing about whether the money arrived. A payment can
+     * be `authorized` and never captured -- auto-capture can be off at the
+     * account, and some methods settle late -- and until 2026-11-25 this branch
+     * treated the signature alone as sufficient and granted the term.
+     *
+     * So the signature is checked first, because it rejects a forgery without
+     * spending a round trip, and then Razorpay's own record is read for the
+     * same reason the reconciliation path below reads it: capture is a fact
+     * about the provider's ledger, and the provider's ledger is where it lives.
+     */
+    const found = await fetchOrderPayments(orderId);
+
+    const confirmed = found.ok
+      ? confirmCapture(found.payments, paymentId, {
+          amountPaise: expectedPaise,
+          currency: expectedCurrency,
+        })
+      : ({ outcome: "unavailable" } as const);
+
+    if (confirmed.outcome === "unavailable") {
+      /*
+       * We cannot establish capture right now. Deliberately `pending` rather
+       * than granting on the strength of the signature: the webhook settles
+       * this independently of the client being here, so nothing is lost but a
+       * little time, and nothing is granted that was not paid for.
+       */
+      log("payment_capture_unconfirmed", {});
+      return json({ status: "pending" });
+    }
+
+    if (confirmed.outcome === "not_captured") {
+      log("payment_not_captured", { state: confirmed.state });
+      return json({ status: "pending" });
+    }
+
+    if (confirmed.outcome === "mismatch") {
+      /*
+       * The captured amount or currency is not what we recorded intending to
+       * charge. Never settle this: it is either a provider-side configuration
+       * fault or an attempt to pay ₹1 for a year, and both want a human.
+       */
+      log("payment_amount_mismatch", {
+        expected_paise: expectedPaise,
+        expected_currency: expectedCurrency,
+        captured_paise: confirmed.amountPaise,
+        captured_currency: confirmed.currency,
+      });
+      return json({ status: "amount_mismatch" });
+    }
+
+    confirmedPaymentId = confirmed.paymentId;
   } else {
     /*
      * No signature, so ask the provider directly.
@@ -127,44 +199,56 @@ Deno.serve(async (request) => {
       return json({ status: "pending" });
     }
 
-    const captured = found.payments.find((p) => p.status === "captured");
+    const decision = confirmAnyCapture(found.payments, {
+      amountPaise: expectedPaise,
+      currency: expectedCurrency,
+    });
 
-    if (!captured) {
-      const declined = found.payments.find((p) => p.status === "failed");
-
-      // Nothing captured and nothing declined: the order is still moving.
-      if (!declined) return json({ status: "pending" });
-
+    if (decision.outcome === "mismatch") {
       /*
-       * Record the decline rather than only reporting it.
-       *
-       * This branch used to return `failed` and stop, which left the row at
-       * `created` for ever -- the member's own payment history showed an
-       * attempt that never resolved, and nothing on this side knew a decline
-       * had happened, so there was nothing to answer a support question with.
+       * Captured, but not for the amount or currency we recorded. Never
+       * settled: it is either a provider-side configuration fault or an attempt
+       * to pay a rupee for a year, and both want a human rather than a grant.
+       */
+      log("payment_amount_mismatch", {
+        expected_paise: expectedPaise,
+        expected_currency: expectedCurrency,
+        captured_paise: decision.amountPaise,
+        captured_currency: decision.currency,
+      });
+      return json({ status: "amount_mismatch" });
+    }
+
+    if (decision.outcome === "pending") return json({ status: "pending" });
+
+    if (decision.outcome === "declined") {
+      /*
+       * Record the decline rather than only reporting it. This branch used to
+       * return `failed` and stop, which left the row at `created` for ever.
        *
        * `settle_payment` refuses to touch a row that is already `paid`, so a
-       * webhook that lands between the fetch above and this call still wins.
+       * webhook landing between the fetch above and this call still wins.
        */
       await db.rpc("settle_payment", {
         p_provider: PROVIDER,
         p_order_id: orderId,
-        p_provider_payment_id: declined.id ? String(declined.id) : null,
+        p_provider_payment_id: decision.paymentId,
         p_status: "failed",
+        p_live_mode: live,
       });
 
       /*
-       * The provider's reason, in the log and nowhere else.
-       *
-       * What the member reads is decided in the client and deliberately does
-       * not quote Razorpay -- a bank's wording is not ours to put in somebody's
-       * mouth. But a decline nobody can explain afterwards turns into a support
-       * conversation with no evidence in it, and the first question is always
-       * "why". These fields describe the transaction, not the person: no name,
-       * no card, no contact details.
+       * The provider's reason, in the log and nowhere else. What the member
+       * reads is decided in the client and deliberately does not quote
+       * Razorpay -- a bank's wording is not ours to put in somebody's mouth.
+       * These fields describe the transaction, not the person.
        */
+      const declined = found.payments.find(
+        (p) => String(p.id ?? "") === decision.paymentId,
+      ) ?? {};
+
       log("payment_declined", {
-        payment_id: declined.id ? String(declined.id) : null,
+        payment_id: decision.paymentId,
         error_code: declined.error_code ? String(declined.error_code) : null,
         error_step: declined.error_step ? String(declined.error_step) : null,
         error_reason: declined.error_reason ? String(declined.error_reason) : null,
@@ -176,7 +260,7 @@ Deno.serve(async (request) => {
       return json({ status: "failed" });
     }
 
-    confirmedPaymentId = String(captured.id ?? "");
+    confirmedPaymentId = decision.paymentId;
   }
 
   const { data: settled, error } = await db.rpc("settle_payment", {
@@ -184,6 +268,7 @@ Deno.serve(async (request) => {
     p_order_id: orderId,
     p_provider_payment_id: confirmedPaymentId,
     p_status: "paid",
+    p_live_mode: live,
   });
 
   if (error) {
@@ -193,6 +278,18 @@ Deno.serve(async (request) => {
 
   const outcome = (settled as { outcome?: string })?.outcome ?? "pending";
   log("payment_settled", { outcome });
+
+  /*
+   * A payment created against the other Razorpay. Reported as its own status
+   * rather than folded into `pending`, because `pending` invites the client to
+   * keep asking and this will never change on its own. It should be unreachable
+   * in normal operation -- the API would have to have answered for an order
+   * from the other environment -- and that is exactly why it is worth saying
+   * out loud if it ever happens.
+   */
+  if (outcome === "mode_mismatch") {
+    return json({ status: "mode_mismatch" });
+  }
 
   const { data: membership } = await db.rpc("my_membership_for", { p_profile: profile });
 
