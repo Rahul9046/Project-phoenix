@@ -35,12 +35,39 @@ Deno.serve(async (request) => {
 
   const db = admin();
 
+  const live = isLiveMode(settings.keyId);
+
+  /*
+   * The mode is handed to the database, not inferred there.
+   *
+   * `begin_payment` records it on the row so a payment can only ever be settled
+   * by the same Razorpay that created it, and refuses outright when this is a
+   * live charge and `payments_live_enabled()` is false. That second check is
+   * the one that matters today: configuring a live key, for any reason, must not
+   * by itself start selling.
+   */
   const { data: started, error: startError } = await db
-    .rpc("begin_payment", { p_profile: profile, p_plan_code: planCode })
+    .rpc("begin_payment", {
+      p_profile: profile,
+      p_plan_code: planCode,
+      p_live_mode: live,
+    })
     .single();
 
   if (startError || !started) {
-    log("payment_begin_failed", { plan: planCode, reason: startError?.message ?? "no_row" });
+    const reason = startError?.message ?? "no_row";
+
+    /*
+     * The gate is a deliberate operational state, not a bad request, so it is
+     * reported as `unavailable` -- the status both clients already render as
+     * "Premium cannot be bought right now" rather than as "no such plan".
+     */
+    if (/live payments are not enabled/i.test(reason)) {
+      log("payment_live_gate_closed", { plan: planCode });
+      return json({ status: "unavailable" });
+    }
+
+    log("payment_begin_failed", { plan: planCode, reason });
     return json({ status: "unknown_plan" });
   }
 
@@ -84,7 +111,7 @@ Deno.serve(async (request) => {
     plan: planCode,
     amount: intent.amount_paise,
     intro: intent.intro_applies,
-    live: isLiveMode(settings.keyId),
+    live,
   });
 
   /*
@@ -103,6 +130,6 @@ Deno.serve(async (request) => {
     planName: intent.plan_name,
     periodMonths: intent.period_months,
     keyId: settings.keyId,
-    liveMode: isLiveMode(settings.keyId),
+    liveMode: live,
   });
 });
