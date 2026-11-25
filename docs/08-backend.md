@@ -107,14 +107,44 @@ sit beside `app/`, which in this layout means `apps/web/src/proxy.ts`.
 | --- | --- |
 | Google | Real — Supabase OAuth |
 | Apple | Real — Supabase OAuth |
-| Facebook | Real — Supabase OAuth |
+| Facebook | **Off.** Credentials are correct; the Meta app is in Development mode |
 | Email | Real — magic link (`signInWithOtp`) |
 | Phone OTP | **Mocked** — no SMS provider chosen |
+
+Facebook was `enabled = true` until 2026-11-25 and had never once worked:
+`auth.identities` has never held a Facebook identity, while `auth_events` showed
+three Facebook "successes". Until Meta grants Business Verification and App
+Review of the `email` permission, only app admins, developers and testers can
+reach the consent screen, so the button was a dead end on the first screen of
+the product.
+
+Switching it off at the project was enough for the **website**, which reads
+`/auth/v1/settings` and dropped the button within its five-minute revalidate
+window with no deploy. The **app does not yet benefit**: every installed build
+up to and including v0.1.3 compiles its own provider list, so it still shows a
+Facebook button, which now fails in-app with Supabase's "provider is not
+enabled" instead of opening a browser. The source no longer hardcodes the list
+(`fetchAvailableProviders`), but that only reaches members in the next release.
+
+Flip `enabled` back to `true` in `supabase/config.toml` and run
+`npm run config:push` the day Meta approves.
 
 OAuth returns to `/auth/callback`, which exchanges the code for a session.
 Email links land on `/auth/confirm`. Both are route handlers, because only those
 can set cookies. Each redirects to `nextRoute(session)` rather than a fixed
 screen, so someone returning mid-onboarding resumes where they stopped.
+
+**Written but not yet deployed at the time of writing:** both routes record
+what happened. Until 2026-11-25 neither did -- every failure path ended in a
+redirect to `/login?error=...` and no event, while the browser recorded a
+success the moment it handed off, which is exactly how a provider that worked
+for nobody went unnoticed. The handoff becomes `*_auth_requested` and the
+outcome is written server-side by the route that witnessed it. `requested` far
+exceeding `success + failure` is the signature of a provider that never returns
+anybody.
+
+Until this ships, production still records a `google_auth_success` at handoff.
+That is an analytics inaccuracy only; no member-facing behaviour depends on it.
 
 ### The two shapes an email link can arrive in
 

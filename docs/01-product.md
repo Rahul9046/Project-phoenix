@@ -86,7 +86,9 @@ would make the free product deliberately worse rather than the paid one better.
 
 ## Built, and not built
 
-**Built, on both clients:** accounts with Google, Facebook and email sign-in;
+**Built, on both clients:** accounts with Google and email sign-in (Facebook is
+built and switched off — the Meta app is in Development mode, see
+[08-backend.md](08-backend.md));
 onboarding; profiles with optional photos; discovery with free filters and
 paging; expressing interest; mutual connections; messaging; blocking; reporting;
 account deletion. The mobile app (`apps/mobile`) additionally has the account

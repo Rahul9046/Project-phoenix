@@ -204,7 +204,7 @@ The same code as Android, and it was already written for iOS.
 | --- | --- |
 | Email code | Works. Six digits, the primary path, and no browser involved |
 | Google | Configured on Supabase; **not yet proven from an iOS build** |
-| Facebook | Configured on Supabase; **not yet proven from an iOS build** |
+| Facebook | **Off at the project** since 2026-11-25 — the Meta app is in Development mode. Never proven on any platform |
 | Apple | **Not configured.** See below |
 | Phone SMS | Not asked for, on either client |
 
@@ -235,25 +235,32 @@ project is shared with the live web and Android products and has no staging.
 Guideline 4.8 requires an app that offers a third-party login service to also
 offer a login option that limits data collection to name and email, lets the
 member keep their email private, and does not track them for advertising.
-Eraya offers Google and Facebook, so 4.8 applies.
+Eraya offers Google, so 4.8 applies. Facebook was switched off on 2026-11-25
+and does not change this: one third-party login service is enough to trigger
+the guideline.
 
 Email code sign-in plausibly satisfies it: it collects an email address and
 nothing else, and Eraya does no advertising tracking. "Plausibly" is doing real
 work in that sentence — it is a reviewer's judgement, not a rule with a
 checkbox, and the common reading is that Sign in with Apple is expected
-whenever Google or Facebook ships.
+whenever Google ships.
 
 It is not implemented here because it cannot be: Sign in with Apple needs a
 Service ID, a key and a team identifier from a paid Apple Developer account,
 and Supabase's Apple provider is `enabled = false` until those exist.
-`availableProviders` reads from configuration rather than assuming, so the
-button is simply not shown.
+`fetchAvailableProviders` reads `/auth/v1/settings` rather than assuming, so
+the button is simply not shown. That sentence was aspirational until
+2026-11-25: the list really was hardcoded, which is why turning Facebook off at
+the project did leave a dead button on every installed copy. The source now
+reads the live setting, so from the next build onwards a provider can be
+withdrawn or restored without shipping a release — but no release carrying that
+change has been made yet.
 
 **Decide this before submitting for review, not after.** Three outcomes are
 possible and they cost very different amounts: email code is accepted as the
 4.8 alternative and nothing changes; Sign in with Apple is added, which is a
-Supabase provider plus a button; or Google and Facebook are withdrawn from the
-iOS build, which is one line in `availableProviders`.
+Supabase provider plus a button; or Google is withdrawn from the iOS build,
+which is now a config push rather than a code change.
 
 ## What was reviewed for iOS and found correct
 
