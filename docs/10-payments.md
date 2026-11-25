@@ -8,6 +8,14 @@ buy another. Nothing in the product should say "subscription", "renews" or
 Everything below is **test mode**. No live key is configured and no real money
 can be taken.
 
+> **Nothing is for sale.** Razorpay refused merchant activation — they do not
+> onboard dating or matrimony platforms — so Eraya has no payment provider at
+> all. `payments-create-order` refuses every order, and both clients offer no
+> purchase. See [The till](#the-till) for what that is, why hiding the buttons
+> was not enough, and what has to happen before sales can reopen. An
+> eligibility enquiry is out with Cashfree and has not been answered. The
+> architecture below is kept whole and unused, deliberately.
+
 ## What it costs
 
 | Plan | Code | Price |
@@ -198,7 +206,13 @@ Set as Supabase edge function secrets — never in `.env.local`, never prefixed
 RAZORPAY_KEY_ID
 RAZORPAY_KEY_SECRET
 RAZORPAY_WEBHOOK_SECRET
+PAYMENTS_SALES_OPEN      # unset today, which means nothing is for sale
 ```
+
+All three Razorpay values **are** set in production, to test credentials, and
+have been since 2026-10-03. That is why `PAYMENTS_SALES_OPEN` exists: a
+configured provider is not the same as a provider that will take money for
+Eraya, and the endpoint could not tell the difference. See [The till](#the-till).
 
 The **key id** is public by design; Razorpay's checkout identifies the merchant
 with it. It is served to clients by the order endpoint rather than configured in
@@ -368,6 +382,124 @@ appears in that path. See [16-ios.md](16-ios.md).
 **Neither of those changed anything on this page.** The web checkout, the edge
 functions, the schema, the prices, the stacking rules and the Android Razorpay
 path are all exactly as described above.
+
+## The till
+
+`PAYMENTS_SALES_OPEN`, an environment variable on the Supabase functions, is
+whether Eraya is selling anything. Unset means shut, and it is unset in
+production. The logic is `supabase/functions/_shared/sales.ts`; the check is
+the first thing `payments-create-order` does.
+
+### Why it exists
+
+Razorpay refused to activate the account. What was left behind is worse than
+nothing configured: `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are both set in
+production to **test** credentials, so `config()` returns a usable account and
+the endpoint will happily create genuine test-mode orders for anybody signed
+in. Two consequences, and the second is the serious one:
+
+- A member is shown a payment sheet for something that cannot be sold to them.
+  `/pricing` has always said "Premium is not on sale yet" with every plan
+  button disabled; the membership screen behind sign-in contradicted it with a
+  working ₹199 button.
+- A test-mode order can be completed with a **published test card**, and
+  `settle_payment` grants a real membership term for it. Premium for free, to
+  anybody who reads Razorpay's documentation.
+
+### What does not close it
+
+- **`payments_live_enabled`.** It gates live mode only, by design and said so
+  in its own migration. This is test mode. It is also not applied in
+  production — see below.
+- **Hiding the buttons.** The endpoint is reachable with any session token, and
+  Android v0.1.3 is already installed on phones. It does not read anything in
+  this repository and goes on offering plans and a pay button for ever.
+- **Unsetting the Razorpay secrets.** It would work, and it would also break
+  `payments-verify` and `payments-webhook`, which need the key secret to verify
+  signatures and the API to reconcile. Reconciliation and refunds for payments
+  that already exist must keep working.
+
+### Where it sits, and why that order matters
+
+The check is before `config()` and before `begin_payment`, both deliberately.
+
+Before the provider, because configured credentials are not evidence that
+anything may be sold. Before the database, because `payments-create-order`
+calls `begin_payment` with `p_live_mode` — a parameter migration
+`20261125110100` adds and **production does not have**. With the till shut that
+call is unreachable, which is what makes the function safe to deploy on its own
+with no migration. With the till open and the migration missing, every order
+would fail. Asserted by `npm run payments:invariants`.
+
+Settlement is not gated and must not be. A payment that already exists has to
+be able to finish, be reconciled, or be refunded.
+
+### Shutting it in a hurry
+
+Remove the variable. It takes effect on the next invocation, needs no code
+deploy and touches no database:
+
+```
+npx supabase secrets unset PAYMENTS_SALES_OPEN
+```
+
+That is the reason this is an environment variable rather than a committed
+constant. The clients are constants — `premiumOnSale` in
+`apps/web/src/features/membership/availability.ts` and
+`apps/mobile/src/features/membership/purchasing.ts` — because an APK on
+somebody's phone cannot be edited in a hurry anyway, and a build's commercial
+state should be visible in its own source.
+
+### Reopening sales, in order
+
+Not a single switch, and the order is not optional.
+
+1. A payment provider has actually approved Eraya. Until then there is nothing
+   to open.
+2. Apply migration `20261125110100_payment_mode_and_commercial_gate.sql`.
+   **Before** anything else — `payments-create-order` already passes
+   `p_live_mode` and the function in production does not have it to pass to.
+3. Deploy `payments-verify` and `payments-webhook`. Production is running the
+   2026-10-03 build of both, which predates the capture, amount and currency
+   checks in `_shared/capture.ts` — a valid signature alone grants the term
+   there. Not urgent while nothing can be bought; a prerequisite before
+   anything can be.
+4. Work through **Going live** below, all of it.
+5. `npx supabase secrets set PAYMENTS_SALES_OPEN=true`.
+6. Flip `premiumOnSale` to `true` in both clients and deploy the web. Android
+   needs a new build; until it ships, the app shows "not on sale" while the
+   website sells, which is honest in both places.
+
+Only the exact string `true` opens it. Not `1`, not `yes`, not `TRUE`, and not
+`true` with a space around it — a value nobody intended must never be read as
+permission to charge. Asserted in `sales.test.ts`.
+
+### One residual exposure
+
+`payments` holds abandoned test-mode rows at status `created` from before the
+till shut, and their order ids are still valid at Razorpay. Eraya's own
+`/checkout` page refuses while `premiumOnSale` is false, so the website is no
+longer a route to paying one — but somebody holding an order id and the public
+test key id could in principle drive Razorpay directly and then call
+`payments-verify`.
+
+Closing them is a one-line update and is **not** done automatically, because it
+writes to production rows:
+
+```sql
+-- Owner-approved only. Closes abandoned test-mode orders so none can be
+-- settled later. Touches no paid row and no subscription.
+update public.payments
+   set status = 'cancelled', failed_at = now()
+ where status = 'created'
+   and paid_at is null;
+```
+
+Check what it would touch first:
+
+```sql
+select status, count(*) from public.payments group by 1;
+```
 
 ## Going live
 
