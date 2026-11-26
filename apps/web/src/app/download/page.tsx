@@ -119,6 +119,30 @@ export default async function DownloadPage() {
         </div>
       ) : null}
 
+      {/*
+        The one-time reinstall at 0.1.4.
+
+        Below the install steps rather than above them, and visually quieter:
+        it applies to the people who already have the app, who are a minority of
+        this page's visitors and are the only ones it would confuse to lead
+        with. Someone installing for the first time reads the three steps and
+        never needs this.
+
+        It is a <section> with its own heading rather than a fourth step,
+        because it is not a step -- the steps are a sequence everybody follows
+        and this is a condition that applies to some people.
+      */}
+      {androidCta.kind === "direct" ? (
+        <section className="mt-6 w-full max-w-md rounded-3xl border border-line bg-canvas px-5 py-6 text-left sm:px-8">
+          <h2 className="text-sm font-medium text-ink">
+            {t("marketing.androidApp.reinstallTitle")}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            {t("marketing.androidApp.reinstallBody")}
+          </p>
+        </section>
+      ) : null}
+
       <Button href="/" variant="quiet" className="mt-12">
         {t("marketing.androidApp.backToSite")}
       </Button>
