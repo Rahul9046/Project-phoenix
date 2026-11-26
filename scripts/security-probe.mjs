@@ -683,6 +683,32 @@ console.log("\nReports");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\nModeration state is not a member's to read");
+// ---------------------------------------------------------------------------
+//
+// A block is never disclosed -- a blocked member simply stops seeing the
+// blocker and is told nothing -- and a suspended member disappears from
+// everyone's discovery. The two silences are deliberately identical from the
+// outside, and anything that tells them apart hands somebody a way to work out
+// that a particular person blocked them.
+//
+// `is_suspended(uuid)` answered exactly that question, about anybody, for any
+// signed-in member: 200 and `true`. It was `security definer`, never revoked,
+// and carried the EXECUTE that Supabase's default privileges hand out. Revoked
+// in 20261126100100; this is the assertion that keeps it revoked.
+{
+  const { status, body } = await request(meera.token, "rpc/is_suspended", {
+    method: "POST",
+    body: JSON.stringify({ p_profile: sanjay.id }),
+  });
+  check(
+    "a member cannot ask whether another member is suspended",
+    status >= 400,
+    `status ${status}: ${body.slice(0, 140)}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 console.log("\nReverts");
 // ---------------------------------------------------------------------------
 
