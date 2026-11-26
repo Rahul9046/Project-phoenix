@@ -42,6 +42,25 @@ function die(...lines) {
   process.exit(2);
 }
 
+/**
+ * The local stack's own database container, found rather than named.
+ *
+ * Used for the privilege pre-flight below. A container on this machine cannot
+ * be a hosted project, which makes it the safest place to ask a question that
+ * has to be asked with superuser rights.
+ */
+let containerName;
+function dbContainer() {
+  if (containerName !== undefined) return containerName;
+  const r = spawnSync("docker", ["ps", "--filter", "name=supabase_db_", "--format", "{{.Names}}"], {
+    encoding: "utf8",
+  });
+  containerName =
+    (r.stdout ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0] ?? null;
+  if (!containerName) die("No running local Supabase database container was found.");
+  return containerName;
+}
+
 /*
  * The environment every child gets. Built by subtraction, not by addition:
  * start from the real environment, then remove the one variable that could
@@ -129,6 +148,76 @@ if (linkedRef && API_URL.includes(linkedRef)) {
 }
 
 console.log(`local stack: ${API_URL}\n`);
+
+// ---------------------------------------------------------------------------
+// Is this stack provisioned like a hosted project, or will it lie to us?
+// ---------------------------------------------------------------------------
+//
+// `supabase migration up` applies migrations as `postgres`, and this image's
+// default ACL for objects `postgres` creates in schema `public` grants
+// `authenticated` no SELECT on any table and `service_role` no EXECUTE on any
+// function -- where a hosted project grants both before the first migration
+// runs. None of the 69 migrations compensates, because none of them has ever
+// had to.
+//
+// The failure mode is the dangerous direction. Every member request answers
+// 42501 "permission denied", so every "a member cannot do X" assertion passes
+// -- refused by a missing GRANT rather than by the rule under test. A stack in
+// that state reports a complete, confident, meaningless pass. Measured, not
+// supposed: before this check existed the suite answered "67 of 75" on such a
+// stack, and the eight failures were all card reads, not one of them the
+// absent access control.
+//
+// So the privileges are verified before anything is run, and the run is
+// refused rather than reported. See docs/18-local-validation.md.
+{
+  const probe = (sql) => {
+    const r = spawnSync(
+      "docker",
+      ["exec", "-i", dbContainer(), "psql", "-U", "postgres", "-t", "-A", "-c", sql],
+      { encoding: "utf8" }
+    );
+    return (r.stdout ?? "").trim();
+  };
+
+  const memberCanRead = probe(
+    "select has_table_privilege('authenticated', 'public.profiles', 'SELECT');"
+  );
+  const serverCanSettle = probe(
+    "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace " +
+      "where n.nspname = 'public' and p.proname = 'settle_payment' " +
+      "and has_function_privilege('service_role', p.oid, 'EXECUTE');"
+  );
+
+  const wrong = [];
+  if (memberCanRead !== "t") wrong.push("`authenticated` has no SELECT on public.profiles");
+  if (serverCanSettle === "0") wrong.push("`service_role` has no EXECUTE on settle_payment");
+
+  if (wrong.length) {
+    die(
+      "REFUSING: this local stack is not provisioned like a hosted project.",
+      "",
+      ...wrong.map((w) => `  - ${w}`),
+      "",
+      "Every request would be refused by a missing GRANT rather than by the rule",
+      "under test, and the probes would report a full pass having proved nothing.",
+      "",
+      "Rebuild the stack with the default privileges in place BEFORE the",
+      "migrations -- the order matters, and a GRANT afterwards is not equivalent:",
+      "",
+      "  mv supabase/migrations supabase/.hold && mkdir supabase/migrations",
+      "  npx supabase stop --no-backup && npx supabase start",
+      "  docker exec -i " + dbContainer() + " psql -U postgres \\",
+      "    < scripts/sql/local-default-privileges.sql",
+      "  rmdir supabase/migrations && mv supabase/.hold supabase/migrations",
+      "  npx supabase migration up --local",
+      "",
+      "docs/18-local-validation.md explains why the dance is necessary."
+    );
+  }
+
+  console.log("privileges match a hosted project: member SELECT yes, service-role EXECUTE yes\n");
+}
 
 const probeEnv = childEnv({
   SUPABASE_URL: API_URL,

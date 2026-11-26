@@ -47,6 +47,7 @@
     "age:check": "node --no-warnings scripts/age-eligibility-check.mjs",
     "security:local": "node scripts/local-security.mjs",
     "security:local:reset": "node scripts/local-security.mjs --reset",
-    "fixtures:local": "node scripts/local-fixtures.mjs"
+    "fixtures:local": "node scripts/local-fixtures.mjs",
+    "security:local:mutations": "node scripts/local-mutation-check.mjs"
   }
 }

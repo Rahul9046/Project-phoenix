@@ -92,3 +92,12 @@ artifacts/
 *.p8
 keystore.properties
 *-release.properties
+
+# Byproducts of the local Supabase stack (`npx supabase start`).
+#
+# The rest of supabase/.temp is deliberately committed: those files record the
+# LINKED project's facts -- postgres version, region, project ref -- and answer
+# production questions with no network and no credential. These two are
+# generated locally and belong to one machine. See docs/18-local-validation.md.
+supabase/.branches/
+supabase/.temp/start-secrets

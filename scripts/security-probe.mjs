@@ -169,6 +169,27 @@ function check(name, passed, detail) {
 const meera = await signIn("meera@demo.eraya.invalid");
 const sanjay = await signIn("sanjay@demo.eraya.invalid");
 
+/**
+ * A fixture member's id WITHOUT signing in as them.
+ *
+ * Priya must stay unconfirmed for the email mark to be asserted absent, and a
+ * magic-link exchange would confirm her -- so the two members who exist only to
+ * be looked at are resolved by id and never signed in.
+ *
+ * Returns null when the fixture is missing. The controls below then FAIL rather
+ * than quietly skipping: a control that disappears when its fixture does is how
+ * an assertion goes back to proving nothing, which is the failure this whole
+ * file is being rewritten to remove.
+ */
+const fixtureIds = await (async () => {
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const find = (email) => data.users.find((u) => u.email === email)?.id ?? null;
+  return {
+    arun: find("arun@demo.eraya.invalid"),
+    priya: find("priya@demo.eraya.invalid"),
+  };
+})();
+
 console.log("\nSigned in as two demo members. Probing...\n");
 
 // ---------------------------------------------------------------------------
@@ -306,6 +327,31 @@ console.log("\nMessaging without a connection");
     JSON.parse(readBody).length === 0,
     readBody.slice(0, 160),
   );
+
+  /*
+   * The control that makes the line above mean anything.
+   *
+   * Sanjay reading zero messages is the right answer only if there were
+   * messages to read. Against an empty conversation -- or no conversation at
+   * all, which is what this probe used to find -- the assertion holds whether
+   * the policy is perfect or absent. So the same conversation is read by the
+   * member who IS in it, and must come back non-empty.
+   */
+  const { body: ownBody } = await request(
+    meera.token,
+    `messages?select=body&connection_id=eq.${connection?.id}`,
+  );
+  let own;
+  try {
+    own = JSON.parse(ownBody);
+  } catch {
+    own = null;
+  }
+  check(
+    "and the member who IS in it reads it normally",
+    Array.isArray(own) && own.length > 0,
+    `${Array.isArray(own) ? own.length : "unparseable"} message(s): ${ownBody.slice(0, 120)}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -318,6 +364,17 @@ console.log("\nGranting yourself premium");
     "membership_plans?select=id&tier=eq.premium&limit=1",
   );
   const plan = JSON.parse(planBody)[0];
+
+  /*
+   * Without a real plan id the insert below is refused by a not-null or a
+   * foreign key rather than by the absent insert policy, and the assertion
+   * reads as a pass while testing the wrong rule entirely.
+   */
+  check(
+    "a premium plan exists for the attempt to be made against",
+    Boolean(plan?.id),
+    planBody.slice(0, 120),
+  );
 
   const { status, body } = await request(meera.token, "subscriptions", {
     method: "POST",
@@ -336,19 +393,49 @@ console.log("\nGranting yourself premium");
 }
 
 {
+  /*
+   * A payload the table would otherwise accept, which it was not before.
+   *
+   * `value` is `jsonb` under a check constraint tying it to `kind`:
+   * `kind = 'boolean'` requires `jsonb_typeof(value) = 'boolean'`. This sent
+   * the STRING `"true"`, whose jsonb type is 'string', so the insert was
+   * refused by `entitlements_value_matches_kind` before any policy was
+   * consulted -- and the assertion passed on a 400 that had nothing to do with
+   * access control. Confirmed by opening `entitlements` to every authenticated
+   * caller for insert: the old payload was still refused, which means this
+   * check would not have noticed the table being left writable.
+   *
+   * The key is one the product does not define, so a unique-constraint
+   * collision on (tier, key) cannot stand in for a refusal either.
+   */
   const { status, body } = await request(meera.token, "entitlements", {
     method: "POST",
     body: JSON.stringify({
       tier: "free",
-      key: "canUseIncognito",
+      key: "probeWroteThisEntitlement",
       kind: "boolean",
-      value: "true",
+      value: true,
     }),
   });
   check(
     "cannot write an entitlement",
     status >= 400,
     `status ${status}: ${body.slice(0, 120)}`,
+  );
+
+  /*
+   * And nothing landed. A write refused by a missing policy answers 201 with an
+   * empty body in some PostgREST configurations rather than erroring, so the
+   * status alone is not the whole claim.
+   */
+  const { body: after } = await request(
+    meera.token,
+    "entitlements?select=key&key=eq.probeWroteThisEntitlement",
+  );
+  check(
+    "and no entitlement row was created",
+    after.replace(/\s/g, "") === "[]",
+    after.slice(0, 160),
   );
 }
 
@@ -444,6 +531,52 @@ console.log("\nBlocks");
 // ---------------------------------------------------------------------------
 
 {
+  /*
+   * Before the block, and this is the half that was missing.
+   *
+   * "A blocked member does not appear in discovery" is satisfied by an empty
+   * list, and an empty list is exactly what this probe got for weeks: the
+   * fixtures were never onboarded, so Meera was invisible to Sanjay for
+   * reasons that had nothing to do with blocking. The assertion passed, and a
+   * `member_blocks` clause deleted from `discover_members` would not have
+   * changed the result by one row.
+   *
+   * So Meera's visibility is asserted FIRST. If she is not there before the
+   * block, her absence afterwards is not evidence of anything.
+   */
+  const { body: beforeBody } = await request(
+    sanjay.token,
+    "rpc/discover_members",
+    { method: "POST", body: JSON.stringify({ max_results: 30 }) },
+  );
+  let before;
+  try {
+    before = JSON.parse(beforeBody);
+  } catch {
+    before = null;
+  }
+  check(
+    "the blocker is in the blocked member's discovery BEFORE the block",
+    Array.isArray(before) && before.some((row) => row.id === meera.id),
+    `${Array.isArray(before) ? before.length : "unparseable"} introduction(s), none of them Meera: ${beforeBody.slice(0, 120)}`,
+  );
+
+  const { body: cardBefore } = await request(sanjay.token, "rpc/member_profile", {
+    method: "POST",
+    body: JSON.stringify({ member_id: meera.id }),
+  });
+  check(
+    "and can load her profile BEFORE the block",
+    (() => {
+      try {
+        return JSON.parse(cardBefore)[0]?.id === meera.id;
+      } catch {
+        return false;
+      }
+    })(),
+    cardBefore.slice(0, 160),
+  );
+
   await request(meera.token, "member_blocks", {
     method: "POST",
     body: JSON.stringify({ blocker_id: meera.id, blocked_id: sanjay.id }),
@@ -765,6 +898,50 @@ for (const fn of [
   );
 }
 
+/*
+ * The other side of both marks.
+ *
+ * `phone_verified === false` on a mocked verification is the right answer, and
+ * it is also the answer a function that always returns false would give. The
+ * same is true of the email mark: asserted only where it is present, it would
+ * survive a predicate hard-wired to true. So each mark is read once more where
+ * the opposite is correct -- Arun answered a real SMS, Priya never confirmed an
+ * address -- and the pair together is what proves the rule rather than the
+ * constant.
+ */
+{
+  const readCard = async (id) => {
+    const { status, body } = await request(meera.token, "rpc/member_profile", {
+      method: "POST",
+      body: JSON.stringify({ member_id: id }),
+    });
+    if (status !== 200) return null;
+    try {
+      return JSON.parse(body)[0] ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const arun = fixtureIds.arun ? await readCard(fixtureIds.arun) : null;
+  check(
+    "a REAL msg91 verification does earn a phone mark",
+    arun !== null && arun.phone_verified === true,
+    fixtureIds.arun
+      ? `phone_verified=${arun ? arun.phone_verified : "no card"} (arun is verified_via=msg91)`
+      : "fixture arun@demo.eraya.invalid is absent, so this control did not run",
+  );
+
+  const priya = fixtureIds.priya ? await readCard(fixtureIds.priya) : null;
+  check(
+    "an unconfirmed member carries no email mark",
+    priya !== null && priya.email_verified === false,
+    fixtureIds.priya
+      ? `email_verified=${priya ? priya.email_verified : "no card"} (priya never confirmed)`
+      : "fixture priya@demo.eraya.invalid is absent, so this control did not run",
+  );
+}
+
 // ---------------------------------------------------------------------------
 console.log("\nPayments");
 // ---------------------------------------------------------------------------
@@ -924,19 +1101,6 @@ console.log("\nDeleting an account takes the photographs with it");
     const { token } = await signIn(email);
     const asMember = { apikey: ANON, Authorization: `Bearer ${token}` };
 
-    // Uploaded by the member, so the insert policy is exercised too. Four bytes
-    // of JPEG; this is about whether the file survives, not what it shows.
-    const uploaded = await fetch(`${bucketUrl}/${id}/probe-0.jpg`, {
-      method: "POST",
-      headers: { ...asMember, "Content-Type": "image/jpeg" },
-      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
-    });
-    check(
-      "a member can store a photograph in their own folder",
-      uploaded.status < 400,
-      `status ${uploaded.status}`,
-    );
-
     const filesUnder = async (folder) => {
       const response = await fetch(`${URL_BASE}/storage/v1/object/list/profile-photos`, {
         method: "POST",
@@ -950,6 +1114,59 @@ console.log("\nDeleting an account takes the photographs with it");
       const rows = await response.json();
       return Array.isArray(rows) ? rows.filter((o) => o.id) : [];
     };
+
+    // Uploaded by the member, so the insert policy is exercised too. Four bytes
+    // of JPEG; this is about whether the file survives, not what it shows.
+    const uploaded = await fetch(`${bucketUrl}/${id}/probe-0.jpg`, {
+      method: "POST",
+      headers: { ...asMember, "Content-Type": "image/jpeg" },
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    });
+    check(
+      "a member can store a photograph in their own folder",
+      uploaded.status < 400,
+      `status ${uploaded.status}`,
+    );
+
+    /*
+     * And not in anybody else's.
+     *
+     * The delete side of this boundary was asserted; the insert side never was,
+     * which left the more useful attack untested. Deleting another member's
+     * photograph is vandalism. Writing INTO their folder is worse: every
+     * member-facing read path -- `member_card`, `member_photos`, discovery --
+     * resolves the first object under `<id>/` by position, so a file landing
+     * there is a picture of someone else's choosing presented as this person's
+     * face to every stranger the product introduces them to.
+     *
+     * `profile_photos` has a check constraint tying the row to the folder, but
+     * the bytes do not go through that table. This asks Storage directly.
+     */
+    const intruded = await fetch(`${bucketUrl}/${meera.id}/intruder.jpg`, {
+      method: "POST",
+      headers: { ...asMember, "Content-Type": "image/jpeg" },
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    });
+    const intruderLanded = (await filesUnder(meera.id)).some(
+      (o) => o.name === "intruder.jpg",
+    );
+    check(
+      "a member cannot store a photograph in another member's folder",
+      intruded.status >= 400 && !intruderLanded,
+      `status ${intruded.status}, landed=${intruderLanded}`,
+    );
+
+    if (intruderLanded) {
+      await fetch(`${bucketUrl}`, {
+        method: "DELETE",
+        headers: {
+          apikey: SERVICE,
+          Authorization: `Bearer ${SERVICE}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prefixes: [`${meera.id}/intruder.jpg`] }),
+      });
+    }
 
     check("the photograph is there before deletion", (await filesUnder(id)).length === 1);
 
@@ -983,15 +1200,60 @@ console.log("\nDeleting an account takes the photographs with it");
       `status ${planted.status}`,
     );
 
-    // The authority the member is given is their own folder and no more. Worth
-    // asserting here rather than assuming, because the deletion flow below
-    // relies on exactly this policy.
+    /*
+     * The authority the member is given is their own folder and no more.
+     *
+     * The attack has to name the object, and that is the whole of what was
+     * wrong with this check until now. It passed `prefixes: ["<meera-id>/"]`,
+     * a directory, and Storage's bulk delete does not walk directories -- it
+     * matches each entry in `prefixes` against an object's exact name. So the
+     * request deleted nothing, answered 200, and the file survived *because no
+     * deletion was ever attempted*.
+     *
+     * Proven rather than reasoned: with `select` and `delete` on
+     * storage.objects opened to every authenticated caller, the directory form
+     * still left the file untouched, while the exact-path form below removed
+     * it immediately. The assertion was therefore true with the policies
+     * perfect and equally true with them gone -- the third attack in this file
+     * to measure nothing, after the renamed `member_profile` argument and the
+     * theft attempt that targeted an empty folder.
+     *
+     * An attacker also has no need to guess the path. The listing above is
+     * permitted: `Members read photos of people they may see` lets anyone the
+     * product has introduced you to enumerate your objects, names and all. So
+     * the attack is run the way a real one would be -- list, then delete what
+     * was listed -- and in both shapes Storage offers.
+     */
+    const visibleToIntruder = await fetch(
+      `${URL_BASE}/storage/v1/object/list/profile-photos`,
+      {
+        method: "POST",
+        headers: { ...asMember, "Content-Type": "application/json" },
+        body: JSON.stringify({ prefix: meera.id, limit: 100 }),
+      },
+    );
+    const intruderSaw = await visibleToIntruder.json();
+    const namesSeen = (Array.isArray(intruderSaw) ? intruderSaw : [])
+      .filter((o) => o.id)
+      .map((o) => `${meera.id}/${o.name}`);
+
     const theft = await fetch(`${bucketUrl}`, {
       method: "DELETE",
       headers: { ...asMember, "Content-Type": "application/json" },
-      body: JSON.stringify({ prefixes: [`${meera.id}/`] }),
+      // Exact object paths. The ones the attacker just listed, or the planted
+      // file if the listing was refused -- the attempt must be made either way.
+      body: JSON.stringify({ prefixes: namesSeen.length ? namesSeen : [meeraFile] }),
+    });
+    const afterBulk = await filesUnder(meera.id);
+
+    // And the single-object form, which is the one an attacker reaches for
+    // first and which Storage authorises on a different path.
+    const theftSingle = await fetch(`${bucketUrl}/${meeraFile}`, {
+      method: "DELETE",
+      headers: { ...asMember },
     });
     const stillThere = await filesUnder(meera.id);
+
     /*
      * Survival is the property, not the status code. A 200 here means Storage
      * accepted the request and deleted the rows the caller was entitled to
@@ -999,8 +1261,9 @@ console.log("\nDeleting an account takes the photographs with it");
      */
     check(
       "a member cannot delete another member's photo files",
-      stillThere.length === 1,
-      `status ${theft.status}, ${stillThere.length} of meera's file(s) left`,
+      afterBulk.length === 1 && stillThere.length === 1,
+      `bulk ${theft.status} -> ${afterBulk.length} left, single ${theftSingle.status} -> ` +
+        `${stillThere.length} left (attacked ${namesSeen.length ? namesSeen.join(", ") : meeraFile})`,
     );
 
     // Put meera's folder back the way it was found, whatever happened above.
