@@ -253,7 +253,8 @@ delete policy for anyone.
 
 ## Android permissions
 
-`android.permissions` is `[]` and `RECORD_AUDIO` is in `blockedPermissions`.
+`android.permissions` is `[]`, and `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW` are
+both in `blockedPermissions`.
 
 The microphone was declared and used by nothing. On a product where people
 decide whether to meet a stranger, an install screen asking for the microphone
@@ -261,9 +262,38 @@ costs trust and buys nothing, and "a library probably wanted it" is not a reason
 a member ever hears. `blockedPermissions` keeps it out even if a future plugin
 adds it back without anyone noticing.
 
+`SYSTEM_ALERT_WINDOW` -- "Display over other apps" -- is blocked for the same
+reason. React Native declares it in its **debug** source set
+(`react-native/ReactAndroid/src/debug/AndroidManifest.xml`) for the redbox and
+the dev overlay, and it reached the release artifact because `expo-dev-client`
+is a production dependency, so the dev launcher and its manifest get linked in.
+Nothing in Eraya draws over anything. It was found on 2026-10-31 in a Play
+bundle's merged manifest, blocked there, and carried into the direct-distribution
+build on 2026-11-26 -- the direct APK had been shipping it since v0.1.2.
+
+**The merged manifest is the only place this is visible.**
+`expo config --type introspect` cannot show it, because the Gradle manifest
+merge is a build step. Read it from a finished artifact instead:
+`aapt dump permissions <apk>`, or `bundletool dump manifest --bundle <aab>`.
+
+Blocking works by emitting `tools:node="remove"`, so the merger drops whatever a
+library contributed. That it works is not a guess: `RECORD_AUDIO` is blocked the
+same way and is absent from every built artifact. `scripts/ios-probe.mjs`
+asserts both blocks, so removing one fails a check rather than appearing on a
+store listing or an install screen.
+
+The deeper fix is to move `expo-dev-client` to `devDependencies`, which would
+take the dev launcher, its manifest and its code out of the release artifact
+entirely and shrink it. That changes the dependency graph and the local dev
+workflow, so it is deliberately a separate decision from declining one
+permission -- the remaining exposure is recorded in
+[07-open-questions.md](07-open-questions.md).
+
 Photo access stays: `expo-image-picker` carries its own usage string and profile
-photos need it. Camera is deliberately absent -- the app picks from the library
-and never captures directly.
+photos need it. It contributes `READ_EXTERNAL_STORAGE` and
+`WRITE_EXTERNAL_STORAGE`, both capped at `maxSdkVersion="32"`, so on Android 13
+and later neither is requested at all. Camera is deliberately absent -- the app
+picks from the library and never captures directly.
 
 ## Photos
 

@@ -44,6 +44,9 @@
     "test": "node --no-warnings --test \"apps/web/src/**/*.test.ts\" \"supabase/functions/**/*.test.ts\"",
     "framing:probe": "node --no-warnings scripts/framing-probe.mjs",
     "phone:probe": "node scripts/phone-limits-probe.mjs",
-    "age:check": "node --no-warnings scripts/age-eligibility-check.mjs"
+    "age:check": "node --no-warnings scripts/age-eligibility-check.mjs",
+    "security:local": "node scripts/local-security.mjs",
+    "security:local:reset": "node scripts/local-security.mjs --reset",
+    "fixtures:local": "node scripts/local-fixtures.mjs"
   }
 }
