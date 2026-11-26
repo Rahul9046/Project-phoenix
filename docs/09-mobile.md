@@ -467,9 +467,14 @@ when something has to run on an emulator, and never publish it.
 **`android/` is gitignored**, so `app.json` and the native project drift. The
 version has to be set in both -- `app.json` for the JS side and
 `versionCode`/`versionName` in `app/build.gradle` for the APK -- and
-`npx expo prebuild` must **not** be used to reconcile them, because it can
-regenerate `debug.keystore` and strand every existing install. Edit the two
-files.
+`npx expo prebuild` regenerates `android/` wholesale -- with or without
+`--clean` -- so edit `app.json` and let prebuild carry the version across rather
+than editing the generated files. Prebuild is safe to run: the signing
+configuration is re-applied from `plugins/with-release-signing.js`, and the
+keystore itself has never lived in `android/`. (An earlier note here warned that
+prebuild would "strand every existing install" by regenerating
+`debug.keystore`. It reproduces that file byte for byte, because the template
+ships it -- which is the same fact that made it unfit to sign with.)
 
 Confirm what was built before publishing it:
 
@@ -480,17 +485,20 @@ unzip -l <apk> | grep -o 'lib/[^/]*' | sort -u   # the ABIs actually inside
 
 ### Signing
 
-`apps/mobile/android/app/build.gradle` points the `release` build type at
-`signingConfigs.debug`, which is the Expo bare template's default, so a release
-APK carries the universal `CN=Android Debug` certificate from
-`apps/mobile/android/app/debug.keystore`.
+Release builds are signed with **Eraya's own key** since v0.1.4: RSA 4096,
+SHA384withRSA, `CN=Eraya`, certificate SHA-256 `dd86912d…81aafd3c`, v2 + v3
+schemes. The keystore lives in `~/.eraya/signing/`, outside this repository and
+outside the generated `android/` directory, and the Gradle configuration that
+reads it is re-applied on every prebuild by
+`apps/mobile/plugins/with-release-signing.js`. A release build with no
+credentials available **fails**; it never falls back to the debug key.
 
-**That identity must be preserved.** Android will not install an update signed
-by a different key over an existing install, so it is what keeps everybody
-already running Eraya upgradeable -- and offering the download publicly raises
-the stakes on that rather than changing the rule: the set of installs a key
-change would strand is now open-ended rather than a tester list. The keystore is
-backed up locally and off-device.
+Everything up to **v0.1.3** was signed with the Expo template's
+`CN=Android Debug` certificate, whose private key ships in the template and is
+therefore public. Android will not update across a key change, so v0.1.4 needs a
+one-time uninstall and reinstall -- the notice for members is drafted, and the
+whole story is in
+[15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
 
 Verify before distributing any build:
 
@@ -498,12 +506,12 @@ Verify before distributing any build:
 apksigner verify --print-certs <apk>
 ```
 
-Anything other than the expected certificate must not go to existing installs.
+Anything other than `dd86912d…81aafd3c` must not be published.
 
-**Play App Signing and an upload key still have to be set up, and what identity
-the Play build will carry is deliberately undecided.** Nothing in this
-repository depends on the answer. See
-[07-open-questions.md](07-open-questions.md).
+**Play is a separate identity and always will be.** The Play upload key is held
+by EAS; Play installs carry a third certificate Google generated under Play App
+Signing. An APK built here can never update a Play install, in either direction.
+See [07-open-questions.md](07-open-questions.md).
 
 ### Switching the website to Google Play
 

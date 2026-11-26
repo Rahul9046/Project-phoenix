@@ -22,6 +22,7 @@ import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertSafeProbeTarget } from "./lib/probe-target.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -90,13 +91,18 @@ if (!URL_BASE || !ANON || !SERVICE) {
 }
 
 /*
- * Say which project is about to be written to, every time.
+ * Which project is about to be written to -- and a refusal, not just a label.
  *
- * This probe creates and deletes auth users. Against production that is a
- * deliberate act, and the one thing that must never happen is somebody running
- * it believing it is pointed somewhere else.
+ * This probe creates and deletes auth users. Saying so in a line of output was
+ * the whole protection until now, and a printed URL stops nobody: it is
+ * announced and then the writes happen. `assertSafeProbeTarget` inverts the
+ * default instead. A local stack runs; anything else exits before a client is
+ * built, unless the caller names the project in ERAYA_PROBE_ALLOW_REMOTE.
  */
-console.log(`target: ${URL_BASE}\n`);
+assertSafeProbeTarget(URL_BASE, {
+  probe: "security-probe",
+  writes: "creates and deletes auth users",
+});
 
 const admin = createClient(URL_BASE, SERVICE, {
   auth: { autoRefreshToken: false, persistSession: false },

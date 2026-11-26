@@ -121,26 +121,36 @@ likely to be paying with a foreign card. Enabling international payments is an
 application to Razorpay carrying higher fees and additional compliance.
 Answering it "no" is legitimate; answering it by accident is not.
 
-**How the directly downloaded Android build and a Play release relate to each
-other.** Play App Signing and an upload signing configuration still have to be
-set up; neither exists. What identity the Play build will carry, whether the
-existing key can serve as the upload key, and what the transition means for
-people already running a build downloaded from eraya.app are one question, and
-it stays open until Play is configured deliberately — with Play's own upload
-requirements read at that time rather than inferred now.
+**ANSWERED 2026-11-26 — how the directly downloaded Android build and a Play
+release relate to each other.** They do not, and they are not meant to. There
+are three keys, and the arrangement is deliberate:
 
-The download became **public** on 2026-10-06, offered from `eraya.app/download`
-while Play's closed-testing period runs in parallel. That answers no part of the
-question, but it enlarges the last part: the population a key change would
-strand is now open-ended rather than a list of testers we could contact. The
-existing identity must be preserved in the meantime, and the keystore is backed
-up locally and off-device.
+- **Direct distribution** (`eraya.app`) is signed, from v0.1.4, with Eraya's own
+  key: RSA 4096, SHA384withRSA, `CN=Eraya`, certificate SHA-256 `dd86912d…`.
+- **Play uploads** are signed with the EAS-held key created 2026-09-02,
+  certificate SHA-256 `a1d8586e…`. It is the **upload** key and signs nothing
+  else.
+- **Play installs** carry a third certificate that Google generated when Play
+  App Signing was accepted. It cannot be exported.
 
-What is worth carrying in as input rather than conclusion: the current
-certificate is the universal Android debug certificate rather than a key unique
-to Eraya, and Android's rule that an update must be signed by the same key as
-the install it replaces applies to the direct channel whatever Play does. See
-[09-mobile.md](09-mobile.md#distribution). Do not plan around a guessed answer.
+So an APK built here can never be an in-place update for a Play install, whatever
+it is signed with — that is what Google-managed Play App Signing means, not a
+defect to engineer around. Moving between the two channels needs an uninstall,
+in either direction, permanently.
+
+The earlier framing of this question assumed one identity might serve both. It
+cannot, so the sub-questions it contained dissolve rather than get answered:
+signing direct downloads with the upload key would buy no Play compatibility
+while putting the credential that authorises Play submissions into a public
+download's trust chain.
+
+What it did cost: v0.1.4 cannot update an existing `eraya.app` install, because
+every build up to v0.1.3 carried the Expo template's public debug key. Roughly
+57 installs need one uninstall-and-reinstall. That was paid once, deliberately,
+at the smallest install base it will ever have.
+
+Full detail in
+[15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
 
 ## Brand — defects in the supplied logo pack
 

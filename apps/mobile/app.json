@@ -68,7 +68,8 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "./plugins/with-release-signing"
     ],
     "extra": {
       "router": {},

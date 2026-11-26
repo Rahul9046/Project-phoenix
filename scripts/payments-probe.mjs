@@ -18,6 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertSafeProbeTarget } from "./lib/probe-target.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -38,14 +39,45 @@ function readEnv() {
 }
 
 const env = readEnv();
-const url = env.NEXT_PUBLIC_SUPABASE_URL;
-const service = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
-const anon = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+/*
+ * The environment wins, so a local stack can be named without editing the
+ * production env file.
+ *
+ * This probe had no override at all: it read `apps/web/.env.local` and only
+ * that, which means every run it has ever had went to production -- and unlike
+ * the security probe, what it writes there survives. `begin_payment` inserts
+ * payment rows, `settle_payment` grants real membership terms against them, and
+ * `revoke_payment` withdraws them. Those rows and those terms belong to a real
+ * profile in the one project real members use.
+ *
+ * `||` and not `??`: `SUPABASE_SECRET_KEY` is declared but empty in that file,
+ * and an empty string is not nullish, so `??` would stop at the blank and never
+ * reach the variable with a value in it.
+ */
+const url = process.env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+const service =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  env.SUPABASE_SECRET_KEY ||
+  env.SUPABASE_SERVICE_ROLE_KEY;
+const anon =
+  process.env.SUPABASE_ANON_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!url || !service) {
   console.error("Missing NEXT_PUBLIC_SUPABASE_URL or the service-role key.");
   process.exit(1);
 }
+
+/*
+ * Refuse before anything is written. See scripts/lib/probe-target.mjs: a local
+ * stack runs, anything else needs the project named in ERAYA_PROBE_ALLOW_REMOTE.
+ */
+assertSafeProbeTarget(url, {
+  probe: "payments-probe",
+  writes: "creates payment rows and grants and revokes real membership terms",
+});
 
 const svc = { apikey: service, Authorization: `Bearer ${service}`, "Content-Type": "application/json" };
 const EMAIL = "paymentprobe@demo.eraya.invalid";

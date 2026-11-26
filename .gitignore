@@ -79,3 +79,16 @@ artifacts/
 # Built Android artefacts. The APK is a build output, not source.
 *.apk
 *.aab
+
+# Android signing material. The real credentials live outside this repository
+# entirely -- ~/.eraya/signing/, see docs/15-android-signing-and-distribution.md
+# -- so nothing here should ever match. These patterns exist because the
+# repository is public and the cost of one mistake is the signing identity.
+# `*.jks` and `*.p12` are already covered in apps/mobile/.gitignore; `*.keystore`
+# was not, and was only ignored by accident because `/android` is ignored whole.
+*.keystore
+*.jks
+*.p12
+*.p8
+keystore.properties
+*-release.properties
