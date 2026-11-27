@@ -1230,6 +1230,26 @@ export const en = {
 
   photos: {
     /*
+     * What the owner of a photograph is told while it waits, and if it is
+     * refused. Nobody else sees any of this -- another member simply sees the
+     * monogram, exactly as they would for someone who has not added a photo.
+     */
+    review: {
+      waiting:
+        "Waiting to be checked. Only you can see it until then — usually within a day.",
+      refused:
+        "This photo was not approved. You can remove it and add another.",
+      reason: {
+        no_person: "It does not appear to show a person.",
+        multiple_people: "It shows more than one person, so it is not clear which is you.",
+        not_the_member: "It does not appear to be a photo of you.",
+        explicit: "It is not the kind of photo Eraya allows.",
+        contact_details: "It has a phone number or an address written on it.",
+        unclear: "It is too dark or too blurred to make out a face.",
+        other: "A moderator has looked at it and asked for a different one.",
+      },
+    },
+    /*
      * Framing, which the app and the website both offer. Every surface draws a
      * photograph in a 4:5 frame, so a crop happens either way -- these are the
      * words for letting the member decide it instead of the layout.
@@ -1268,6 +1288,30 @@ export const en = {
     persistFailed: "That photo did not save. Please try again.",
   },
 
+  /*
+   * Why something a member typed was refused at the moment of posting.
+   *
+   * Specific about WHAT to change and silent about how the check works: a
+   * message that explains the rule explains how to get around it. None of these
+   * blames the member -- most people who meet the contact-details rule are
+   * simply trying to be easier to reach.
+   */
+  content: {
+    refused: {
+      contact_details:
+        "Please keep phone numbers and email addresses out of this. Talk here until you are comfortable — it is safer, and you can always share more later.",
+      external_link:
+        "Links cannot be sent on Eraya. Please write it in your own words.",
+      sexual_solicitation:
+        "That is not something Eraya allows. Please reword it.",
+      abuse:
+        "That cannot be sent. Please say it differently.",
+      prohibited:
+        "That cannot be sent on Eraya.",
+      unknown:
+        "That could not be sent. Please try rewording it.",
+    },
+  },
   help: {
     takeTimeTitle: "Take your time in the conversation",
     takeTimeBody:

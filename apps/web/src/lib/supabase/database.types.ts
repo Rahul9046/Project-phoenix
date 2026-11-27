@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -165,6 +160,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_filter_terms: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          note: string | null
+          pattern: string
+          reason: Database["public"]["Enums"]["content_rejection_reason"]
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          note?: string | null
+          pattern: string
+          reason: Database["public"]["Enums"]["content_rejection_reason"]
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          note?: string | null
+          pattern?: string
+          reason?: Database["public"]["Enums"]["content_rejection_reason"]
+        }
+        Relationships: []
       }
       entitlements: {
         Row: {
@@ -346,6 +368,48 @@ export type Database = {
           },
         ]
       }
+      member_reports_archive: {
+        Row: {
+          archived_at: string
+          archived_for: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          reason_code: string | null
+          reported_id: string | null
+          reporter_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          archived_at?: string
+          archived_for?: string | null
+          created_at?: string | null
+          description?: string | null
+          id: string
+          reason_code?: string | null
+          reported_id?: string | null
+          reporter_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          archived_at?: string
+          archived_for?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reason_code?: string | null
+          reported_id?: string | null
+          reporter_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       member_reverts: {
         Row: {
           created_at: string
@@ -395,6 +459,8 @@ export type Database = {
           is_recurring: boolean
           name: string
           period_months: number
+          play_intro_product_id: string | null
+          play_product_id: string | null
           price_paise: number
           sort_order: number
           tier: Database["public"]["Enums"]["membership_tier"]
@@ -411,6 +477,8 @@ export type Database = {
           is_recurring?: boolean
           name: string
           period_months: number
+          play_intro_product_id?: string | null
+          play_product_id?: string | null
           price_paise: number
           sort_order?: number
           tier?: Database["public"]["Enums"]["membership_tier"]
@@ -427,6 +495,8 @@ export type Database = {
           is_recurring?: boolean
           name?: string
           period_months?: number
+          play_intro_product_id?: string | null
+          play_product_id?: string | null
           price_paise?: number
           sort_order?: number
           tier?: Database["public"]["Enums"]["membership_tier"]
@@ -618,12 +688,14 @@ export type Database = {
       }
       payments: {
         Row: {
+          acknowledged_at: string | null
           amount_paise: number
           created_at: string
           currency: string
           failed_at: string | null
           id: string
           intro_offer_applied: boolean
+          live_mode: boolean | null
           paid_at: string | null
           plan_id: string
           profile_id: string
@@ -634,12 +706,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acknowledged_at?: string | null
           amount_paise: number
           created_at?: string
           currency?: string
           failed_at?: string | null
           id?: string
           intro_offer_applied?: boolean
+          live_mode?: boolean | null
           paid_at?: string | null
           plan_id: string
           profile_id: string
@@ -650,12 +724,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acknowledged_at?: string | null
           amount_paise?: number
           created_at?: string
           currency?: string
           failed_at?: string | null
           id?: string
           intro_offer_applied?: boolean
+          live_mode?: boolean | null
           paid_at?: string | null
           plan_id?: string
           profile_id?: string
@@ -791,22 +867,40 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_state: Database["public"]["Enums"]["photo_moderation_state"]
           position: number
           profile_id: string
+          rejection_reason:
+            | Database["public"]["Enums"]["photo_rejection_reason"]
+            | null
           storage_path: string
         }
         Insert: {
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_state?: Database["public"]["Enums"]["photo_moderation_state"]
           position?: number
           profile_id: string
+          rejection_reason?:
+            | Database["public"]["Enums"]["photo_rejection_reason"]
+            | null
           storage_path: string
         }
         Update: {
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_state?: Database["public"]["Enums"]["photo_moderation_state"]
           position?: number
           profile_id?: string
+          rejection_reason?:
+            | Database["public"]["Enums"]["photo_rejection_reason"]
+            | null
           storage_path?: string
         }
         Relationships: [
@@ -1034,7 +1128,7 @@ export type Database = {
         Returns: undefined
       }
       admin_list_archived_reports: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           archived_at: string
           archived_for: string
@@ -1075,12 +1169,18 @@ export type Database = {
         Args: { p_profile: string; p_reason?: string; p_report?: string }
         Returns: undefined
       }
+      approve_photo: { Args: { photo_id: string }; Returns: boolean }
       attach_provider_order: {
         Args: { p_order_id: string; p_payment: string }
         Returns: undefined
       }
       begin_payment: {
-        Args: { p_plan_code: string; p_profile: string }
+        Args: {
+          p_live_mode?: boolean
+          p_plan_code: string
+          p_profile: string
+          p_provider?: Database["public"]["Enums"]["payment_provider"]
+        }
         Returns: {
           amount_paise: number
           currency: string
@@ -1106,7 +1206,11 @@ export type Database = {
         }[]
       }
       claim_payment_event: {
-        Args: { p_event_id: string; p_event_type: string }
+        Args: {
+          p_event_id: string
+          p_event_type: string
+          p_provider?: Database["public"]["Enums"]["payment_provider"]
+        }
         Returns: boolean
       }
       claim_phone_otp_attempt: {
@@ -1240,15 +1344,49 @@ export type Database = {
           status: Database["public"]["Enums"]["payment_status"]
         }[]
       }
+      my_photos: {
+        Args: never
+        Returns: {
+          id: string
+          moderated_at: string
+          moderation_state: Database["public"]["Enums"]["photo_moderation_state"]
+          photo_position: number
+          rejection_reason: Database["public"]["Enums"]["photo_rejection_reason"]
+          storage_path: string
+        }[]
+      }
+      normalise_for_screening: { Args: { input: string }; Returns: string }
       ops_setting: {
         Args: { fallback: number; setting_key: string }
         Returns: number
       }
+      payments_live_enabled: { Args: never; Returns: boolean }
       phone_is_verified: {
         Args: { verified_at: string; verified_via: string }
         Returns: boolean
       }
       phone_otp_capacity: { Args: never; Returns: Json }
+      photo_is_publishable: { Args: { object_name: string }; Returns: boolean }
+      photo_review_counts: {
+        Args: never
+        Returns: {
+          grandfathered: number
+          pending: number
+          rejected: number
+        }[]
+      }
+      photo_review_queue: {
+        Args: { include_grandfathered?: boolean; max_results?: number }
+        Returns: {
+          first_name: string
+          id: string
+          moderation_state: Database["public"]["Enums"]["photo_moderation_state"]
+          photo_position: number
+          profile_id: string
+          storage_path: string
+          uploaded_at: string
+        }[]
+      }
       record_auth_event: {
         Args: {
           event_name: string
@@ -1282,6 +1420,13 @@ export type Database = {
         Returns: undefined
       }
       record_profile_view: { Args: never; Returns: undefined }
+      reject_photo: {
+        Args: {
+          photo_id: string
+          reason: Database["public"]["Enums"]["photo_rejection_reason"]
+        }
+        Returns: boolean
+      }
       report_and_block_member: {
         Args: {
           p_details?: string
@@ -1304,6 +1449,10 @@ export type Database = {
         }
         Returns: Json
       }
+      screen_text: {
+        Args: { input: string }
+        Returns: Database["public"]["Enums"]["content_rejection_reason"]
+      }
       search_cities: {
         Args: { max_results?: number; query: string }
         Returns: {
@@ -1316,6 +1465,7 @@ export type Database = {
       }
       settle_payment: {
         Args: {
+          p_live_mode?: boolean
           p_order_id: string
           p_provider: Database["public"]["Enums"]["payment_provider"]
           p_provider_payment_id: string
@@ -1325,8 +1475,16 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      visible_photo_count: { Args: { member: string }; Returns: number }
+      visible_photo_path: { Args: { member: string }; Returns: string }
     }
     Enums: {
+      content_rejection_reason:
+        | "contact_details"
+        | "external_link"
+        | "sexual_solicitation"
+        | "abuse"
+        | "prohibited"
       entitlement_kind: "boolean" | "number"
       gender: "woman" | "man" | "non_binary" | "prefer_not_to_say"
       interest_kind: "interested" | "passed"
@@ -1350,6 +1508,19 @@ export type Database = {
         | "cancelled"
         | "refunded"
         | "partially_refunded"
+      photo_moderation_state:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "grandfathered"
+      photo_rejection_reason:
+        | "no_person"
+        | "multiple_people"
+        | "not_the_member"
+        | "explicit"
+        | "contact_details"
+        | "unclear"
+        | "other"
       relationship_status: "divorced" | "separated" | "widowed"
       religion:
         | "hindu"
@@ -1422,12 +1593,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1451,11 +1622,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1476,11 +1647,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1501,11 +1672,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1518,11 +1689,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1537,6 +1708,13 @@ export const Constants = {
   },
   public: {
     Enums: {
+      content_rejection_reason: [
+        "contact_details",
+        "external_link",
+        "sexual_solicitation",
+        "abuse",
+        "prohibited",
+      ],
       entitlement_kind: ["boolean", "number"],
       gender: ["woman", "man", "non_binary", "prefer_not_to_say"],
       interest_kind: ["interested", "passed"],
@@ -1562,6 +1740,21 @@ export const Constants = {
         "cancelled",
         "refunded",
         "partially_refunded",
+      ],
+      photo_moderation_state: [
+        "pending",
+        "approved",
+        "rejected",
+        "grandfathered",
+      ],
+      photo_rejection_reason: [
+        "no_person",
+        "multiple_people",
+        "not_the_member",
+        "explicit",
+        "contact_details",
+        "unclear",
+        "other",
       ],
       relationship_status: ["divorced", "separated", "widowed"],
       religion: [
@@ -1598,3 +1791,4 @@ export const Constants = {
     },
   },
 } as const
+

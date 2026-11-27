@@ -12,6 +12,10 @@ import {
   uploadPhoto,
   type Crop,
   type PickedPhoto,
+  myPhotoReviewStates,
+  photoRejectionReasonKey,
+  photoStatusKey,
+  type PhotoReviewState,
 } from "@/features/account/photos";
 import { photoUrlFor } from "@/features/members/data";
 import { useMyDetails } from "@/features/members/me";
@@ -39,12 +43,33 @@ import { useT } from "@/features/i18n/LocaleProvider";
  * a 4:5 frame, so a crop happens either way -- this is the member deciding what
  * it keeps instead of the layout taking the middle.
  */
+/**
+ * Does this photograph need the member to look at it?
+ *
+ * `approved` and `grandfathered` both say no. Labelling the grandfathered ones
+ * would be telling members about a database migration rather than about
+ * themselves -- they are visible, and nothing is being asked of anybody.
+ */
+function needsAttention(review: PhotoReviewState | undefined): boolean {
+  return review?.state === "pending" || review?.state === "rejected";
+}
+
 export default function Photos() {
   const t = useT();
   const { details, reload } = useMyDetails();
   const toast = useToast();
 
   const [urls, setUrls] = useState<Record<string, string | null>>({});
+
+  /*
+   * Where each of my photographs is in review.
+   *
+   * Read separately from the paths, because `useMyDetails` carries what every
+   * screen needs and this is wanted on one. An empty map is a complete answer:
+   * the tiles then render exactly as they did before review existed, which is
+   * the right failure for a status line.
+   */
+  const [review, setReview] = useState<Record<string, PhotoReviewState>>({});
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -63,6 +88,18 @@ export default function Photos() {
    * newer one for different data -- both of which write state that is no longer
    * true.
    */
+  useEffect(() => {
+    let current = true;
+    void myPhotoReviewStates().then((states) => {
+      if (current) setReview(states);
+    });
+    return () => {
+      current = false;
+    };
+    // `photoPaths` changes when one is added or removed, which is exactly when
+    // the states are stale.
+  }, [details.photoPaths]);
+
   useEffect(() => {
     let active = true;
     const paths = details.photoPaths;
@@ -221,6 +258,35 @@ export default function Photos() {
                 </Text>
               </View>
             ) : null}
+
+            {/*
+              * A photograph waiting to be checked, or refused, is dimmed.
+              *
+              * Dimming only -- the sentence that explains it lives in the sheet
+              * this tile opens, because a 31%-wide tile cannot hold a sentence
+              * in six languages and a truncated explanation is worse than a
+              * visual cue plus a tap.
+              *
+              * Only the owner ever sees either state. To everybody else the
+              * profile shows the monogram, exactly as it would for a member who
+              * has not added a photo, so nothing here reveals that an
+              * unapproved photograph exists at all.
+              */}
+            {needsAttention(review[path]) ? (
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor:
+                    review[path]?.state === "rejected"
+                      ? "rgba(0,0,0,0.55)"
+                      : "rgba(0,0,0,0.3)",
+                }}
+              />
+            ) : null}
           </Pressable>
         ))}
 
@@ -283,6 +349,26 @@ export default function Photos() {
         title={t("photos.sheetTitle")}
       >
         <View style={{ gap: space.md }}>
+          {/*
+            * Why this photograph is dimmed, in the member's own language.
+            *
+            * Shown above the actions, because it changes which action makes
+            * sense: a refused photograph is one to remove and replace, and a
+            * waiting one is one to leave alone.
+            */}
+          {selected && photoStatusKey(review[selected]) ? (
+            <View style={{ gap: space.xxs }}>
+              <Text variant="body">
+                {t(photoStatusKey(review[selected])!)}
+              </Text>
+              {photoRejectionReasonKey(review[selected]) ? (
+                <Text variant="caption" tone="subtle">
+                  {t(photoRejectionReasonKey(review[selected])!)}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
           {selected && details.photoPaths[0] !== selected ? (
             <Button
               label={t("photos.makeFirst")}

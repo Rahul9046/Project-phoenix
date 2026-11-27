@@ -316,3 +316,77 @@ export async function makePrimary(paths: string[], path: string): Promise<boolea
 
   return true;
 }
+
+/**
+ * The moderation state of each of my own photographs.
+ *
+ * Through `my_photos()`, which reads the session rather than taking an id, so
+ * there is no argument to substitute and no way to ask about anybody else's.
+ * `member_photos` deliberately hides pending and rejected photographs, and that
+ * is wrong for exactly one person -- the one who uploaded them. Without this the
+ * product would accept a photograph and then say nothing about it.
+ *
+ * Keyed by storage path, because that is what every screen here already holds.
+ * An empty map on failure: the screen falls back to showing the photographs
+ * with no status, which is what it did before this feature existed.
+ */
+export type PhotoReviewState = {
+  state: "pending" | "approved" | "rejected" | "grandfathered";
+  rejectionReason: string | null;
+};
+
+export async function myPhotoReviewStates(): Promise<
+  Record<string, PhotoReviewState>
+> {
+  const { data, error } = await supabase.rpc("my_photos");
+
+  if (error || !Array.isArray(data)) return {};
+
+  const byPath: Record<string, PhotoReviewState> = {};
+  for (const row of data) {
+    byPath[String(row.storage_path)] = {
+      state: row.moderation_state as PhotoReviewState["state"],
+      rejectionReason: (row.rejection_reason as string | null) ?? null,
+    };
+  }
+  return byPath;
+}
+
+/**
+ * The sentence to show beside one of my photographs, or null for nothing.
+ *
+ * `approved` and `grandfathered` both say nothing, deliberately: a photograph
+ * that is simply visible needs no label, and labelling the grandfathered ones
+ * would be telling members about a migration rather than about themselves.
+ */
+export function photoStatusKey(
+  review: PhotoReviewState | undefined,
+): TranslationKey | null {
+  if (!review) return null;
+  if (review.state === "pending") return "photos.review.waiting";
+  if (review.state === "rejected") return "photos.review.refused";
+  return null;
+}
+
+/** The reason line under a refusal, when a reason is recorded. */
+export function photoRejectionReasonKey(
+  review: PhotoReviewState | undefined,
+): TranslationKey | null {
+  if (!review || review.state !== "rejected" || !review.rejectionReason) {
+    return null;
+  }
+
+  const known = [
+    "no_person",
+    "multiple_people",
+    "not_the_member",
+    "explicit",
+    "contact_details",
+    "unclear",
+    "other",
+  ];
+
+  return known.includes(review.rejectionReason)
+    ? (`photos.review.reason.${review.rejectionReason}` as TranslationKey)
+    : null;
+}
