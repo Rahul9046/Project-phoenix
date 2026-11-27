@@ -23,6 +23,16 @@ on:
     # mobile app share this repository and have no business spending a deploy.
     paths:
       - "apps/web/**"
+      # The web app imports @eraya/i18n, @eraya/legal and @eraya/eligibility
+      # from here, so a change to one of them changes what eraya.app serves
+      # without touching apps/web. Without this line a six-language copy
+      # correction living entirely in packages/i18n merged to `main` and never
+      # deployed -- the merge reported success and the site kept the old
+      # wording, which is the same silent-skip failure this workflow was
+      # created to escape. Every workspace package is a web dependency today,
+      # so the filter is the whole directory rather than a list of three that
+      # can fall behind the next package.
+      - "packages/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy-web.yml"
