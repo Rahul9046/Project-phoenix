@@ -39,7 +39,7 @@ any plugin's source.
 | --- | --- | --- |
 | Bundle identifier | `app.eraya.mobile` | The same string as the Android package. One product, two stores |
 | Display name | Eraya | `CFBundleDisplayName` |
-| Marketing version | `0.1.3` | `expo.version`, shared with Android's `versionName`. The iOS build is the same release, not a different one |
+| Marketing version | `0.1.4` | `expo.version`, shared with Android's `versionName`. The iOS build is the same release, not a different one. `ios-probe.mjs` asserts the generated `CFBundleShortVersionString` matches |
 | Build number | `1` | `ios.buildNumber`. The first iOS build of anything |
 | URL scheme | `eraya` | `eraya://auth` and `eraya://payment`. Registered app-wide, so both platforms get both |
 | Orientations | Portrait | No landscape is declared |
@@ -239,28 +239,74 @@ Eraya offers Google, so 4.8 applies. Facebook was switched off on 2026-11-25
 and does not change this: one third-party login service is enough to trigger
 the guideline.
 
-Email code sign-in plausibly satisfies it: it collects an email address and
-nothing else, and Eraya does no advertising tracking. "Plausibly" is doing real
-work in that sentence — it is a reviewer's judgement, not a rule with a
-checkbox, and the common reading is that Sign in with Apple is expected
-whenever Google ships.
+Email code sign-in does not reliably satisfy it, and an earlier version of this
+page said "plausibly" where it should have said "probably not". Of the three
+criteria, two are comfortable and one is not:
 
-It is not implemented here because it cannot be: Sign in with Apple needs a
-Service ID, a key and a team identifier from a paid Apple Developer account,
-and Supabase's Apple provider is `enabled = false` until those exist.
-`fetchAvailableProviders` reads `/auth/v1/settings` rather than assuming, so
-the button is simply not shown. That sentence was aspirational until
-2026-11-25: the list really was hardcoded, which is why turning Facebook off at
-the project did leave a dead button on every installed copy. The source now
-reads the live setting, so from the next build onwards a provider can be
-withdrawn or restored without shipping a release — but no release carrying that
-change has been made yet.
+| Criterion | Email code |
+| --- | --- |
+| Limits collection to name and email | Yes — it collects an address and nothing else |
+| Does not track for advertising | Yes — Eraya ships no tracking SDK at all |
+| **Lets the member keep their email address private** | **No.** That criterion describes Hide My Email. Eraya's own sign-in cannot offer privacy *from Eraya* |
 
-**Decide this before submitting for review, not after.** Three outcomes are
-possible and they cost very different amounts: email code is accepted as the
-4.8 alternative and nothing changes; Sign in with Apple is added, which is a
-Supabase provider plus a button; or Google is withdrawn from the iOS build,
-which is now a config push rather than a code change.
+None of 4.8's five exceptions apply either. The nearest — "your app
+*exclusively* uses your company's own account setup and sign-in systems" — fails
+on the word exclusively, because Google is offered too.
+
+**So the strategy chosen in Stage 5A is to keep Google and email and add Sign in
+with Apple.** It is not implemented end to end here because it cannot be: Sign
+in with Apple needs a Service ID, a key and a team identifier from a paid Apple
+Developer account, and Supabase's Apple provider stays `enabled = false` until
+those exist. What Stage 5B did build is everything that does not need Apple:
+`"apple"` has always been in the provider list that is asked about, so enabling
+the provider makes the button appear with no app release.
+
+### The correction that matters: withdrawing Google is NOT a config push
+
+This page previously said that withdrawing Google from the iOS build was "now a
+config push rather than a code change". **That was wrong**, and it mattered
+because it was one of the two escape routes from this question.
+
+`/auth/v1/settings` is **per project**, and one project serves the website, the
+Android app and the iOS app. Disabling Google there disables it *everywhere* —
+including for the overwhelming majority of sign-ins, on two platforms that are
+already live. There is no per-platform provider setting, and there was no
+platform conditional anywhere in `features/auth/`.
+
+There is now. `features/auth/providers.ts` holds a per-platform allow list, and
+it does two jobs:
+
+- **iOS may offer Apple; Android and the web may not.** This is the control that
+  stops the config push Stage 5C has to make — turning Apple on so iOS can be
+  submitted — from putting an untested Apple button in front of Android members
+  and web visitors. `apps/web/src/features/auth/settings.ts` carries the same
+  exclusion for the same reason.
+- **The iOS offline fallback is empty.** When `/auth/v1/settings` cannot be read,
+  the old code fell back to Google alone — a lone third-party login with no
+  alternative beside it, which is the exact shape 4.8 prohibits, reached by
+  nothing more exotic than a flaky connection in a reviewer's office. On iOS it
+  now falls back to no third-party provider at all and the screen says so
+  (`auth.signIn.providersOffline`, in all six languages). Email is a complete
+  sign-in path on its own, so nobody is locked out.
+
+The decision is a pure function with unit tests —
+`apps/mobile/src/features/auth/providers.test.ts` — because it is a compliance
+property rather than a layout preference, and `ios-probe.mjs` asserts the module
+is still wired in and that the web list has not quietly regained Apple.
+
+### Known consequence for already-installed Android copies
+
+**Android v0.1.4 is already published, and it filters `/auth/v1/settings`
+against its own hardcoded list, which includes `"apple"`.** So on the day the
+Supabase Apple provider is enabled, installed v0.1.4 copies **will** show an
+Apple button. The allow list added here protects future builds; it cannot reach
+a binary that already shipped.
+
+That is a sequencing decision for Stage 5C, not a defect, and there are two
+honest options: ship an Android build carrying the allow list before enabling
+the provider, or accept that installed copies offer an Apple sign-in that has
+never been tested on Android. Pretending the second is impossible would be the
+error.
 
 ## What was reviewed for iOS and found correct
 
@@ -373,9 +419,48 @@ Separated from everything above because none of it is known:
   overflow anywhere they do not on Android
 - text at the largest system size
 
+## What Stage 5B closed, and what it could not
+
+Closed, and asserted by `npm run ios:probe` (90 assertions) or `npm test`:
+
+| Was | Is |
+| --- | --- |
+| `NSAllowsArbitraryLoads: true` in the generated plist | **`false`**, set explicitly in `app.json`. The `localhost` exception and `NSAllowsLocalNetworking` stay, so `expo start` still reaches Metro |
+| `UIRequiredDeviceCapabilities: ["armv7"]` — 32-bit ARM, the template default | **`["arm64"]`** |
+| Provider list identical on every platform | Per-platform allow list; Apple on iOS only, with unit tests |
+| iOS offline fallback = Google alone | **Empty**, with a localized explanation and a retry |
+| The website would show Apple the moment the provider is enabled | It will not — `ALL` in `features/auth/settings.ts` excludes it |
+| Marketing version recorded here as 0.1.3 | **0.1.4** |
+
+**Required-reason APIs: inventoried, not guessed.** Every category Eraya reaches
+is declared by the dependency that reaches it — `expo-file-system`
+(FileTimestamp, DiskSpace), `expo-constants` (UserDefaults), `expo-application`
+(FileTimestamp), and React Native's own manifest. Eraya's own code calls none of
+them directly, which the probe asserts by symbol. **So no app-level
+`PrivacyInfo.xcprivacy` is declared**, deliberately: inventing one to satisfy a
+static check would be asserting something about code we did not write. If
+ITMS-91053 comes back on the first upload it will name the categories, and that
+is the point to add `ios.privacyManifests`.
+
+### Must be inspected in the real IPA — not knowable from here
+
+`expo config --type introspect` runs in development mode, so some keys it shows
+are not the keys a Release build ships. These are the ones to check inside the
+first `.ipa`'s `Info.plist`:
+
+| Key | Expectation | Why it cannot be settled here |
+| --- | --- | --- |
+| `NSAllowsArbitraryLoads` | **false** | The `app.json` override is proven to win in introspection; a build is still the only place the final merge is observable |
+| `NSBonjourServices` | **absent** | `expo-dev-launcher` deletes `_expo._tcp` in a build-phase script when `$CONFIGURATION != "Debug"`. Verified by reading the plugin, not by running it |
+| `NSLocalNetworkUsageDescription` | **absent** | Same script, and only when the text still matches the dev-launcher default |
+| `exp+eraya` URL scheme | present is acceptable, absent is better | Added by the dev client. Harmless, but worth knowing which it is |
+| `RCTMetroPort` | **absent** | A build-time variable; it should not survive a Release build |
+| `MinimumOSVersion` | **16.4** | The real floor, from the Expo SDK 57 podspecs (`ios => '16.4'`). The `LSMinimumSystemVersion: 12.0` the plist carries is a macOS key and is inert on iOS — misleading, but not worth overriding without evidence |
+
 ## Still open
 
-- **Sign in with Apple**, above. The only item that could block review.
+- **Sign in with Apple** needs the paid account: a Service ID, a key and a team
+  identifier. The app side is ready; see the correction above.
 - **In-app purchase.** Premium is unbuyable on iOS until StoreKit exists. That
   is a defensible first release and not a permanent position.
 - **Apple's judgement on an app that sells nothing.** Disabling purchases

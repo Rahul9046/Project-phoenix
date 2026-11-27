@@ -24,7 +24,7 @@
  * `--fast` skips the Expo introspection, which is the slow part: it runs the
  * config plugins, and it is the only part that needs node_modules installed.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -479,7 +479,196 @@ if (fast) {
       "no landscape orientation is declared",
       orientations.join(" "),
     );
+
+    /*
+     * App Transport Security.
+     *
+     * The introspected config used to carry `NSAllowsArbitraryLoads: true`,
+     * which permits plain HTTP to anywhere. Eraya needs no such thing -- every
+     * endpoint it talks to is HTTPS -- and an ATS exception is something App
+     * Review asks about. `app.json` now sets the key explicitly, and this
+     * asserts the override actually wins rather than being merged away by a
+     * plugin.
+     *
+     * The localhost exception and `NSAllowsLocalNetworking` stay: a development
+     * build has to reach Metro over HTTP on the machine or the LAN, and
+     * removing that would break `expo start` to no benefit. They are the
+     * documented narrow form of the thing the broad form was doing.
+     */
+    const ats = plist.NSAppTransportSecurity ?? {};
+    ok(
+      ats.NSAllowsArbitraryLoads === false,
+      "ATS does not allow arbitrary loads",
+      JSON.stringify(ats.NSAllowsArbitraryLoads),
+    );
+    ok(
+      ats.NSExceptionDomains?.localhost?.NSExceptionAllowsInsecureHTTPLoads === true,
+      "the localhost exception survives, so a dev build can still reach Metro",
+    );
+
+    /*
+     * `armv7` is 32-bit ARM and has not existed on a supported iPhone for
+     * years; it was the Expo template's default. The real floor for this SDK is
+     * iOS 16.4, which is arm64 everywhere.
+     */
+    const caps = plist.UIRequiredDeviceCapabilities ?? [];
+    ok(
+      caps.includes("arm64") && !caps.includes("armv7"),
+      "device capabilities name arm64 and not the legacy armv7",
+      caps.join(" "),
+    );
   }
+}
+
+/* -------------------------------------------------------------------------
+ * Which sign-in providers a platform may offer.
+ *
+ * This is a compliance property, not a layout preference, and it has two
+ * halves that fail in opposite directions.
+ *
+ * Guideline 4.8 requires an equivalent alternative login wherever a
+ * third-party one is offered, so an iOS build must never show Google with no
+ * Apple button beside it -- including on the offline path, which is reached by
+ * nothing more exotic than a flaky connection.
+ *
+ * And `/auth/v1/settings` is per-project, not per-platform. Enabling Apple so
+ * that iOS can be submitted enables it for the website and the Android app in
+ * the same instant, so each client needs its own allow list or that config push
+ * ships an untested button to everybody.
+ *
+ * The decision itself is unit-tested in
+ * `apps/mobile/src/features/auth/providers.test.ts`; what this asserts is that
+ * the module still exists, is still wired in, and that the web's own list has
+ * not quietly regained Apple.
+ */
+console.log("\nWho may offer which sign-in provider");
+{
+  const providersFile = join(mobile, "src", "features", "auth", "providers.ts");
+  ok(existsSync(providersFile), "features/auth/providers.ts exists");
+
+  if (existsSync(providersFile)) {
+    const src = readFileSync(providersFile, "utf8");
+
+    const iosList = /const IOS_PROVIDERS[^=]*=\s*\[([^\]]*)\]/.exec(src)?.[1] ?? "";
+    const otherList =
+      /const OTHER_PROVIDERS[^=]*=\s*\[([^\]]*)\]/.exec(src)?.[1] ?? "";
+
+    ok(iosList.includes('"apple"'), "iOS may offer Apple", iosList.trim());
+    ok(
+      !otherList.includes('"apple"'),
+      "Android and the web target may NOT offer Apple",
+      otherList.trim(),
+    );
+    ok(
+      iosList.indexOf('"apple"') < iosList.indexOf('"google"'),
+      "Apple is listed before Google on iOS, so 4.8's alternative is not buried",
+    );
+    ok(
+      /platform === "ios" \? \[\]/.test(src),
+      "the iOS fallback is empty -- never a lone third-party provider",
+    );
+  }
+
+  const signIn = readFileSync(
+    join(mobile, "src", "features", "auth", "sign-in.ts"),
+    "utf8",
+  );
+  ok(
+    signIn.includes("resolveProviders"),
+    "sign-in.ts resolves providers through that module rather than deciding itself",
+  );
+  ok(
+    guardsBefore(signIn, "resolveProviders(platform, null)", "return resolveProviders(platform, settings)"),
+    "a failed settings read takes the fallback before a successful answer is built",
+  );
+
+  const webSettings = readFileSync(
+    join(root, "apps", "web", "src", "features", "auth", "settings.ts"),
+    "utf8",
+  );
+  const webList = /const ALL:[^=]*=\s*\[([^\]]*)\]/.exec(webSettings)?.[1] ?? "";
+  ok(
+    webList.includes('"google"') && !webList.includes('"apple"'),
+    "the website does not offer Apple either",
+    webList.trim(),
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Required-reason APIs, and who declares them.
+ *
+ * Apple rejects an upload that uses a required-reason API without declaring a
+ * reason (ITMS-91053), enforced since May 2024. An app-level
+ * `PrivacyInfo.xcprivacy` is needed when the *app's own* code uses one; an SDK
+ * that uses one ships its own.
+ *
+ * Eraya reaches these APIs only through Expo modules, and the inventory below
+ * is the evidence for that claim rather than an assumption about it. Nothing is
+ * declared on Eraya's behalf -- inventing a manifest to satisfy a static check
+ * would be asserting something about code we did not write.
+ */
+console.log("\nRequired-reason API declarations");
+{
+  const manifests = [
+    ["expo-file-system", ["NSPrivacyAccessedAPICategoryFileTimestamp", "NSPrivacyAccessedAPICategoryDiskSpace"]],
+    ["expo-constants", ["NSPrivacyAccessedAPICategoryUserDefaults"]],
+    ["expo-application", ["NSPrivacyAccessedAPICategoryFileTimestamp"]],
+  ];
+
+  for (const [pkg, categories] of manifests) {
+    const file = join(root, "node_modules", pkg, "ios", "PrivacyInfo.xcprivacy");
+    const present = existsSync(file);
+    ok(present, `${pkg} ships its own privacy manifest`);
+    if (present) {
+      const xml = readFileSync(file, "utf8");
+      for (const category of categories) {
+        ok(xml.includes(category), `${pkg} declares ${category}`);
+      }
+    }
+  }
+
+  /*
+   * The app's own code must not reach a required-reason API directly. These are
+   * the symbols that would mean it does; all of them are absent, which is why
+   * no app-level manifest is declared.
+   */
+  const appSources = [
+    join(mobile, "src"),
+    join(mobile, "app"),
+  ];
+  const forbidden = [
+    "NSUserDefaults",
+    "systemUptime",
+    "mach_absolute_time",
+    "volumeAvailableCapacity",
+    "activeInputModes",
+  ];
+  const hits = [];
+  for (const dir of appSources) {
+    for (const file of walk(dir)) {
+      const src = readFileSync(file, "utf8");
+      for (const symbol of forbidden) {
+        if (src.includes(symbol)) hits.push(`${symbol} in ${file}`);
+      }
+    }
+  }
+  ok(
+    hits.length === 0,
+    "the app's own code calls no required-reason API directly",
+    hits.join("; "),
+  );
+}
+
+/* Every .ts/.tsx under a directory. */
+function walk(dir) {
+  const out = [];
+  if (!existsSync(dir)) return out;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...walk(full));
+    else if (/\.(ts|tsx)$/.test(entry.name)) out.push(full);
+  }
+  return out;
 }
 
 /* -------------------------------------------------------------------------
