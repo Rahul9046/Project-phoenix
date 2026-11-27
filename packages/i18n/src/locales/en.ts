@@ -965,8 +965,8 @@ export const en = {
       stepThree: "Open Eraya and sign in, or create an account. If you already use Eraya on the website, everything is there waiting for you.",
       reassurance: "Nothing else about your phone needs changing, and Eraya uninstalls like any other app whenever you want.",
       /* The one-time reinstall at 0.1.4, when the signing key changed. */
-      reinstallTitle: "Already have Eraya installed?",
-      reinstallBody: "Please uninstall it first, then install this version. Eraya now has its own security signing key, and Android will not update an app when the key changes — that rule is what stops anyone else replacing an app on your phone. You will sign in once with the same account. Your profile, photos, conversations, connections and membership are kept on your account, not on your phone, so nothing is lost. Uninstalling the app is not the same as deleting your Eraya account. Future updates will install normally.",
+      reinstallTitle: "Already have an older version of Eraya?",
+      reinstallBody: "This applies only if the Eraya app on your phone came from a download before version 0.1.4, or from a Play test invitation. If you are installing Eraya for the first time, or already have 0.1.4, the steps above are all you need. Otherwise: please uninstall the older app, then install this version. Eraya's signing identity has changed to one that is Eraya's own, and Android treats an app signed with a new identity as a different app — so it asks you to install rather than update. You will sign in once with the same account. Your profile, photos, conversations, connections and membership are kept on your account, not on your phone, so nothing is lost. Uninstalling the app is not the same as deleting your Eraya account.",
       backToSite: "Visit eraya.app",
     },
     /*
