@@ -38,8 +38,26 @@ storage service never boots, so the `storage` schema is never created, and
 `20260905100100_brand_bucket.sql` fails on `relation "storage.buckets" does not
 exist`. `supabase start` then rolls the whole stack back.
 
-Set `[storage] enabled = true` for a local run. **Do not commit that** without
-deciding what it means for `npm run config:push` — see the warning at the end.
+Set `[storage] enabled = true` for a local run and revert it afterwards. It is
+a local-only nuisance, not a production risk — the section at the end explains
+why, and corrects a Stage 4C finding that said otherwise.
+
+### 1b. Windows may reserve the default ports after a reboot
+
+`supabase start` can fail with `ports are not available: exposing port TCP
+0.0.0.0:54322`, with nothing listening on it. The cause is a Hyper-V dynamic
+port reservation, which Windows re-rolls on boot and which swallowed
+**54263–54362** on 2026-11-27 — every default Supabase port at once.
+
+```sh
+netsh int ipv4 show excludedportrange protocol=tcp
+```
+
+If the range covers 54321–54324, move the local ports out of it: `[api]`,
+`[db] port`/`shadow_port`, `[studio]`, `[local_smtp]`, **and** `[analytics]`
+(Logflare defaults to 54327 and is not declared in this file, so it has to be
+added or disabled). Revert afterwards. Nothing in the suite depends on the port
+numbers — every runner resolves them from `supabase status`.
 
 ### 2. Migrations applied by `migration up` get the wrong privileges
 
@@ -162,20 +180,30 @@ same reason. Defence in depth, and only visible by breaking one layer at a time.
 
 ---
 
-## ⚠️ `[storage] enabled = false` and `config:push`
+## `[storage] enabled = false` — a local nuisance, not a production risk
 
-The flag is not only a local nuisance. `supabase/config.toml` says storage is
-off "matching the project", and that comment is **stale**: production
-demonstrably has storage enabled — the `profile-photos` and brand buckets exist,
-members upload photographs, and `supabase storage ls` has been run against it.
+**Stage 4C flagged this as a live risk of disabling production Storage on the
+next `config:push`. That was wrong, and the evidence is three months old.**
 
-So `npm run config:push` carries a live risk of **disabling storage on
-production**, which would take every profile photograph offline. It has not been
-established what the Management API does with that field, and establishing it by
-pushing is not an experiment worth running.
+The flag does two things, neither of which touches production Storage:
 
-**Before any future `config:push`:** read the storage setting in the Supabase
-dashboard, and reconcile this file to what is actually there. Do not flip the
-value on the strength of this note alone — the comment above it records a `402`
-from the free tier when storage was last enabled in a push, so changing it may
-trade one broken workflow for another.
+- **Locally** it decides whether `supabase start` runs the storage container.
+  False means it does not, which is the whole reason for the bootstrap above.
+- **On push** it tells the CLI not to manage that section. That is why the line
+  exists: `b784553` added it to "make config push exit clean", because with
+  storage enabled the CLI tried to configure vector buckets and the free tier
+  answered `402`, failing every push for an unrelated reason.
+
+The line has been in `config.toml` since **2026-08-29**. At least four config
+pushes have gone out since — Google sign-in, Facebook on, the email rate limit,
+Facebook off — and production Storage has been enabled and serving photographs
+throughout. Verified read-only on 2026-11-27: two buckets (`profile-photos`
+private, `brand` public) and **46 objects** in `profile-photos`.
+
+So **leave it false.** Setting it true would restore the `402` and break
+`npm run config:push` while changing nothing about production.
+
+What *was* genuinely wrong is the comment, which claimed storage was off
+"matching the project". It has been corrected in place, because a stale comment
+that reads as a production risk costs a reviewer real time — it cost this
+project a finding in a launch report.
