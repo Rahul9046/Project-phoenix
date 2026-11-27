@@ -71,11 +71,18 @@ const REPOSITORY = "Rahul9046/Project-phoenix";
  */
 const release = {
   /** The build a visitor downloads. Shown to them. */
-  version: "0.1.3",
+  version: "0.1.4",
   /** The git tag of the GitHub release the APK is attached to. */
-  tag: "android-beta-v0.1.3",
-  /** The asset's name on that release, and so the name it is saved under. */
-  asset: "eraya-beta-v0.1.3.apk",
+  tag: "android-beta-v0.1.4",
+  /**
+   * The asset's name on that release, and so the name it is saved under.
+   *
+   * Renamed at 0.1.4 to say what is true of it: this is the first build signed
+   * with Eraya's own key rather than the Expo template's public debug key. The
+   * two `/downloads` addresses below are unchanged and always will be, so no
+   * link in circulation cares what the asset is called.
+   */
+  asset: "eraya-v0.1.4-production-signed.apk",
 } as const;
 
 const assetUrl = `https://github.com/${REPOSITORY}/releases/download/${release.tag}/${release.asset}`;
