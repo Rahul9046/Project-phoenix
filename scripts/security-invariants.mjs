@@ -28,8 +28,12 @@
  * These are a floor, not a ceiling. They catch a policy that was deleted,
  * narrowed, or never written. They do not catch one that is subtly mis-scoped.
  * So a check passing here means "the structure is right", never "the assertion
- * is verified" -- the nine assertions in `security-probe.mjs` stay unproven
- * until they run against fixtures that are actually onboarded.
+ * is verified".
+ *
+ * The nine assertions in `security-probe.mjs` were run for the first time on
+ * 2026-11-26, against a local stack, and each was then shown to FAIL when the
+ * rule it depends on was removed -- `npm run security:local:mutations`. That is
+ * the verification; this file is still only the floor beneath it.
  *
  * It needs no credentials, makes no network call, and writes nothing.
  */
@@ -399,6 +403,7 @@ if (failures.length) {
 }
 
 console.log(
-  "\nStructural only. These do not verify the nine security-probe assertions,\n" +
-    "which stay unproven until they run against onboarded fixtures.",
+  "\nStructural only. These execute nothing. The nine runtime assertions are\n" +
+    "verified by `npm run security:local` and proved non-vacuous by\n" +
+    "`npm run security:local:mutations`, both of which need Docker.",
 );

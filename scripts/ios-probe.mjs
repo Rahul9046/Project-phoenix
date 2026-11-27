@@ -90,8 +90,8 @@ ok(
   String(app.ios?.buildNumber),
 );
 ok(
-  app.version === "0.1.3",
-  "marketing version is the shipped 0.1.3, shared with Android",
+  app.version === "0.1.4",
+  "marketing version is the shipped 0.1.4, shared with Android",
   app.version,
 );
 ok(app.name === "Eraya", "display name is Eraya", app.name);
@@ -201,9 +201,16 @@ ok(
   "the Android package is untouched",
   app.android?.package,
 );
+/*
+ * Pinned on purpose, and bumped deliberately with each release.
+ *
+ * The point of this assertion is not that the number is 5 -- it is that an iOS
+ * change cannot move the Android versionCode without somebody noticing. A
+ * release bumps it here and in `app.json` together, in the same commit.
+ */
 ok(
-  app.android?.versionCode === 4,
-  "versionCode is still 4",
+  app.android?.versionCode === 5,
+  "versionCode is still 5",
   String(app.android?.versionCode),
 );
 ok(
@@ -213,6 +220,21 @@ ok(
 ok(
   (app.android?.blockedPermissions ?? []).includes("android.permission.RECORD_AUDIO"),
   "RECORD_AUDIO is still blocked explicitly, not only by the picker's option",
+);
+/*
+ * And "Display over other apps", which reached the first Play bundle because
+ * React Native declares it in its debug source set and `expo-dev-client` is a
+ * production dependency. Blocked rather than tolerated: Play lists it on the
+ * store page, and a dating app that can draw over other apps is a question
+ * nobody wants to answer. Asserted here because the only place it is visible is
+ * the merged manifest of a built artifact -- `expo config --type introspect`
+ * cannot see it, so nothing else in this repository would notice its return.
+ */
+ok(
+  (app.android?.blockedPermissions ?? []).includes(
+    "android.permission.SYSTEM_ALERT_WINDOW",
+  ),
+  "SYSTEM_ALERT_WINDOW is blocked -- RN's debug manifest contributes it otherwise",
 );
 
 /* ---------------------------------------------------------------- 5 -------
@@ -421,8 +443,8 @@ if (fast) {
 
   if (plist) {
     ok(
-      plist.CFBundleShortVersionString === "0.1.3",
-      "CFBundleShortVersionString is 0.1.3",
+      plist.CFBundleShortVersionString === "0.1.4",
+      "CFBundleShortVersionString is 0.1.4",
       plist.CFBundleShortVersionString,
     );
     ok(plist.CFBundleVersion === "1", "CFBundleVersion is 1", plist.CFBundleVersion);

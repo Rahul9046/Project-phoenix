@@ -253,7 +253,8 @@ delete policy for anyone.
 
 ## Android permissions
 
-`android.permissions` is `[]` and `RECORD_AUDIO` is in `blockedPermissions`.
+`android.permissions` is `[]`, and `RECORD_AUDIO` and `SYSTEM_ALERT_WINDOW` are
+both in `blockedPermissions`.
 
 The microphone was declared and used by nothing. On a product where people
 decide whether to meet a stranger, an install screen asking for the microphone
@@ -261,9 +262,38 @@ costs trust and buys nothing, and "a library probably wanted it" is not a reason
 a member ever hears. `blockedPermissions` keeps it out even if a future plugin
 adds it back without anyone noticing.
 
+`SYSTEM_ALERT_WINDOW` -- "Display over other apps" -- is blocked for the same
+reason. React Native declares it in its **debug** source set
+(`react-native/ReactAndroid/src/debug/AndroidManifest.xml`) for the redbox and
+the dev overlay, and it reached the release artifact because `expo-dev-client`
+is a production dependency, so the dev launcher and its manifest get linked in.
+Nothing in Eraya draws over anything. It was found on 2026-10-31 in a Play
+bundle's merged manifest, blocked there, and carried into the direct-distribution
+build on 2026-11-26 -- the direct APK had been shipping it since v0.1.2.
+
+**The merged manifest is the only place this is visible.**
+`expo config --type introspect` cannot show it, because the Gradle manifest
+merge is a build step. Read it from a finished artifact instead:
+`aapt dump permissions <apk>`, or `bundletool dump manifest --bundle <aab>`.
+
+Blocking works by emitting `tools:node="remove"`, so the merger drops whatever a
+library contributed. That it works is not a guess: `RECORD_AUDIO` is blocked the
+same way and is absent from every built artifact. `scripts/ios-probe.mjs`
+asserts both blocks, so removing one fails a check rather than appearing on a
+store listing or an install screen.
+
+The deeper fix is to move `expo-dev-client` to `devDependencies`, which would
+take the dev launcher, its manifest and its code out of the release artifact
+entirely and shrink it. That changes the dependency graph and the local dev
+workflow, so it is deliberately a separate decision from declining one
+permission -- the remaining exposure is recorded in
+[07-open-questions.md](07-open-questions.md).
+
 Photo access stays: `expo-image-picker` carries its own usage string and profile
-photos need it. Camera is deliberately absent -- the app picks from the library
-and never captures directly.
+photos need it. It contributes `READ_EXTERNAL_STORAGE` and
+`WRITE_EXTERNAL_STORAGE`, both capped at `maxSdkVersion="32"`, so on Android 13
+and later neither is requested at all. Camera is deliberately absent -- the app
+picks from the library and never captures directly.
 
 ## Photos
 
@@ -467,9 +497,14 @@ when something has to run on an emulator, and never publish it.
 **`android/` is gitignored**, so `app.json` and the native project drift. The
 version has to be set in both -- `app.json` for the JS side and
 `versionCode`/`versionName` in `app/build.gradle` for the APK -- and
-`npx expo prebuild` must **not** be used to reconcile them, because it can
-regenerate `debug.keystore` and strand every existing install. Edit the two
-files.
+`npx expo prebuild` regenerates `android/` wholesale -- with or without
+`--clean` -- so edit `app.json` and let prebuild carry the version across rather
+than editing the generated files. Prebuild is safe to run: the signing
+configuration is re-applied from `plugins/with-release-signing.js`, and the
+keystore itself has never lived in `android/`. (An earlier note here warned that
+prebuild would "strand every existing install" by regenerating
+`debug.keystore`. It reproduces that file byte for byte, because the template
+ships it -- which is the same fact that made it unfit to sign with.)
 
 Confirm what was built before publishing it:
 
@@ -480,17 +515,20 @@ unzip -l <apk> | grep -o 'lib/[^/]*' | sort -u   # the ABIs actually inside
 
 ### Signing
 
-`apps/mobile/android/app/build.gradle` points the `release` build type at
-`signingConfigs.debug`, which is the Expo bare template's default, so a release
-APK carries the universal `CN=Android Debug` certificate from
-`apps/mobile/android/app/debug.keystore`.
+Release builds are signed with **Eraya's own key** since v0.1.4: RSA 4096,
+SHA384withRSA, `CN=Eraya`, certificate SHA-256 `dd86912d…81aafd3c`, v2 + v3
+schemes. The keystore lives in `~/.eraya/signing/`, outside this repository and
+outside the generated `android/` directory, and the Gradle configuration that
+reads it is re-applied on every prebuild by
+`apps/mobile/plugins/with-release-signing.js`. A release build with no
+credentials available **fails**; it never falls back to the debug key.
 
-**That identity must be preserved.** Android will not install an update signed
-by a different key over an existing install, so it is what keeps everybody
-already running Eraya upgradeable -- and offering the download publicly raises
-the stakes on that rather than changing the rule: the set of installs a key
-change would strand is now open-ended rather than a tester list. The keystore is
-backed up locally and off-device.
+Everything up to **v0.1.3** was signed with the Expo template's
+`CN=Android Debug` certificate, whose private key ships in the template and is
+therefore public. Android will not update across a key change, so v0.1.4 needs a
+one-time uninstall and reinstall -- the notice for members is drafted, and the
+whole story is in
+[15-android-signing-and-distribution.md](15-android-signing-and-distribution.md).
 
 Verify before distributing any build:
 
@@ -498,12 +536,12 @@ Verify before distributing any build:
 apksigner verify --print-certs <apk>
 ```
 
-Anything other than the expected certificate must not go to existing installs.
+Anything other than `dd86912d…81aafd3c` must not be published.
 
-**Play App Signing and an upload key still have to be set up, and what identity
-the Play build will carry is deliberately undecided.** Nothing in this
-repository depends on the answer. See
-[07-open-questions.md](07-open-questions.md).
+**Play is a separate identity and always will be.** The Play upload key is held
+by EAS; Play installs carry a third certificate Google generated under Play App
+Signing. An APK built here can never update a Play install, in either direction.
+See [07-open-questions.md](07-open-questions.md).
 
 ### Switching the website to Google Play
 

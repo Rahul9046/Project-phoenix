@@ -217,15 +217,37 @@ enabled = false
 client_id = "env(SUPABASE_AUTH_FACEBOOK_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_FACEBOOK_SECRET)"
 
-# Storage is off, matching the project.
+# This does NOT mean production has no Storage. It does.
 #
-# Declared explicitly rather than left to the CLI's defaults. Without this,
-# `supabase config push` tries to enable storage with vector buckets, which the
-# free tier refuses with a 402 -- so every push ended in an error that had
-# nothing to do with what was being pushed, and the real result got lost in it.
+# The first line here used to read "Storage is off, matching the project", and
+# both halves of that were wrong by 2026-09. Production has two buckets --
+# `profile-photos` (private) and `brand` (public) -- created by
+# 20260830160200 and 20260905100100, holding 46 member photographs as of
+# 2026-11-27. Profile photos arrived; this comment never caught up, and the
+# stale version was read in Stage 4C as evidence that a `config push` might
+# switch production Storage off.
 #
-# Turn this on when profile photos arrive; they will need a bucket and its own
-# RLS policies.
+# It will not. What this flag does:
+#
+#   * LOCALLY it decides whether `supabase start` runs the storage container.
+#     False means it does not, which is why a local stack cannot apply
+#     20260905100100 -- that migration inserts into `storage.buckets`, and the
+#     schema is created by the storage service on boot. See
+#     docs/18-local-validation.md for the bootstrap that works around it.
+#
+#   * ON PUSH it tells the CLI not to manage this section. That is the whole
+#     reason the line exists: it was added by b784553, "make config push exit
+#     clean", because with storage enabled the CLI tried to configure vector
+#     buckets and the free tier answered 402 -- so every push failed for a
+#     reason unrelated to what was being pushed.
+#
+# The evidence that it is harmless is three months of it: this line has been
+# here since 2026-08-29, at least four config pushes have gone out since
+# (Google sign-in, Facebook on, the email rate limit, Facebook off), and
+# production Storage has been enabled and serving photographs throughout.
+#
+# So leave it false. Setting it true would restore the 402 and break
+# `npm run config:push` without changing anything about production.
 [storage]
 enabled = false
 
