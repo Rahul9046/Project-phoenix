@@ -36,6 +36,21 @@ const ADVICE = [
     title: "help.neverSendMoneyTitle",
     body: "help.neverSendMoneyBody",
   },
+  /*
+   * Contact details, placed after "take your time" and before blocking.
+   *
+   * Private conversations deliberately allow a phone number or an email to be
+   * exchanged -- adults who have chosen each other should not have to leave
+   * Eraya to do something this ordinary. The safeguard for that is guidance in
+   * one place somebody can read once, NOT a warning attached to every message:
+   * a product that interrupts each line of a conversation trains people to
+   * dismiss it, and has then spent its credibility on nothing.
+   */
+  {
+    icon: "call-outline",
+    title: "help.shareContactTitle",
+    body: "help.shareContactBody",
+  },
   {
     icon: "hand-left-outline",
     title: "help.blockTitle",

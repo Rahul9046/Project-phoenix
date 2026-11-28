@@ -1,0 +1,28 @@
+{
+  "_comment": [
+    "The Android build Eraya currently recommends. Read by the app from",
+    "https://eraya.app/app-version.json to show a dismissible 'there is a newer",
+    "version' card. See apps/mobile/src/features/updates/.",
+    "",
+    "RULES FOR EDITING THIS FILE",
+    "",
+    "1. Only ever name a release that is ALREADY PUBLISHED. The app turns this",
+    "   into a download button, so naming an unpublished version points members",
+    "   at a 404. Publish the GitHub release first, then change this.",
+    "2. downloadUrl must stay on https://eraya.app. The app rejects any other",
+    "   origin on purpose -- it will not hand a member an APK from a host the",
+    "   product does not control.",
+    "3. There is no minimum-version or force-update field, deliberately. Nothing",
+    "   in this file can lock anybody out of their account; see version.ts.",
+    "4. This file is served as a static asset, so changing it needs a web deploy",
+    "   (apps/web/** is in the deploy filter) and costs no Worker CPU.",
+    "",
+    "NOTE ON v0.1.4: the published 0.1.4 build contains no version check at all,",
+    "so it will never read this file. The notice begins working with v0.1.5."
+  ],
+  "android": {
+    "version": "0.1.4",
+    "versionCode": 5,
+    "downloadUrl": "https://eraya.app/downloads/eraya.apk"
+  }
+}

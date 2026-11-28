@@ -26,6 +26,12 @@ import {
   type Crop,
   type SourceImage,
 } from "@/features/account/photos";
+import {
+  myPhotoReviewStates,
+  photoRejectionReasonKey,
+  photoStatusKey,
+  type PhotoReviewState,
+} from "@/features/account/photo-review";
 
 /**
  * A photo, if they want one.
@@ -70,6 +76,13 @@ function PhotoForm() {
   const [error, setError] = useState<string | null>(null);
 
   /*
+   * Where each photograph is in review. An empty map is a complete answer: it
+   * is what a pre-migration database yields, and the tiles then render exactly
+   * as they did before moderation existed.
+   */
+  const [review, setReview] = useState<Record<string, PhotoReviewState>>({});
+
+  /*
    * The batch being framed. `waiting` is what has been chosen and not yet been
    * looked at, `source` is the one on the screen now, and `batch` is only there
    * so the member can be told "2 of 3" rather than being shown an unexplained
@@ -96,7 +109,11 @@ function PhotoForm() {
 
       setPaths(existing);
       setLoading(false);
-      if (existing.length > 0) await sign(existing);
+      if (existing.length > 0) {
+        await sign(existing);
+        const states = await myPhotoReviewStates();
+        if (active) setReview(states);
+      }
     })();
 
     return () => {
@@ -207,6 +224,13 @@ function PhotoForm() {
 
     setPaths((current) => [...current, ...result.paths]);
     await sign(result.paths);
+    /*
+     * Re-read the review states, so a photograph just uploaded says "waiting to
+     * be checked" immediately rather than after a reload. This is the moment the
+     * member most needs to be told: they have handed over a picture of
+     * themselves and are deciding whether the step is done.
+     */
+    setReview(await myPhotoReviewStates());
     setPending(false);
 
     const framed = (batch?.index ?? 0) + 1;
@@ -288,6 +312,28 @@ function PhotoForm() {
                         />
                       ) : null}
                     </div>
+                    {/*
+                      What is happening to this photograph, when anything is.
+                      Nothing is drawn for an approved or grandfathered one, and
+                      nothing at all before the migration is applied -- see
+                      photo-review.ts. Without this the website accepts a
+                      photograph and never mentions that nobody else can see it.
+                    */}
+                    {photoStatusKey(review[path]) ? (
+                      <p className="mt-1.5 text-[0.8rem] leading-snug text-ink-muted">
+                        {t(photoStatusKey(review[path])!)}
+                        {photoRejectionReasonKey(review[path]) ? (
+                          <span className="block text-ink-subtle">
+                            {t(photoRejectionReasonKey(review[path])!)}
+                          </span>
+                        ) : null}
+                        {review[path]?.state === "pending" ? (
+                          <span className="block text-ink-subtle">
+                            {t("photos.review.waitingCanReplace")}
+                          </span>
+                        ) : null}
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       disabled={pending}

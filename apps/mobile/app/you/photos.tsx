@@ -366,6 +366,18 @@ export default function Photos() {
                   {t(photoRejectionReasonKey(review[selected])!)}
                 </Text>
               ) : null}
+              {/*
+                What they can do about it, said only while a photograph is
+                actually waiting. A refusal already ends with "you can remove it
+                and add another", so repeating it there would be the same
+                sentence twice; a pending photograph otherwise leaves somebody
+                believing they have to wait before they can change their mind.
+              */}
+              {review[selected]?.state === "pending" ? (
+                <Text variant="caption" tone="subtle">
+                  {t("photos.review.waitingCanReplace")}
+                </Text>
+              ) : null}
             </View>
           ) : null}
 

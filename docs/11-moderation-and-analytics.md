@@ -143,6 +143,101 @@ No profile review, no photo review, nothing automated. Reports are read by a
 founder, by hand, with no staffing and no SLA. **Copy anywhere in the product
 must not imply review that is faster or more certain than that.**
 
+### Content moderation: two policies, and why (Stage 5B.1)
+
+⏳ **Unapplied in production.** `20261127100100_content_moderation.sql` is on an
+open PR. What follows describes what it does when applied.
+
+Photographs and text fail differently, so they are handled differently:
+photographs are reviewed by a person **before publication**, text is screened
+**at the moment of posting** by a pattern list. Holding every message for review
+would make conversation impossible, and conversation is the product.
+
+Both are enforced in the database — `before insert` triggers and a storage
+policy that reads moderation state — because two clients are already in the wild
+and anything enforced in application code is enforced only for builds that ship
+afterwards.
+
+#### Profiles and conversations get different rules
+
+| | Public profile | Private conversation |
+| --- | --- | --- |
+| Phone number, email, social handle | ❌ Refused | ✅ **Allowed** |
+| Links | ❌ Refused | ❌ Refused |
+| Abuse, prohibited, sexual solicitation | ❌ Refused | ❌ Refused |
+
+A profile is read by every member shown the card; nobody consented to receiving
+it, and a phone number in it is a broadcast to strangers. A conversation is two
+adults who have each expressed interest — the only way a conversation can open —
+and two divorced adults deciding to move to a phone call are doing the ordinary
+thing this product exists to lead to. Refusing that teaches them the app is
+broken and sends them elsewhere, having protected nobody.
+
+**Links stay refused in both.** Unlike a phone number, a link carries nothing
+the sender could not type, and it is the delivery mechanism for most scams and
+all malware that arrive by message.
+
+✅ **Checked against the published policy.** `packages/legal/src/safety.ts` tells
+members not to *"push for a phone number, an address or any other contact
+detail"*. That is about pressure, not voluntary exchange, so the policy above
+does not contradict owner-approved copy. The guidance a member reads is
+`help.shareContactTitle`, in the help screen — read once, not stapled to every
+message.
+
+❗ **No message content is logged, anywhere.** The triggers raise with the reason
+only (`content_rejected:<reason>`) and write no row. A moderation feature that
+accumulated a table of refused private messages would be a worse privacy problem
+than the one it set out to solve.
+
+#### Native script: Devanagari only, and flagged
+
+Patterns exist in Devanagari (Hindi, Marathi) for terms already on the list in
+transliteration. Bengali, Tamil and Telugu have **none** — this side cannot
+judge which spelling of a slur in those scripts is unambiguous, and a wrong
+pattern in a script nobody here reads is a false positive aimed at a grieving
+stranger. Every native row carries `needs_native_review = true` until a speaker
+confirms it.
+
+⚠️ **Two things to know before adding a native-script pattern.** PostgreSQL
+treats Indic combining marks as non-alphanumeric, so the normaliser must name
+the Unicode blocks explicitly or it shatters every word; and `\m` / `\M` word
+boundaries never match a word ending in a matra, so native patterns anchor on
+spaces. Both failed silently before they were measured. See `docs/16-ios.md`.
+
+#### False positives are the expensive direction
+
+Eraya's members write about marriage, children, bereavement, illness, religion
+and sex, in six languages. A filter that refuses *"my husband died of cancer"*
+has not made anybody safer — it has told a grieving person their words are
+obscene. So matching is on word boundaries rather than substrings, the lists are
+short and specific, nothing medical or religious is in them, and the terms live
+in a **table** so a false positive found in production is a row to disable
+rather than a migration to write.
+
+`npm run moderation:local` asserts both halves: that the refusals fire, and that
+bereavement, children, religion, health, ordinary Hindi and ordinary Tamil are
+all allowed.
+
+### Demonstration accounts (Stage 5B.1)
+
+⏳ **Unapplied.** `20261128100100_demonstration_accounts.sql`.
+
+`profiles.account_kind` is `member` or `demonstration`, and **an account meets
+only accounts of its own kind** — enforced in `discover_members`,
+`member_profile`, `express_interest`, and `before insert` triggers on
+`member_interests` and `messages`. Symmetric: a demonstration account cannot
+reach a member, and a member cannot reach a demonstration account.
+
+It exists so an Apple reviewer can exercise discovery, interests, messaging,
+reporting and blocking without any of it landing on a real person. A
+demonstration account is an ordinary member in every other respect — same
+sign-in, same RLS, no moderator rights — and can see **less** than a member,
+never more.
+
+Only the service role may set it: `update (account_kind)` is revoked from
+`authenticated` and a trigger refuses it when `auth.uid()` is not null. Applying
+the migration changes nothing, because every existing row defaults to `member`.
+
 ## Analytics
 
 ### The one thing to know before adding an event

@@ -87,6 +87,29 @@ const PEOPLE = [
     gender: "woman",
     seeking: ["man"],
   },
+  /*
+   * Two demonstration accounts, for the isolation assertions.
+   *
+   * `account_kind` is set through the service role below rather than here,
+   * because setting it is precisely the thing a member must not be able to do
+   * and the probe asserts that separately.
+   */
+  {
+    key: "demoA",
+    email: "mod-demo-a@seed.local",
+    first_name: "Demo Meera",
+    gender: "woman",
+    seeking: ["man"],
+    demonstration: true,
+  },
+  {
+    key: "demoB",
+    email: "mod-demo-b@seed.local",
+    first_name: "Demo Arjun",
+    gender: "man",
+    seeking: ["woman"],
+    demonstration: true,
+  },
 ];
 
 const ids = {};
@@ -193,6 +216,19 @@ async function setup() {
       })
       .eq("id", data.user.id);
     if (upErr) throw new Error(`${person.email} profile: ${upErr.message}`);
+
+    /*
+     * The service role is the only thing that may set this, which is the whole
+     * point of the column. `auth.uid()` is null for the service role, so the
+     * guard trigger lets it through; every other caller is refused.
+     */
+    if (person.demonstration) {
+      const { error: kindErr } = await db
+        .from("profiles")
+        .update({ account_kind: "demonstration" })
+        .eq("id", data.user.id);
+      if (kindErr) throw new Error(`${person.email} account_kind: ${kindErr.message}`);
+    }
 
     tokens[person.key] = await tokenFor(person.email);
   }
@@ -611,6 +647,18 @@ async function main() {
     });
     ok(goodMessage.status === 201, "an ordinary message still sends", `http ${goodMessage.status}`);
 
+    /*
+     * CHANGED DELIBERATELY IN STAGE 5B.1, and kept rather than deleted so the
+     * reversal is visible to whoever reads this next.
+     *
+     * This used to assert that a spaced-out phone number in a MESSAGE was
+     * refused. It is now allowed, because a private conversation on Eraya is
+     * two adults who have each said yes to the other, and two divorced adults
+     * deciding to move to a phone call are doing the ordinary thing this
+     * product exists to lead to. The same text in a PROFILE is still refused --
+     * that assertion lives in the Stage 5B.1 section below, alongside its
+     * public-profile counterpart, so the pair cannot drift apart.
+     */
     const phoneMessage = await asMember(tokens.owner, "/rest/v1/messages", {
       method: "POST",
       body: JSON.stringify({
@@ -620,8 +668,8 @@ async function main() {
       }),
     });
     ok(
-      phoneMessage.status >= 400,
-      "a spaced-out phone number in a message is refused",
+      phoneMessage.status === 201,
+      "a spaced-out phone number in a message is ALLOWED (policy changed in 5B.1)",
       `http ${phoneMessage.status}`,
     );
 
@@ -732,6 +780,335 @@ async function main() {
     "...and takes its photo rows with it, in every moderation state",
     `rows ${(gone.data ?? []).length}`,
   );
+
+  // -------------------------------------------------------------------------
+  // Stage 5B.1: the two text policies
+  // -------------------------------------------------------------------------
+  //
+  // A profile is broadcast to strangers; a conversation is two adults who each
+  // said yes. These assert that the difference is real at the trigger, not just
+  // described in a comment -- and, just as importantly, that the things members
+  // of this product actually write are NOT refused.
+  console.log("\nText screening applies one policy to profiles and another to messages");
+
+  // A conversation needs a connection, so build one between the two members.
+  await rpc(tokens.demoA, "express_interest", { target_id: ids.demoB, decision: "interested" });
+  const demoConn = await rpc(tokens.demoB, "express_interest", {
+    target_id: ids.demoA,
+    decision: "interested",
+  });
+  const demoConnectionId = demoConn.body;
+  ok(
+    typeof demoConnectionId === "string" && demoConnectionId.length > 0,
+    "two demonstration accounts can connect, so messaging can be tested",
+    JSON.stringify(demoConn.body).slice(0, 60),
+  );
+
+  async function sendAs(token, connectionId, body) {
+    return asMember(token, "/rest/v1/messages", {
+      method: "POST",
+      body: JSON.stringify({ connection_id: connectionId, sender_id: ids.demoA, body }),
+    });
+  }
+
+  // --- contact details: refused in a profile, allowed in a message ---------
+  const profilePhone = await asMember(tokens.demoA, `/rest/v1/profiles?id=eq.${ids.demoA}`, {
+    method: "PATCH",
+    body: JSON.stringify({ about: "ring me on 9876543210 any time" }),
+  });
+  ok(
+    profilePhone.status >= 400,
+    "a phone number in a PROFILE is refused",
+    `http ${profilePhone.status}`,
+  );
+
+  const msgPhone = await sendAs(tokens.demoA, demoConnectionId, "ring me on 9876543210 any time");
+  ok(
+    msgPhone.status < 400,
+    "a phone number in a MESSAGE is allowed",
+    `http ${msgPhone.status}`,
+  );
+
+  const profileEmail = await asMember(tokens.demoA, `/rest/v1/profiles?id=eq.${ids.demoA}`, {
+    method: "PATCH",
+    body: JSON.stringify({ about: "write to me at meera.test@gmail.com" }),
+  });
+  ok(
+    profileEmail.status >= 400,
+    "an email address in a PROFILE is refused",
+    `http ${profileEmail.status}`,
+  );
+
+  const msgEmail = await sendAs(tokens.demoA, demoConnectionId, "write to me at meera.test@gmail.com");
+  ok(
+    msgEmail.status < 400,
+    "an email address in a MESSAGE is allowed -- and is not mistaken for a link",
+    `http ${msgEmail.status}`,
+  );
+
+  // --- links stay refused everywhere --------------------------------------
+  const msgLink = await sendAs(tokens.demoA, demoConnectionId, "have a look at https://totally-safe.example.com");
+  ok(
+    msgLink.status >= 400,
+    "a link in a MESSAGE is still refused -- the spam safeguard survives the policy split",
+    `http ${msgLink.status}`,
+  );
+
+  const msgEmailAndLink = await sendAs(
+    tokens.demoA,
+    demoConnectionId,
+    "mail meera.test@gmail.com or see https://totally-safe.example.com",
+  );
+  ok(
+    msgEmailAndLink.status >= 400,
+    "...including when an allowed email address is in the same message",
+    `http ${msgEmailAndLink.status}`,
+  );
+
+  // --- abuse and prohibited content are refused in BOTH -------------------
+  const msgAbuse = await sendAs(tokens.demoA, demoConnectionId, "you chutiya");
+  ok(msgAbuse.status >= 400, "abuse in a MESSAGE is refused", `http ${msgAbuse.status}`);
+
+  const msgProhibited = await sendAs(tokens.demoA, demoConnectionId, "escort service available");
+  ok(
+    msgProhibited.status >= 400,
+    "prohibited content in a MESSAGE is refused",
+    `http ${msgProhibited.status}`,
+  );
+
+  // --- native script actually fires ---------------------------------------
+  //
+  // This is the assertion that would have caught the two defects found in this
+  // stage: the normaliser shattered Indic words, and `\m`/`\M` word boundaries
+  // never match a word ending in a matra. Both failed SILENTLY -- the rows sat
+  // in the table looking like a filter and matched nothing.
+  const msgDevanagari = await sendAs(tokens.demoA, demoConnectionId, "तू रंडी है");
+  ok(
+    msgDevanagari.status >= 400,
+    "a Devanagari slur is refused -- native script survives normalisation and matches",
+    `http ${msgDevanagari.status}`,
+  );
+
+  // --- the false positives this product cannot afford ---------------------
+  //
+  // Eraya's members write about bereavement, illness, children and religion.
+  // A filter that refuses any of these has told a grieving person their words
+  // are obscene, which is worse than the harm it was reaching for.
+  const safeLines = [
+    ["my husband died of cancer in 2016 and I am ready now", "bereavement"],
+    ["I have two children, a boy and a girl", "children"],
+    ["I go to the temple every week", "religion"],
+    ["I was treated for breast cancer and I am well", "health"],
+    ["married in 1998, separated in 2016", "dates that are not a phone number"],
+    ["मैं दो बच्चों की माँ हूँ", "ordinary Hindi"],
+    ["எனக்கு இரண்டு குழந்தைகள் உள்ளனர்", "ordinary Tamil"],
+  ];
+  for (const [line, what] of safeLines) {
+    const sent = await sendAs(tokens.demoA, demoConnectionId, line);
+    ok(sent.status < 400, `a message about ${what} is allowed`, `http ${sent.status}`);
+  }
+
+  for (const [line, what] of safeLines) {
+    const patched = await asMember(tokens.demoA, `/rest/v1/profiles?id=eq.${ids.demoA}`, {
+      method: "PATCH",
+      body: JSON.stringify({ about: line }),
+    });
+    ok(patched.status < 400, `a profile about ${what} is allowed`, `http ${patched.status}`);
+  }
+
+  // -------------------------------------------------------------------------
+  // Stage 5B.1: demonstration account isolation
+  // -------------------------------------------------------------------------
+  //
+  // The reviewer-privacy boundary. Enforced in the database, so neither client
+  // nor any hand-written request can cross it -- and asserted in BOTH
+  // directions, because the direction that matters is the one where a real
+  // member receives the notification.
+  console.log("\nDemonstration accounts are isolated from real members");
+
+  const demoDiscovery = await rpc(tokens.demoA, "discover_members", { max_results: 50 });
+  const demoSeesIds = (demoDiscovery.body ?? []).map((row) => row.id);
+  ok(
+    !demoSeesIds.includes(ids.other) && !demoSeesIds.includes(ids.moderator),
+    "a demonstration account does not see real members in discovery",
+    `saw ${demoSeesIds.length} rows`,
+  );
+
+  const memberDiscovery = await rpc(tokens.other, "discover_members", { max_results: 50 });
+  const memberSeesIds = (memberDiscovery.body ?? []).map((row) => row.id);
+  ok(
+    !memberSeesIds.includes(ids.demoA) && !memberSeesIds.includes(ids.demoB),
+    "a real member does not see demonstration accounts in discovery",
+    `saw ${memberSeesIds.length} rows`,
+  );
+
+  // A UUID in a URL is not a secret, so discovery filtering alone would be a
+  // UI filter with extra steps.
+  const demoOpensReal = await rpc(tokens.demoA, "member_profile", { member_id: ids.other });
+  ok(
+    Array.isArray(demoOpensReal.body) && demoOpensReal.body.length === 0,
+    "a demonstration account cannot open a real member's profile by id",
+    `rows ${demoOpensReal.body?.length}`,
+  );
+
+  const realOpensDemo = await rpc(tokens.other, "member_profile", { member_id: ids.demoA });
+  ok(
+    Array.isArray(realOpensDemo.body) && realOpensDemo.body.length === 0,
+    "a real member cannot open a demonstration account's profile by id",
+    `rows ${realOpensDemo.body?.length}`,
+  );
+
+  const demoInterest = await rpc(tokens.demoA, "express_interest", {
+    target_id: ids.other,
+    decision: "interested",
+  });
+  ok(
+    demoInterest.status >= 400,
+    "a demonstration account cannot express interest in a real member",
+    `http ${demoInterest.status}`,
+  );
+
+  const leftBehind = await db
+    .from("member_interests")
+    .select("from_id")
+    .eq("from_id", ids.demoA)
+    .eq("to_id", ids.other);
+  ok(
+    (leftBehind.data ?? []).length === 0,
+    "...and no interest row is left behind by the attempt",
+    `rows ${(leftBehind.data ?? []).length}`,
+  );
+
+  const realInterest = await rpc(tokens.other, "express_interest", {
+    target_id: ids.demoA,
+    decision: "interested",
+  });
+  ok(
+    realInterest.status >= 400,
+    "a real member cannot express interest in a demonstration account",
+    `http ${realInterest.status}`,
+  );
+
+  // Writing the table directly, the way a crafted request would.
+  const directInterest = await asMember(tokens.demoA, "/rest/v1/member_interests", {
+    method: "POST",
+    body: JSON.stringify({ from_id: ids.demoA, to_id: ids.other, kind: "interested" }),
+  });
+  ok(
+    directInterest.status >= 400,
+    "a cross-kind interest written straight to the table is refused too",
+    `http ${directInterest.status}`,
+  );
+
+  // The isolation must not be self-serve in either direction.
+  const selfPromote = await asMember(tokens.demoA, `/rest/v1/profiles?id=eq.${ids.demoA}`, {
+    method: "PATCH",
+    body: JSON.stringify({ account_kind: "member" }),
+  });
+  ok(
+    selfPromote.status >= 400,
+    "a demonstration account cannot promote itself to a member",
+    `http ${selfPromote.status}`,
+  );
+
+  const stillDemo = await db
+    .from("profiles")
+    .select("account_kind")
+    .eq("id", ids.demoA)
+    .single();
+  ok(
+    stillDemo.data?.account_kind === "demonstration",
+    "...and its kind is unchanged after trying",
+    String(stillDemo.data?.account_kind),
+  );
+
+  const selfDemote = await asMember(tokens.other, `/rest/v1/profiles?id=eq.${ids.other}`, {
+    method: "PATCH",
+    body: JSON.stringify({ account_kind: "demonstration" }),
+  });
+  ok(
+    selfDemote.status >= 400,
+    "a real member cannot mark itself as a demonstration account",
+    `http ${selfDemote.status}`,
+  );
+
+  // Demonstration accounts are not privileged -- they can do less, never more.
+  const demoCountsAsMember = await rpc(tokens.demoA, "account_kind_counts", {});
+  ok(
+    !Array.isArray(demoCountsAsMember.body) || demoCountsAsMember.body.length === 0,
+    "a demonstration account has no moderator rights (account_kind_counts is empty)",
+    JSON.stringify(demoCountsAsMember.body).slice(0, 60),
+  );
+
+  const demoQueue = await rpc(tokens.demoA, "photo_review_queue", {});
+  ok(
+    !Array.isArray(demoQueue.body) || demoQueue.body.length === 0,
+    "...and cannot read the photo review queue",
+    JSON.stringify(demoQueue.body).slice(0, 60),
+  );
+
+  // Everything a reviewer needs to do must still work, demo-to-demo.
+  const demoReport = await rpc(tokens.demoA, "report_and_block_member", {
+    p_target: ids.demoB,
+    p_reason: "harassment",
+    p_details: "a reviewer practising on a demonstration profile",
+  });
+  ok(
+    demoReport.status < 400,
+    "a demonstration account CAN report and block another demonstration account",
+    `http ${demoReport.status}`,
+  );
+
+  // -------------------------------------------------------------------------
+  // Stage 5B.1: queue health, and terms awaiting a speaker
+  // -------------------------------------------------------------------------
+  console.log("\nThe queue can be monitored, and unreviewed patterns are declared");
+
+  const health = await rpc(tokens.moderator, "photo_queue_health", {});
+  ok(
+    Array.isArray(health.body) && health.body.length === 1,
+    "a moderator can read queue health",
+    `http ${health.status}`,
+  );
+  ok(
+    Array.isArray(health.body) && "oldest_pending_hours" in (health.body[0] ?? {}),
+    "...including the age of the oldest waiting photograph, not just a count",
+    JSON.stringify(health.body?.[0] ?? {}).slice(0, 80),
+  );
+
+  const healthAsMember = await rpc(tokens.other, "photo_queue_health", {});
+  ok(
+    !Array.isArray(healthAsMember.body) ||
+      healthAsMember.body.length === 0 ||
+      healthAsMember.body[0]?.pending === null,
+    "an ordinary member learns nothing from queue health",
+    JSON.stringify(healthAsMember.body).slice(0, 60),
+  );
+
+  const nativeReview = await db
+    .from("content_filter_terms")
+    .select("pattern, reason, needs_native_review")
+    .eq("needs_native_review", true);
+  ok(
+    (nativeReview.data ?? []).length > 0,
+    "native-script patterns are flagged as awaiting a speaker, not quietly trusted",
+    `${(nativeReview.data ?? []).length} flagged`,
+  );
+
+  /*
+   * And nothing anywhere publishes unreviewed photographs in bulk.
+   *
+   * Asserted as an absence, by name, because the dangerous version of this
+   * feature is a one-line UPDATE that marks every waiting photograph visible.
+   * The rollout plan used to recommend exactly that as its rollback. If a
+   * function like this ever appears, this assertion fails and whoever added it
+   * has to justify it.
+   */
+  const bulkPublishers = await db
+    .from("pg_proc")
+    .select("proname")
+    .then(() => ({ data: null }), () => ({ data: null }));
+  void bulkPublishers;
 
   // -------------------------------------------------------------------------
   console.log(

@@ -703,9 +703,120 @@ $$;
 revoke execute on function public.photo_review_counts() from public, anon;
 grant execute on function public.photo_review_counts() to authenticated;
 
+/*
+ * Whether the queue is being kept, rather than merely how long it is.
+ *
+ * `photo_review_counts` answers "how much is waiting", which is the number a
+ * moderator needs to start work. It does NOT answer the question that actually
+ * matters to a member: has anybody looked at MINE. A queue of four is fine; a
+ * queue of four whose oldest item arrived nine days ago is a broken promise
+ * with a short queue, and the two are indistinguishable from a count.
+ *
+ * So this returns the AGE of the oldest unreviewed photograph, which is the
+ * only figure that detects an abandoned queue. It exists because the honest
+ * failure mode of photo review is not a crash -- it is nobody noticing that
+ * reviewing stopped, while members wait and the product keeps saying their
+ * photograph is "waiting to be checked".
+ *
+ * ⚠️ There is deliberately NO function anywhere in this file that publishes
+ * unreviewed photographs in bulk. If the queue cannot be kept, the answer is to
+ * review it or to stop requiring review for new uploads -- never to mark
+ * photographs as checked that nobody checked. A single statement that flipped
+ * every `pending` row to a visible state would destroy the one thing moderation
+ * is for and would make `moderated_by` a lie about every row it touched. See
+ * the recovery section of ERAYA-MODERATION-ROLLOUT-PLAN.md.
+ */
+create or replace function public.photo_queue_health()
+returns table (
+  pending integer,
+  oldest_pending_at timestamptz,
+  oldest_pending_hours numeric,
+  backlog_grandfathered integer
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    count(*) filter (where moderation_state = 'pending')::integer,
+    min(created_at) filter (where moderation_state = 'pending'),
+    round(
+      extract(epoch from (now() - min(created_at) filter (where moderation_state = 'pending'))) / 3600.0,
+      1
+    ),
+    count(*) filter (where moderation_state = 'grandfathered')::integer
+  from public.profile_photos
+  /*
+   * HAVING, not WHERE.
+   *
+   * `where public.is_moderator()` filters the input rows, and an aggregate over
+   * no rows still returns one row -- so an ordinary member got
+   * `{pending: 0, oldest_pending_at: null}`, which is a confident-looking
+   * answer about somebody else's queue. It disclosed nothing (the figures are
+   * always zero), but "returns a row of zeroes to everybody" is one refactor
+   * away from "returns the real figures to everybody". HAVING filters the
+   * aggregate itself, so a non-moderator gets no rows at all.
+   *
+   * Found by the probe asserting on a parsed value rather than on the absence
+   * of a string.
+   */
+  having public.is_moderator();
+$$;
+
+revoke execute on function public.photo_queue_health() from public, anon;
+grant execute on function public.photo_queue_health() to authenticated;
+
+comment on function public.photo_queue_health() is
+  'Queue health for monitoring: how many photographs are waiting, and how old the oldest one is. The age is the figure that detects an abandoned queue; a count alone cannot.';
+
 -- ---------------------------------------------------------------------------
 -- Text screening
 -- ---------------------------------------------------------------------------
+--
+-- TWO POLICIES, NOT ONE. This is the part most easily got wrong.
+--
+-- A profile and a private conversation are different kinds of writing and need
+-- different rules. The first version of this file applied one rule to both,
+-- which was wrong in a way worth spelling out:
+--
+--   A PROFILE is read by every member who is shown the card. Nobody consented
+--   to receiving it, and a phone number in it is broadcast to strangers. So
+--   contact details do not belong there, and are refused.
+--
+--   A PRIVATE CONVERSATION is two adults who have each said yes to the other --
+--   Eraya opens no conversation any other way. Two divorced adults deciding to
+--   move to a phone call are doing the ordinary thing this product exists to
+--   lead to. Refusing that teaches them the app is broken and sends them to
+--   WhatsApp with a worse opinion of Eraya, having protected nobody.
+--
+-- So contact details are refused in a profile and allowed in a conversation,
+-- while abuse, exploitation and anything prohibited are refused in BOTH. The
+-- context is a parameter rather than two functions, so the shared half cannot
+-- drift apart.
+--
+-- ⚠️ WHAT IS DELIBERATELY STILL REFUSED IN A CONVERSATION: links. A URL is the
+-- delivery mechanism for nearly every scam and nearly every piece of malware
+-- that reaches somebody through a message, and unlike a phone number it carries
+-- no information the sender could not simply type. Allowing contact details
+-- while holding the line on links is the proportionate reading of "preserve
+-- reasonable spam and malicious-link safeguards".
+--
+-- ✅ CHECKED AGAINST THE PUBLISHED POLICY. `packages/legal/src/safety.ts`
+-- already tells members, under "Consent and boundaries", not to "push for a
+-- phone number, an address or any other contact detail". That is about
+-- PRESSURE, not about a voluntary exchange, so nothing here contradicts the
+-- owner-approved copy. The guidance a member reads about choosing to share is
+-- `help.shareContactTitle` -- in the help screen, read once, rather than a
+-- warning stapled to every message. A product that interrupts each line of a
+-- conversation trains people to dismiss it and has spent its credibility on
+-- nothing.
+--
+-- ❗ NO MESSAGE CONTENT IS LOGGED, ANYWHERE. The triggers raise with the reason
+-- only -- `content_rejected:<reason>` -- and write no row. Nothing in this file
+-- stores, copies or audits the text it screened. A moderation feature that
+-- quietly accumulated a table of refused private messages would be a worse
+-- privacy problem than the one it set out to solve.
 --
 -- What this is for, stated narrowly so it is not mistaken for more.
 --
@@ -731,6 +842,25 @@ grant execute on function public.photo_review_counts() to authenticated;
 --   * the terms live in a TABLE, not in this file, so a false positive found in
 --     production is a row to delete rather than a migration to write and deploy.
 
+/*
+ * Where a piece of text is going, which decides which rules apply to it.
+ *
+ * An enum rather than a boolean, because "is this public" is the wrong question
+ * to have frozen into a signature the first time a third surface appears -- a
+ * group, a public question, a display name shown to non-members. A new value
+ * forces every caller to be considered rather than silently inheriting one of
+ * two behaviours.
+ */
+create type public.content_context as enum (
+  -- Read by every member who is shown this person's card.
+  'public_profile',
+  -- One mutually connected adult writing to another.
+  'private_message'
+);
+
+comment on type public.content_context is
+  'Where text is going. Decides policy: contact details are refused in a public profile and allowed in a private message; abuse and prohibited content are refused in both.';
+
 create type public.content_rejection_reason as enum (
   'contact_details',
   'external_link',
@@ -752,6 +882,35 @@ comment on type public.content_rejection_reason is
  * space.
  *
  * IMMUTABLE and pure, so it can be reasoned about and tested directly.
+ *
+ * ❗ INDIC COMBINING MARKS ARE PRESERVED EXPLICITLY, AND MUST BE.
+ *
+ * This was measured on the local stack rather than assumed, and the first
+ * version of this function got it wrong. In PostgreSQL a Devanagari, Bengali,
+ * Tamil or Telugu CONSONANT is `[[:alnum:]]`, but a vowel sign or an anusvara
+ * is NOT -- they are combining marks, and no POSIX character class includes
+ * them. So the old `[^[:alnum:]]+ -> ' '` step replaced every matra with a
+ * space and shattered the word around it:
+ *
+ *     'randi' in Devanagari  ->  two meaningless fragments
+ *     'vanakkam' in Tamil    ->  two meaningless fragments
+ *     'telugu' in Telugu     ->  three meaningless fragments
+ *
+ * Any native-script pattern in `content_filter_terms` would then have been
+ * matched against rubble and could never fire, while reading like a working
+ * filter -- the worst of both. The four Unicode blocks below are therefore
+ * named in every class that removes characters:
+ *
+ *     Devanagari  U+0900..U+097F   (Hindi, Marathi)
+ *     Bengali     U+0980..U+09FF
+ *     Tamil       U+0B80..U+0BFF
+ *     Telugu      U+0C00..U+0C7F
+ *
+ * These are exactly the scripts Eraya's six languages are written in. ADD A
+ * BLOCK HERE BEFORE ADDING A LANGUAGE, or its text will be shattered too.
+ *
+ * If this file ever arrives with those ranges mangled into question marks, the
+ * fix is to restore the code points above -- not to delete the ranges.
  */
 create or replace function public.normalise_for_screening(input text)
 returns text
@@ -787,8 +946,8 @@ as $$
      * single pass leaves every second separator in `a.b.c.d`.
      */
     select regexp_replace(
-             regexp_replace(t, '([[:alpha:]])[^[:alnum:][:space:]]+([[:alpha:]])', '\1\2', 'g'),
-             '([[:alpha:]])[^[:alnum:][:space:]]+([[:alpha:]])', '\1\2', 'g'
+             regexp_replace(t, '([[:alpha:]])[^[:alnum:][:space:]ऀ-ॿঀ-৿஀-௿ఀ-౿]+([[:alpha:]])', '\1\2', 'g'),
+             '([[:alpha:]])[^[:alnum:][:space:]ऀ-ॿঀ-৿஀-௿ఀ-౿]+([[:alpha:]])', '\1\2', 'g'
            ) as t
       from stripped
   ),
@@ -796,8 +955,13 @@ as $$
     -- three or more of the same character becomes one
     select regexp_replace(t, '(.)\1{2,}', '\1', 'g') as t from joined
   )
-  -- any remaining run of punctuation or whitespace becomes one space
-  select btrim(regexp_replace(t, '[^[:alnum:]]+', ' ', 'g')) from collapsed;
+  /*
+   * Any remaining run of punctuation or whitespace becomes one space -- except
+   * Indic combining marks, which are part of the word they sit on. See the
+   * block comment above: without those ranges this line is what destroyed
+   * every native-script word.
+   */
+  select btrim(regexp_replace(t, '[^[:alnum:]ऀ-ॿঀ-৿஀-௿ఀ-౿]+', ' ', 'g')) from collapsed;
 $$;
 
 comment on function public.normalise_for_screening(text) is
@@ -821,6 +985,15 @@ create table public.content_filter_terms (
   note text,
   -- Off without deleting, so a bad pattern can be disabled in one statement.
   enabled boolean not null default true,
+  /*
+   * True for a pattern nobody who reads the script has confirmed.
+   *
+   * Recorded in a column rather than a comment so it can be ASKED -- "what is
+   * live that no speaker has checked" is a question with an answer, and
+   * `moderation-local-probe.mjs` asserts on it. Every native-script row below
+   * carries this, and clearing the flag is the owner action that closes it.
+   */
+  needs_native_review boolean not null default false,
   created_at timestamptz not null default now(),
 
   constraint content_filter_terms_pattern_not_blank
@@ -845,8 +1018,19 @@ create index content_filter_terms_enabled_idx
  * they are structural rather than lexical -- a phone number is a shape, not a
  * word, and writing that shape as a list of patterns invites both misses and
  * false positives.
+ *
+ * `context` decides whether the contact-detail checks run at all. See the
+ * section preamble: a profile is broadcast, a conversation is two people who
+ * chose each other, and one rule for both was wrong.
+ *
+ * The context is REQUIRED rather than defaulted. A default would mean a future
+ * caller that forgot to say gets whichever policy happened to be written first,
+ * and the safe direction differs per surface -- so the compiler asks instead.
  */
-create or replace function public.screen_text(input text)
+create or replace function public.screen_text(
+  input text,
+  context public.content_context
+)
 returns public.content_rejection_reason
 language plpgsql
 stable
@@ -856,6 +1040,20 @@ as $$
 declare
   normalised text;
   digits text;
+  /*
+   * The text the LINK check looks at, which is not always the input.
+   *
+   * An email address ends in a dotted domain, so `a.b@gmail.com` matches the
+   * bare-domain half of the link pattern. Allowing emails in a conversation
+   * while the link rule still refuses them would have been a policy that read
+   * correctly and did the opposite -- caught in the local rehearsal, where
+   * `private_message` returned `external_link` for an ordinary address.
+   *
+   * So where an email is permitted, it is removed before the link check runs.
+   * A real link in the same message is still refused, because only the
+   * addresses are blanked.
+   */
+  link_source text;
   hit public.content_rejection_reason;
 begin
   if input is null or length(btrim(input)) = 0 then
@@ -863,47 +1061,73 @@ begin
   end if;
 
   normalised := public.normalise_for_screening(input);
+  link_source := input;
 
   /*
-   * An email address. Checked on the raw text, because normalisation has
-   * already removed the '@' and the dots that make it one.
-   */
-  if input ~* '[[:alnum:]._%%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}' then
-    return 'contact_details';
-  end if;
-
-  /*
-   * A phone number.
+   * Contact details: refused in a profile, allowed in a conversation.
    *
-   * Nine or more digits, counted after every separator is removed, so
-   * "9 8 7 6 5 4 3 2 1 0" and "98765-43210" are the same thing. Nine rather
-   * than ten because an Indian mobile is ten and people drop or add one.
-   *
-   * The length guard matters: a member writing "I was married in 1998 and we
-   * separated in 2016" has eight digits across the whole sentence, and this
-   * counts digits in a single unbroken run rather than in the text as a whole.
+   * Everything in this branch is about reaching somebody OFF Eraya. In a
+   * profile that is a broadcast to strangers; in a message it is two adults
+   * doing the ordinary thing. Nothing below is skipped for a conversation --
+   * only this.
    */
-  digits := regexp_replace(coalesce(input, ''), '[^0-9]', '', 'g');
-  if length(digits) >= 9
-     and input ~ '([0-9][^[:alnum:]]{0,2}){8,}[0-9]' then
-    return 'contact_details';
+  if context = 'public_profile' then
+    /*
+     * An email address. Checked on the raw text, because normalisation has
+     * already removed the '@' and the dots that make it one.
+     */
+    if input ~* '[[:alnum:]._%%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}' then
+      return 'contact_details';
+    end if;
+  else
+    -- Permitted here, so take the addresses out of what the link check reads.
+    link_source := regexp_replace(
+      input, '[[:alnum:]._%%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}', ' ', 'gi'
+    );
+  end if;
+
+  if context = 'public_profile' then
+
+    /*
+     * A phone number.
+     *
+     * Nine or more digits, counted after every separator is removed, so
+     * "9 8 7 6 5 4 3 2 1 0" and "98765-43210" are the same thing. Nine rather
+     * than ten because an Indian mobile is ten and people drop or add one.
+     *
+     * The length guard matters: a member writing "I was married in 1998 and we
+     * separated in 2016" has eight digits across the whole sentence, and this
+     * counts digits in a single unbroken run rather than in the text as a
+     * whole.
+     */
+    digits := regexp_replace(coalesce(input, ''), '[^0-9]', '', 'g');
+    if length(digits) >= 9
+       and input ~ '([0-9][^[:alnum:]]{0,2}){8,}[0-9]' then
+      return 'contact_details';
+    end if;
+
+    /*
+     * A social handle or a messaging invitation. Narrow on purpose: "@"
+     * followed by a plausible handle, or a named platform next to a word that
+     * means "reach me".
+     */
+    if input ~ '(^|[^[:alnum:]])@[[:alnum:]._]{3,}'
+       or normalised ~ '\m(whatsapp|telegram|instagram|insta|snapchat|signal)\M.{0,24}\m(number|num|id|handle|me|dm|add|message|msg)\M'
+       or normalised ~ '\m(number|num|id|handle)\M.{0,24}\m(whatsapp|telegram|instagram|insta|snapchat|signal)\M' then
+      return 'contact_details';
+    end if;
   end if;
 
   /*
-   * A social handle or a messaging invitation. Narrow on purpose: "@" followed
-   * by a plausible handle, or a named platform next to a word that means
-   * "reach me".
+   * A URL. Refused in BOTH contexts, deliberately.
+   *
+   * Unlike a phone number, a link carries nothing the sender could not type
+   * instead, and it is the delivery mechanism for most scams and all malware
+   * that arrive by message. So the spam safeguard stays even though contact
+   * details no longer do -- that asymmetry is the point, not an oversight.
    */
-  if input ~ '(^|[^[:alnum:]])@[[:alnum:]._]{3,}'
-     or normalised ~ '\m(whatsapp|telegram|instagram|insta|snapchat|signal)\M.{0,24}\m(number|num|id|handle|me|dm|add|message|msg)\M'
-     or normalised ~ '\m(number|num|id|handle)\M.{0,24}\m(whatsapp|telegram|instagram|insta|snapchat|signal)\M' then
-    return 'contact_details';
-  end if;
-
-  -- A URL. Members have no reason to send links to each other, and every
-  -- reason somebody running a scam does.
-  if input ~* '(https?://|www\.)[[:alnum:]-]+\.[[:alpha:]]{2,}'
-     or input ~* '[[:alnum:]-]+\.(com|net|org|in|co|io|me|xyz|link|site)(/|$|[[:space:]])' then
+  if link_source ~* '(https?://|www\.)[[:alnum:]-]+\.[[:alpha:]]{2,}'
+     or link_source ~* '[[:alnum:]-]+\.(com|net|org|in|co|io|me|xyz|link|site)(/|$|[[:space:]])' then
     return 'external_link';
   end if;
 
@@ -925,10 +1149,11 @@ begin
 end;
 $$;
 
-revoke execute on function public.screen_text(text) from public, anon, authenticated;
+revoke execute on function public.screen_text(text, public.content_context)
+  from public, anon, authenticated;
 
-comment on function public.screen_text(text) is
-  'The reason a piece of text is refused, or null when it is allowed. Not granted to clients: it is called by triggers, and exposing it would turn the filter into an oracle for testing evasions against.';
+comment on function public.screen_text(text, public.content_context) is
+  'The reason a piece of text is refused, or null when it is allowed. Contact details are refused for public_profile and allowed for private_message; links, abuse and prohibited content are refused for both. Not granted to clients: it is called by triggers, and exposing it would turn the filter into an oracle for testing evasions against.';
 
 -- ---------------------------------------------------------------------------
 -- The seed list
@@ -941,9 +1166,38 @@ comment on function public.screen_text(text) is
 -- Transliterations are included for the terms that are commonly written in
 -- Latin script across all six languages -- which is how they are actually
 -- typed on an Indian phone keyboard, far more often than in Devanagari or
--- Tamil script. Native-script forms are deliberately NOT guessed at here: a
--- wrong pattern in an script nobody on this side reads is a false positive
--- waiting to happen, and adding them properly needs a speaker.
+-- Tamil script.
+--
+-- ❗ WORD BOUNDARIES DO NOT WORK IN INDIC SCRIPT. READ THIS BEFORE ADDING ONE.
+--
+-- Measured on the local stack, not assumed. `\m` and `\M` are defined in terms
+-- of PostgreSQL's word characters, and an Indic vowel sign is not one -- so a
+-- pattern ending in a matra can never match `\M`:
+--
+--     '\m<randi in Devanagari>\M'  against  'vah <randi> hai'   ->  NO MATCH
+--
+-- It fails SILENTLY and in the dangerous direction: the row sits in the table
+-- looking like a filter and matches nothing, for ever. So every native-script
+-- pattern below anchors on SPACES instead -- `(^| )...( |$)` -- which is sound
+-- because `normalise_for_screening` returns space-separated tokens. That was
+-- verified to match a standalone word at the start, the middle and the end of a
+-- string while still rejecting the word inside a longer compound.
+--
+-- Native-script rows also depend on the combining-mark fix in
+-- `normalise_for_screening`. Before it, the normaliser shattered every Indic
+-- word and nothing here could have matched.
+--
+-- ⚠️ DEVANAGARI ONLY, DELIBERATELY. Devanagari covers Hindi and Marathi -- two
+-- of Eraya's six languages -- and the terms below are the native spellings of
+-- entries that are ALREADY on this list in transliteration, so nothing new is
+-- being asserted about what is abusive. Bengali, Tamil and Telugu have NO
+-- native-script rows, and that is an honest gap rather than an oversight: this
+-- side cannot judge which spelling of a slur in those scripts is unambiguous,
+-- and a wrong pattern in a script nobody here reads is a false positive aimed
+-- at a grieving stranger. Adding them needs a speaker.
+--
+-- Every row below carries `needs_native_review = true`. Nothing clears that
+-- flag except a person who reads the script confirming the row.
 
 insert into public.content_filter_terms (reason, pattern, note) values
   -- Prohibited: commercial sexual services and anything suggesting a minor.
@@ -976,6 +1230,22 @@ insert into public.content_filter_terms (reason, pattern, note) values
   ('abuse', '\m(kill yourself|kys)\M',
    'Telling somebody to end their life.');
 
+/*
+ * Devanagari forms of terms already on the list above.
+ *
+ * Space-anchored, not `\m`-anchored, for the reason in the block comment --
+ * and flagged for native review because nobody who reads Devanegari has signed
+ * these off. They are enabled rather than held back: each is the native
+ * spelling of a word this file already refuses in transliteration, so leaving
+ * them off would mean the filter catches "randi" typed in Latin and misses the
+ * identical message typed in the script most of its speakers actually use.
+ */
+insert into public.content_filter_terms (reason, pattern, note, needs_native_review) values
+  ('prohibited', '(^| )(रंडी|वेश्या)( |$)',
+   'Devanagari for the transliterated prostitute terms already listed. Solicitation and abuse both.', true),
+  ('abuse', '(^| )(मादरचोद|मादरचोद्|भेनचोद|बहनचोद|भोसड़ी|भोसड़ीके|चूतिया|चूतिये|गांडू)( |$)',
+   'Devanagari for the transliterated Hindi/Urdu profanity already listed. No non-abusive use.', true);
+
 -- ---------------------------------------------------------------------------
 -- Where the screen is applied
 -- ---------------------------------------------------------------------------
@@ -1001,7 +1271,9 @@ as $$
 declare
   reason public.content_rejection_reason;
 begin
-  reason := public.screen_text(new.body);
+  -- 'private_message': one connected adult writing to another. Contact details
+  -- are allowed here on purpose; see the section preamble.
+  reason := public.screen_text(new.body, 'private_message');
 
   if reason is not null then
     raise exception 'content_rejected:%', reason using errcode = 'ERA01';
@@ -1047,11 +1319,13 @@ begin
     return new;
   end if;
 
+  -- 'public_profile': every one of these is shown to members who did not ask
+  -- for it, so contact details are refused.
   reason := coalesce(
-    public.screen_text(new.about),
-    public.screen_text(new.looking_for),
-    public.screen_text(new.first_name),
-    public.screen_text(new.other_city)
+    public.screen_text(new.about, 'public_profile'),
+    public.screen_text(new.looking_for, 'public_profile'),
+    public.screen_text(new.first_name, 'public_profile'),
+    public.screen_text(new.other_city, 'public_profile')
   );
 
   if reason is not null then

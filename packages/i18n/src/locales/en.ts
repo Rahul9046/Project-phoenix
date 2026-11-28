@@ -1236,15 +1236,18 @@ export const en = {
      */
     review: {
       waiting:
-        "Waiting to be checked. Only you can see it until then — usually within a day.",
+        "Waiting to be checked. Only you can see it until then.",
+      waitingCanReplace:
+        "You can remove it or add a different one while you wait.",
       refused:
-        "This photo was not approved. You can remove it and add another.",
+        "This photo was not approved, and nobody else has seen it. You can remove it and add another.",
       reason: {
         no_person: "It does not appear to show a person.",
         multiple_people: "It shows more than one person, so it is not clear which is you.",
         not_the_member: "It does not appear to be a photo of you.",
         explicit: "It is not the kind of photo Eraya allows.",
-        contact_details: "It has a phone number or an address written on it.",
+        contact_details:
+          "Phone numbers and email addresses cannot go in your profile — every member can read it. You can share them in a conversation whenever you choose to.",
         unclear: "It is too dark or too blurred to make out a face.",
         other: "A moderator has looked at it and asked for a different one.",
       },
@@ -1312,7 +1315,29 @@ export const en = {
         "That could not be sent. Please try rewording it.",
     },
   },
+  /*
+   * Being told a newer Android build exists.
+   *
+   * No deadline and no consequence in any of these strings: the notice is
+   * advisory, it can be dismissed, and nothing is withdrawn from somebody
+   * who stays on an older version. Copy that implied otherwise would be a
+   * threat the product has no intention of carrying out.
+   */
+  updates: {
+    eyebrow: "Update available",
+    title: "Eraya {version} is ready",
+    body:
+      "You are on an older version. Updating keeps your account, your conversations and your photos exactly as they are.",
+    download: "Get the update",
+    dismiss: "Not now",
+    note:
+      "The download opens in your browser. Installing it over your current app keeps you signed in.",
+  },
+
   help: {
+    shareContactTitle: "Share contact details when you are ready, not because you were asked",
+    shareContactBody:
+      "You can exchange a phone number or an email in a conversation whenever you choose to. Somebody pressing for it early, or pushing to move to another app, is telling you something — and Eraya cannot see or help with anything that happens off it.",
     takeTimeTitle: "Take your time in the conversation",
     takeTimeBody:
       "There is no hurry here and nobody is counting. Somebody pushing to move to another app or to meet immediately is telling you something.",
