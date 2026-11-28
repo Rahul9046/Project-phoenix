@@ -123,3 +123,42 @@ export function parseAndroidRelease(payload: unknown): AndroidRelease | null {
 
   return { version: version.trim(), versionCode, downloadUrl };
 }
+
+/**
+ * The whole notice decision, as one pure function.
+ *
+ * `pendingUpdate()` in `data.ts` does the fetching and the keystore reading;
+ * everything it then DECIDES is here, so the decision can be tested without a
+ * device. Each condition below is one of the things a release has to be able to
+ * prove about an update notice:
+ *
+ *   - a newer version is offered;
+ *   - an equal or older one is not;
+ *   - a version this member already dismissed is not offered again;
+ *   - dismissing one version does NOT suppress a later one;
+ *   - iOS is never offered an Android APK;
+ *   - not knowing (no release, no installed version) offers nothing.
+ */
+export function shouldNotify(input: {
+  platform: string;
+  installed: string | null | undefined;
+  release: AndroidRelease | null;
+  dismissedVersion: string | null | undefined;
+}): boolean {
+  // iOS updates through the App Store. Handing it an APK would be absurd and,
+  // on a store build, against the rules.
+  if (input.platform !== "android") return false;
+
+  // No release means the file could not be read, parsed or trusted. Saying
+  // nothing is the entire contract for that case.
+  if (!input.release) return false;
+
+  if (!isNewerVersion(input.installed, input.release.version)) return false;
+
+  // Keyed by version, so dismissing 0.1.5 says nothing about 0.1.6.
+  if (input.dismissedVersion && input.dismissedVersion === input.release.version) {
+    return false;
+  }
+
+  return true;
+}

@@ -39,7 +39,7 @@ any plugin's source.
 | --- | --- | --- |
 | Bundle identifier | `app.eraya.mobile` | The same string as the Android package. One product, two stores |
 | Display name | Eraya | `CFBundleDisplayName` |
-| Marketing version | `0.1.4` | `expo.version`, shared with Android's `versionName`. The iOS build is the same release, not a different one. `ios-probe.mjs` asserts the generated `CFBundleShortVersionString` matches |
+| Marketing version | `0.1.5` | `expo.version`, shared with Android's `versionName`. The iOS build is the same release, not a different one. `ios-probe.mjs` asserts the generated `CFBundleShortVersionString` matches |
 | Build number | `1` | `ios.buildNumber`. The first iOS build of anything |
 | URL scheme | `eraya` | `eraya://auth` and `eraya://payment`. Registered app-wide, so both platforms get both |
 | Orientations | Portrait | No landscape is declared |
@@ -307,6 +307,41 @@ honest options: ship an Android build carrying the allow list before enabling
 the provider, or accept that installed copies offer an Apple sign-in that has
 never been tested on Android. Pretending the second is impossible would be the
 error.
+
+#### ❗ Publishing v0.1.5 does not close this. Corrected 2026-11-28.
+
+An earlier draft of the rollout treated "publish an Android build carrying the
+allow list" as a mitigation that *removes* the problem. It does not, and the
+distinction matters enough to write down:
+
+**Publishing v0.1.5 does not uninstall v0.1.4.** Eraya is distributed as a
+direct APK with no store and no auto-update, so a member on v0.1.4 stays on
+v0.1.4 until they choose to download and install a newer one. Some never will.
+
+| | |
+| --- | --- |
+| What publishing v0.1.5 achieves | Anybody who **updates** stops seeing an Apple button |
+| What it does not achieve | Anybody who **does not update** still sees one, for as long as they keep v0.1.4 |
+| How long that lasts | ⏳ **Indefinitely.** There is no expiry, no forced update and no minimum-version gate — deliberately, and that decision is not being revisited for this |
+| Does the update notice fix it? | Only partly. v0.1.4 has no version awareness at all, so it cannot even be *told* an update exists. The notice begins working from v0.1.5 onward |
+
+**So this is a residual compatibility risk, not a closed one.** The honest
+position for Stage 5C:
+
+- Publishing v0.1.5 **reduces** the affected population to those who have not
+  updated, and reduces it further over time.
+- It never reaches zero while any v0.1.4 install survives.
+- Enabling the Apple provider therefore means accepting that **some installed
+  Android clients will display an Apple sign-in button that cannot work**.
+- The failure is visible and harmless — an OAuth attempt against an
+  unconfigured provider — and it carries **no bypass and no data risk**. It is a
+  cosmetic defect in a shipped binary, which is the category of thing that
+  cannot be fixed retroactively on any platform.
+
+⚠️ **Do not "solve" this with a forced update or a minimum-version gate.** Both
+hand a remote value the power to lock members out of their own accounts, which
+is a far worse failure than a dead button. The update notice is advisory by
+design and stays that way.
 
 ## What was reviewed for iOS and found correct
 

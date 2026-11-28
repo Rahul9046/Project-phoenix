@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { compareVersions, isNewerVersion, parseAndroidRelease } from "./version.ts";
+import {
+  compareVersions,
+  isNewerVersion,
+  parseAndroidRelease,
+  shouldNotify,
+} from "./version.ts";
 
 /**
  * The update check, tested where it can be tested.
@@ -126,4 +131,62 @@ test("the download URL must be on eraya.app, and a lookalike is not", () => {
       android: { ...base, downloadUrl: "https://eraya.app/downloads/eraya-0.1.5.apk" },
     }),
   );
+});
+
+/* ------------------------------------------------------------------------ */
+/* The notice decision — one test per thing a release has to be able to prove */
+/* ------------------------------------------------------------------------ */
+
+const RELEASE = {
+  version: "0.1.6",
+  versionCode: 8,
+  downloadUrl: "https://eraya.app/downloads/eraya.apk",
+};
+
+const base = {
+  platform: "android",
+  installed: "0.1.5",
+  release: RELEASE,
+  dismissedVersion: null,
+};
+
+test("a higher recommended version shows the notice", () => {
+  assert.equal(shouldNotify(base), true);
+});
+
+test("an equal or lower version shows nothing", () => {
+  assert.equal(shouldNotify({ ...base, installed: "0.1.6" }), false);
+  assert.equal(shouldNotify({ ...base, installed: "0.1.7" }), false);
+});
+
+test("a dismissed version is not offered again", () => {
+  assert.equal(shouldNotify({ ...base, dismissedVersion: "0.1.6" }), false);
+});
+
+test("dismissing one version does not suppress a newer one", () => {
+  // The member dismissed 0.1.6; 0.1.7 is published. They must still be told.
+  assert.equal(
+    shouldNotify({
+      ...base,
+      dismissedVersion: "0.1.6",
+      release: { ...RELEASE, version: "0.1.7", versionCode: 9 },
+    }),
+    true,
+  );
+});
+
+test("a network or parse failure blocks nothing and shows nothing", () => {
+  // `release: null` is every failure: offline, timeout, non-2xx, bad JSON,
+  // wrong shape, wrong host. The app carries on; the card simply is not there.
+  assert.equal(shouldNotify({ ...base, release: null }), false);
+});
+
+test("iOS is never offered an Android APK", () => {
+  assert.equal(shouldNotify({ ...base, platform: "ios" }), false);
+  assert.equal(shouldNotify({ ...base, platform: "web" }), false);
+});
+
+test("an unknown installed version shows nothing", () => {
+  assert.equal(shouldNotify({ ...base, installed: null }), false);
+  assert.equal(shouldNotify({ ...base, installed: "" }), false);
 });

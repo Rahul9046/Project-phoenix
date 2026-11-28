@@ -23,35 +23,20 @@ import { createClient } from "@/lib/supabase/server";
 
 const FAILED = "That did not go through. Nothing has changed — try again.";
 
-/**
- * Why a photograph was refused.
+/*
+ * The rejection reasons and their labels live in `photo-reasons.ts`.
  *
- * The same values as the `photo_rejection_reason` enum, and a rejection must
- * carry one -- the database refuses a rejection with no reason, because a
- * member who is told only "no" cannot fix anything.
+ * ❗ They may NOT live here. This module carries `"use server"`, and such a
+ * module may export async functions only -- every export becomes a server
+ * action reference, so a client importing an array from here gets a stub and
+ * crashes with "PHOTO_REJECTION_REASONS.map is not a function" the moment the
+ * reason dropdown renders. Nothing static catches that; it was found by
+ * clicking "Reject..." in a browser.
  */
-export const PHOTO_REJECTION_REASONS = [
-  "no_person",
-  "multiple_people",
-  "not_the_member",
-  "explicit",
-  "contact_details",
-  "unclear",
-  "other",
-] as const;
-
-export type PhotoRejectionReason = (typeof PHOTO_REJECTION_REASONS)[number];
-
-/** What a moderator reads beside each reason. Not shown to members. */
-export const REJECTION_LABELS: Record<PhotoRejectionReason, string> = {
-  no_person: "Not a photograph of a person",
-  multiple_people: "A group photo — unclear who this is",
-  not_the_member: "Someone else, a celebrity or a stock image",
-  explicit: "Sexual or otherwise not permitted",
-  contact_details: "A phone number or handle written into the image",
-  unclear: "Too dark, small or blurred to show a face",
-  other: "Something else",
-};
+import {
+  PHOTO_REJECTION_REASONS,
+  type PhotoRejectionReason,
+} from "@/features/admin/photo-reasons";
 
 export async function approvePhoto(photoId: string): Promise<ModerationResult> {
   await requireModerator();
