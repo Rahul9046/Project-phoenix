@@ -21,8 +21,8 @@
     "so it will never read this file. The notice begins working with v0.1.5."
   ],
   "android": {
-    "version": "0.1.4",
-    "versionCode": 5,
+    "version": "0.1.5",
+    "versionCode": 7,
     "downloadUrl": "https://eraya.app/downloads/eraya.apk"
   }
 }

@@ -348,9 +348,14 @@ closed-testing period runs in parallel.** The two are independent: neither is
 waiting on the other. This is temporary, and the end state is the website
 pointing at a public Play listing instead.
 
-Current shipped build: **v0.1.2, versionCode 3**. `apps/mobile/app.json` is at
-versionCode 4, which is the next build rather than a released one -- the website
-shows the *published* version and says so.
+Current shipped build: **v0.1.5, versionCode 7**, published 2026-11-28 on the
+`android-v0.1.5` release. `apps/mobile/app.json` agrees with it at this release;
+when it runs ahead it is naming the next build rather than a released one, and
+the website shows the *published* version and says so.
+
+versionCode 6 is consumed by the Google Play closed-testing AAB under the same
+application id, so the direct releases go 5 -> 7. Play requires a strictly
+increasing versionCode per application id and both channels share one.
 
 Version lives in `app.json` (`expo.version`, `expo.android.versionCode`) and
 never in `build.gradle`. `apps/mobile/android/` is gitignored and generated.
