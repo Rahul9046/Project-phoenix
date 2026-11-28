@@ -90,8 +90,8 @@ ok(
   String(app.ios?.buildNumber),
 );
 ok(
-  app.version === "0.1.4",
-  "marketing version is the shipped 0.1.4, shared with Android",
+  app.version === "0.1.5",
+  "marketing version is the shipped 0.1.5, shared with Android",
   app.version,
 );
 ok(app.name === "Eraya", "display name is Eraya", app.name);
@@ -204,13 +204,19 @@ ok(
 /*
  * Pinned on purpose, and bumped deliberately with each release.
  *
- * The point of this assertion is not that the number is 5 -- it is that an iOS
+ * The point of this assertion is not that the number is 7 -- it is that an iOS
  * change cannot move the Android versionCode without somebody noticing. A
  * release bumps it here and in `app.json` together, in the same commit.
+ *
+ * ❗ 6 IS DELIBERATELY SKIPPED. v0.1.4 shipped as 5 on the direct-download
+ * line, and **6 was consumed by the Google Play closed-testing AAB** on
+ * `release/google-play-closed-beta-1`, under the same application id. Play
+ * requires a strictly increasing versionCode per application, so reusing 6
+ * would collide the moment the two lines meet. v0.1.5 is therefore 7.
  */
 ok(
-  app.android?.versionCode === 5,
-  "versionCode is still 5",
+  app.android?.versionCode === 7,
+  "versionCode is 7 (6 was consumed by the Play AAB)",
   String(app.android?.versionCode),
 );
 ok(
@@ -443,8 +449,8 @@ if (fast) {
 
   if (plist) {
     ok(
-      plist.CFBundleShortVersionString === "0.1.4",
-      "CFBundleShortVersionString is 0.1.4",
+      plist.CFBundleShortVersionString === "0.1.5",
+      "CFBundleShortVersionString is 0.1.5",
       plist.CFBundleShortVersionString,
     );
     ok(plist.CFBundleVersion === "1", "CFBundleVersion is 1", plist.CFBundleVersion);

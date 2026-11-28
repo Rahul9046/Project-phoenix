@@ -2,13 +2,17 @@
 
 import { useState, useTransition } from "react";
 
+import { approvePhoto, rejectPhoto } from "@/features/admin/photo-actions";
+/*
+ * Values come from the plain module, never from the "use server" one: a
+ * `"use server"` module exports async functions only, so importing an array
+ * from it yields an action stub and crashes at render. See photo-reasons.ts.
+ */
 import {
-  approvePhoto,
-  rejectPhoto,
   PHOTO_REJECTION_REASONS,
   REJECTION_LABELS,
   type PhotoRejectionReason,
-} from "@/features/admin/photo-actions";
+} from "@/features/admin/photo-reasons";
 
 /**
  * Two decisions about one photograph.

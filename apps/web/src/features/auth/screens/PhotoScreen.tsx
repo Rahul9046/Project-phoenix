@@ -301,8 +301,16 @@ function PhotoForm() {
             {paths.length > 0 ? (
               <ul className="flex flex-wrap gap-3">
                 {paths.map((path) => (
-                  <li key={path} className="w-24">
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-sand">
+                  /*
+                    The tile stays 96px; the ITEM is allowed to be wider.
+                    Found in a browser: with `w-24` on the item, a refusal
+                    sentence wrapped into six 96px-wide lines beside acres of
+                    empty page. The status text is prose and needs prose width,
+                    so the image keeps its own fixed-width wrapper and the item
+                    sizes for the words underneath it.
+                  */
+                  <li key={path} className="w-40 max-w-full">
+                    <div className="relative aspect-[4/5] w-24 overflow-hidden rounded-xl bg-sand">
                       {urls[path] ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

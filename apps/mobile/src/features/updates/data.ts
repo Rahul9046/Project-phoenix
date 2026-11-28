@@ -3,7 +3,11 @@ import { Platform } from "react-native";
 
 import { secureSessionStorage } from "@/lib/supabase/secure-storage";
 
-import { isNewerVersion, parseAndroidRelease, type AndroidRelease } from "./version";
+import {
+  parseAndroidRelease,
+  shouldNotify,
+  type AndroidRelease,
+} from "./version";
 
 /**
  * Fetching the recommended Android version, and remembering what has been
@@ -127,13 +131,23 @@ export async function dismissVersion(version: string): Promise<void> {
  */
 export async function pendingUpdate(): Promise<AndroidRelease | null> {
   const installed = installedVersion();
-  if (!installed) return null;
-
   const release = await fetchAndroidRelease();
-  if (!release) return null;
 
-  if (!isNewerVersion(installed, release.version)) return null;
-  if (await isDismissed(release.version)) return null;
+  /*
+   * The decision itself lives in `version.ts` as a pure function, so every
+   * condition it applies is testable without a device. This function is only
+   * the two things that need one: the network and the keystore.
+   */
+  const dismissedVersion = release?.version
+    ? ((await isDismissed(release.version)) ? release.version : null)
+    : null;
 
-  return release;
+  return shouldNotify({
+    platform: Platform.OS,
+    installed,
+    release,
+    dismissedVersion,
+  })
+    ? release
+    : null;
 }
