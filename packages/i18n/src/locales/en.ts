@@ -1230,6 +1230,29 @@ export const en = {
 
   photos: {
     /*
+     * What the owner of a photograph is told while it waits, and if it is
+     * refused. Nobody else sees any of this -- another member simply sees the
+     * monogram, exactly as they would for someone who has not added a photo.
+     */
+    review: {
+      waiting:
+        "Waiting to be checked. Only you can see it until then.",
+      waitingCanReplace:
+        "You can remove it or add a different one while you wait.",
+      refused:
+        "This photo was not approved, and nobody else has seen it. You can remove it and add another.",
+      reason: {
+        no_person: "It does not appear to show a person.",
+        multiple_people: "It shows more than one person, so it is not clear which is you.",
+        not_the_member: "It does not appear to be a photo of you.",
+        explicit: "It is not the kind of photo Eraya allows.",
+        contact_details:
+          "Phone numbers and email addresses cannot go in your profile — every member can read it. You can share them in a conversation whenever you choose to.",
+        unclear: "It is too dark or too blurred to make out a face.",
+        other: "A moderator has looked at it and asked for a different one.",
+      },
+    },
+    /*
      * Framing, which the app and the website both offer. Every surface draws a
      * photograph in a 4:5 frame, so a crop happens either way -- these are the
      * words for letting the member decide it instead of the layout.
@@ -1268,7 +1291,53 @@ export const en = {
     persistFailed: "That photo did not save. Please try again.",
   },
 
+  /*
+   * Why something a member typed was refused at the moment of posting.
+   *
+   * Specific about WHAT to change and silent about how the check works: a
+   * message that explains the rule explains how to get around it. None of these
+   * blames the member -- most people who meet the contact-details rule are
+   * simply trying to be easier to reach.
+   */
+  content: {
+    refused: {
+      contact_details:
+        "Please keep phone numbers and email addresses out of this. Talk here until you are comfortable — it is safer, and you can always share more later.",
+      external_link:
+        "Links cannot be sent on Eraya. Please write it in your own words.",
+      sexual_solicitation:
+        "That is not something Eraya allows. Please reword it.",
+      abuse:
+        "That cannot be sent. Please say it differently.",
+      prohibited:
+        "That cannot be sent on Eraya.",
+      unknown:
+        "That could not be sent. Please try rewording it.",
+    },
+  },
+  /*
+   * Being told a newer Android build exists.
+   *
+   * No deadline and no consequence in any of these strings: the notice is
+   * advisory, it can be dismissed, and nothing is withdrawn from somebody
+   * who stays on an older version. Copy that implied otherwise would be a
+   * threat the product has no intention of carrying out.
+   */
+  updates: {
+    eyebrow: "Update available",
+    title: "Eraya {version} is ready",
+    body:
+      "You are on an older version. Updating keeps your account, your conversations and your photos exactly as they are.",
+    download: "Get the update",
+    dismiss: "Not now",
+    note:
+      "The download opens in your browser. Installing it over your current app keeps you signed in.",
+  },
+
   help: {
+    shareContactTitle: "Share contact details when you are ready, not because you were asked",
+    shareContactBody:
+      "You can exchange a phone number or an email in a conversation whenever you choose to. Somebody pressing for it early, or pushing to move to another app, is telling you something — and Eraya cannot see or help with anything that happens off it.",
     takeTimeTitle: "Take your time in the conversation",
     takeTimeBody:
       "There is no hurry here and nobody is counting. Somebody pushing to move to another app or to meet immediately is telling you something.",

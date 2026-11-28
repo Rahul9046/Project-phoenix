@@ -1,6 +1,7 @@
 import { LEGAL_VERSION } from "@eraya/legal";
 import type { TranslationKey } from "@eraya/i18n";
 
+import { contentRefusalKey } from "@/features/account/content-refusal";
 import { supabase } from "@/lib/supabase/client";
 import {
   stageAtLeast,
@@ -34,6 +35,17 @@ const GENERIC: TranslationKey = "failures.saveFailed";
 function describe(error: { code?: string; message: string }): TranslationKey {
   const code = error.code ?? "";
   const message = error.message ?? "";
+
+  /*
+   * Text the screening triggers refused.
+   *
+   * Checked first, because it is the only failure here that is about what the
+   * member wrote rather than about the request. `failures.saveFailed` would
+   * invite them to try again unchanged, which cannot work and reads as a fault
+   * in the product rather than a rule in it.
+   */
+  const refusal = contentRefusalKey({ message });
+  if (refusal) return refusal;
 
   if (code === "23514" && message.includes("date_of_birth_adult")) {
     return "failures.underage";

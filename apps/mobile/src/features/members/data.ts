@@ -13,6 +13,7 @@ import type {
   Message,
 } from "@/features/members/types";
 import type { Database } from "@/lib/supabase/database.types";
+import { contentRefusalKey } from "@/features/account/content-refusal";
 
 /**
  * Reading and writing the things members do to each other.
@@ -360,6 +361,14 @@ export async function sendMessage(
     .insert({ connection_id: connectionId, sender_id: senderId, body: trimmed });
 
   if (error) {
+    /*
+     * Screening refused the words. Checked before the policy case because it is
+     * the only outcome here that the member can act on -- "that did not send"
+     * invites sending the same thing again, which cannot work.
+     */
+    const refusal = contentRefusalKey(error);
+    if (refusal) return { ok: false, messageKey: refusal };
+
     /*
      * The insert policy refuses when the connection has ended or was never
      * mutual. That is the product rule doing its job rather than a fault, so it

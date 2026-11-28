@@ -457,6 +457,56 @@ first `.ipa`'s `Info.plist`:
 | `RCTMetroPort` | **absent** | A build-time variable; it should not survive a Release build |
 | `MinimumOSVersion` | **16.4** | The real floor, from the Expo SDK 57 podspecs (`ios => '16.4'`). The `LSMinimumSystemVersion: 12.0` the plist carries is a macOS key and is inert on iOS — misleading, but not worth overriding without evidence |
 
+## What Stage 5B.1 closed
+
+Rollout hardening, between Stage 5B (compliance built) and Stage 5C (Apple
+enrolment). Nothing here needed the paid account.
+
+| Was | Is |
+| --- | --- |
+| The website would have had Android v0.1.4's silent-failure defect — a photograph accepted and nobody told it is invisible | The website shows waiting / refused state per photograph, and re-reads it after an upload. `features/account/photo-review.ts` |
+| Review copy promised *"usually within a day"* | ❌ Removed from **all six languages**. The product says a photograph is waiting and that only the owner can see it, which is true at any queue length |
+| One text policy for profiles and conversations | Two: contact details refused in a profile, **allowed** in a private conversation between connected adults. Links refused in both |
+| Native-script filtering listed as "not guessed at" | Devanagari patterns exist and **fire**, flagged `needs_native_review`. See the two defects below |
+| App Review privacy relied on demo profiles crowding discovery plus a note asking the reviewer not to contact real members | `profiles.account_kind` — an account meets only accounts of its own kind, enforced in `discover_members`, `member_profile`, `express_interest` and two triggers |
+| The documented rollback mass-published every pending photograph | ❌ Deleted. Recovery now preserves every state, and the probe asserts no bulk publisher exists |
+| Queue monitoring was a count | `photo_queue_health()` reports the **age of the oldest waiting photograph**, which is the only figure that detects an abandoned queue |
+| Subtitle undecided | ✅ `Meet again, at your own pace` |
+| No in-app update path for direct APK installs | `app-version.json` + a dismissible home-screen card, six languages, no forced update |
+
+### Two defects found by measuring instead of reasoning
+
+Both were in the unapplied moderation migration, both would have shipped, and
+both failed **silently** — the rows would have sat in the table looking like a
+working filter.
+
+**1. The normaliser shattered every Indic word.** In PostgreSQL an Indic
+consonant is `[[:alnum:]]` but a vowel sign or anusvara is **not** — they are
+combining marks, and no POSIX class includes them. So the
+`[^[:alnum:]]+ -> ' '` step replaced every matra with a space:
+
+```
+Devanagari 'randi'  ->  two meaningless fragments
+Tamil 'vanakkam'    ->  two meaningless fragments
+```
+
+Fixed by naming the four Unicode blocks Eraya's languages use (Devanagari,
+Bengali, Tamil, Telugu) in every class that removes characters. **Add a block
+before adding a language.**
+
+**2. `\m` / `\M` word boundaries never match Indic script.** A word ending in a
+matra cannot match `\M`, because the matra is not a word character — so
+`'\m<word>\M'` matched nothing, for ever. Native-script patterns anchor on
+spaces instead, `(^| )...( |$)`, which is sound because the normaliser returns
+space-separated tokens.
+
+### ❗ versionCode 7 for v0.1.5
+
+`main` says 5 (v0.1.4). **6 is already consumed** by the Google Play
+closed-testing AAB on `release/google-play-closed-beta-1`, under the same
+application id. Play requires a strictly increasing versionCode, so the next
+direct release is **7**.
+
 ## Still open
 
 - **Sign in with Apple** needs the paid account: a Service ID, a key and a team

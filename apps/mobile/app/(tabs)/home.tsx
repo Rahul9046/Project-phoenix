@@ -8,6 +8,7 @@ import { greetingKey } from "@eraya/i18n";
 import { HomeMark } from "@/brand/HomeMark";
 import { useSession } from "@/features/auth/SessionProvider";
 import { LanguageSwitcher } from "@/features/i18n/LanguageSwitcher";
+import { UpdateNotice } from "@/features/updates/UpdateNotice";
 import { useT } from "@/features/i18n/LocaleProvider";
 import { routes } from "@/features/auth/routing";
 import {
@@ -163,6 +164,19 @@ export default function Home() {
           <LanguageSwitcher />
         </View>
       </View>
+
+      {/*
+        A newer Android build, if there is one.
+
+        Above the interest card because it is about whether this screen can be
+        trusted to be complete -- an out-of-date build may be missing the thing
+        the member is looking for -- and because it disappears for good once
+        dismissed, while the cards below are permanent furniture.
+
+        It renders nothing on iOS, nothing when the version file cannot be
+        reached, and nothing once dismissed. See UpdateNotice.
+      */}
+      <UpdateNotice />
 
       {/*
         Interest received: a real number, and nothing to tap.
