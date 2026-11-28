@@ -915,6 +915,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_kind: Database["public"]["Enums"]["account_kind"]
           about: string | null
           city_id: string | null
           connections_seen_at: string | null
@@ -944,6 +945,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_kind?: Database["public"]["Enums"]["account_kind"]
           about?: string | null
           city_id?: string | null
           connections_seen_at?: string | null
@@ -973,6 +975,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_kind?: Database["public"]["Enums"]["account_kind"]
           about?: string | null
           city_id?: string | null
           connections_seen_at?: string | null
@@ -1115,6 +1118,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      account_kind_counts: {
+        Args: never
+        Returns: {
+          account_kind: Database["public"]["Enums"]["account_kind"]
+          profiles: number
+        }[]
+      }
       activity_summary: {
         Args: never
         Returns: {
@@ -1360,6 +1370,7 @@ export type Database = {
         Args: { fallback: number; setting_key: string }
         Returns: number
       }
+      may_meet: { Args: { other: string }; Returns: boolean }
       payments_live_enabled: { Args: never; Returns: boolean }
       phone_is_verified: {
         Args: { verified_at: string; verified_via: string }
@@ -1479,6 +1490,7 @@ export type Database = {
       visible_photo_path: { Args: { member: string }; Returns: string }
     }
     Enums: {
+      account_kind: "member" | "demonstration"
       content_rejection_reason:
         | "contact_details"
         | "external_link"
@@ -1708,6 +1720,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      account_kind: ["member", "demonstration"],
       content_rejection_reason: [
         "contact_details",
         "external_link",

@@ -342,6 +342,11 @@ create policy "Members read approved photos of people they may see"
       -- product.
       or (
         public.photo_is_publishable(name)
+        -- From 20261126110100_demonstration_isolation.sql. This migration drops
+        -- that policy and creates this one, so the kind check has to be
+        -- restated or landing moderation would re-open the photograph bytes to
+        -- the other population.
+        and public.may_meet(((storage.foldername(name))[1])::uuid)
         and not exists (
           select 1 from public.member_blocks b
           where (
@@ -461,6 +466,12 @@ as $$
   left join public.cities c on c.id = p.city_id
   where p.id = member_id
     and p.onboarding_stage = 'onboarding_completed'
+    -- From 20261126110100_demonstration_isolation.sql. This migration
+    -- re-declares `member_profile`, and this function is what makes the
+    -- boundary hold on every surface that composes it -- `interests_received`,
+    -- `my_conversations`, `member_photos` and both clients' connection lists.
+    -- Dropping it here would re-expose all of them.
+    and public.accounts_may_meet(auth.uid(), p.id)
     and not exists (
       select 1 from public.member_blocks b
       where (b.blocker_id = auth.uid() and b.blocked_id = p.id)
@@ -493,6 +504,10 @@ as $$
       p.city_id as my_city_id,
       p.gender  as my_gender,
       p.seeking as my_seeking,
+      -- Carried through by 20261126110100_demonstration_isolation.sql. This
+      -- migration re-declares `discover_members`, so leaving it out here would
+      -- silently drop the demonstration boundary the moment moderation lands.
+      p.account_kind as my_kind,
       c.state   as my_state,
       p.suspended_at is not null as suspended
     from public.profiles p
@@ -526,6 +541,8 @@ as $$
   left join public.cities c on c.id = p.city_id, me
   where p.onboarding_stage = 'onboarding_completed'
     and p.id <> me.id
+    -- From 20261126110100. An account meets only accounts of its own kind.
+    and p.account_kind = me.my_kind
     and p.first_name is not null
     and p.date_of_birth is not null
     and not me.suspended

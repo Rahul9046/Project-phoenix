@@ -18,6 +18,9 @@ Three things, none of which any other check can do.
 | --- | --- |
 | `npm run security:local` | Fixtures, then both writing probes, against a disposable database |
 | `npm run security:local:mutations` | That each of the nine assertions **fails when its rule is removed** |
+| `npm run moderation:local` | The photograph queue and text screening, as a real member |
+| `npm run demonstration:local` | That a demonstration account and a real member cannot reach each other — including through a history that existed before the conversion |
+| `npm run demonstration:local:mutations` | That each of those controls **fails when its rule is removed** |
 | `npm run security:invariants` | Structure only — reads the migrations, executes nothing |
 
 The last one needs nothing at all and is the weakest. A policy that reads
