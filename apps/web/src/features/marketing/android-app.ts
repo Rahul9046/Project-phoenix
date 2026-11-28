@@ -71,18 +71,27 @@ const REPOSITORY = "Rahul9046/Project-phoenix";
  */
 const release = {
   /** The build a visitor downloads. Shown to them. */
-  version: "0.1.4",
-  /** The git tag of the GitHub release the APK is attached to. */
-  tag: "android-beta-v0.1.4",
+  version: "0.1.5",
+  /**
+   * The git tag of the GitHub release the APK is attached to.
+   *
+   * `android-v`, dropping the `android-beta-v` prefix the 0.1.2, 0.1.3 and
+   * 0.1.4 tags carry. Nothing reads the prefix -- this field is the only thing
+   * that resolves a tag, and the release titles stopped saying "beta" at 0.1.4
+   * -- so the tag is the last place still describing the app as a beta. The
+   * older tags keep their names: a published tag is an address too, and the
+   * 0.1.4 release goes on answering at the one it was published under.
+   */
+  tag: "android-v0.1.5",
   /**
    * The asset's name on that release, and so the name it is saved under.
    *
-   * Renamed at 0.1.4 to say what is true of it: this is the first build signed
-   * with Eraya's own key rather than the Expo template's public debug key. The
-   * two `/downloads` addresses below are unchanged and always will be, so no
-   * link in circulation cares what the asset is called.
+   * Named at 0.1.4 to say what is true of it: from that build onwards the APK
+   * is signed with Eraya's own key rather than the Expo template's public debug
+   * key. The two `/downloads` addresses below are unchanged and always will be,
+   * so no link in circulation cares what the asset is called.
    */
-  asset: "eraya-v0.1.4-production-signed.apk",
+  asset: "eraya-v0.1.5-production-signed.apk",
 } as const;
 
 const assetUrl = `https://github.com/${REPOSITORY}/releases/download/${release.tag}/${release.asset}`;

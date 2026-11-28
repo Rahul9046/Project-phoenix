@@ -537,7 +537,7 @@ space-separated tokens.
 
 ### ❗ versionCode 7 for v0.1.5
 
-`main` says 5 (v0.1.4). **6 is already consumed** by the Google Play
+`main` said 5 (v0.1.4) when this was decided. **6 is already consumed** by the Google Play
 closed-testing AAB on `release/google-play-closed-beta-1`, under the same
 application id. Play requires a strictly increasing versionCode, so the next
 direct release is **7**.
