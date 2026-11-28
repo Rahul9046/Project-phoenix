@@ -135,6 +135,16 @@ export const en = {
        */
       lede:
         "Eraya is a community for divorced, separated and widowed people in India — a place to meet, connect and begin again at your own pace.",
+      /*
+       * Shown only when `/auth/v1/settings` could not be read, so the
+       * provider buttons on screen are a fallback rather than the answer.
+       * Saying so matters most on iOS, where the fallback is deliberately
+       * empty -- without this line the screen would simply look as though
+       * email were the only way in, which is a different claim.
+       */
+      providersOffline:
+        "We could not load the other ways to sign in. You can continue with your email below, or try again.",
+      providersRetry: "Try again",
       emailDivider: "or with your email",
       emailHint:
         "We will send you a six-digit code. There is no password to remember.",
@@ -966,7 +976,7 @@ export const en = {
       reassurance: "Nothing else about your phone needs changing, and Eraya uninstalls like any other app whenever you want.",
       /* The one-time reinstall at 0.1.4, when the signing key changed. */
       reinstallTitle: "Already have an older version of Eraya?",
-      reinstallBody: "This applies only if the Eraya app on your phone came from a download before version 0.1.4, or from a Play test invitation. If you are installing Eraya for the first time, or already have 0.1.4, the steps above are all you need. Otherwise: please uninstall the older app, then install this version. Eraya's signing identity has changed to one that is Eraya's own, and Android treats an app signed with a new identity as a different app — so it asks you to install rather than update. You will sign in once with the same account. Your profile, photos, conversations, connections and membership are kept on your account, not on your phone, so nothing is lost. Uninstalling the app is not the same as deleting your Eraya account.",
+      reinstallBody: "This applies only if the Eraya app on your phone came from a download before version 0.1.4, or from a Play test invitation. If you are installing Eraya for the first time, or already have 0.1.4, the steps above are all you need. Otherwise: please uninstall the older app, then install this version. Eraya's signing identity has changed to one that is Eraya's own, and Android treats an app signed with a new identity as a different app — so it asks you to install rather than update. You will sign in once with the same account. Your profile, photos, conversations, connections and membership are kept on your account, not on your phone, so uninstalling does not remove any of them. What the app keeps on the phone itself — your signed-in session and this device's saved language — is cleared, so you will sign in once more. Uninstalling the app is not the same as deleting your Eraya account.",
       backToSite: "Visit eraya.app",
     },
     /*

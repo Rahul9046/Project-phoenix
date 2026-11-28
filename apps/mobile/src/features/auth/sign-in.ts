@@ -1,10 +1,17 @@
+import { Platform } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import type { Provider } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase/client";
 import { supabaseConfig } from "@/lib/supabase/env";
 import { maskEmail, recordAuthEvent } from "@/features/auth/events";
+import {
+  resolveProviders,
+  type AuthSettingsResponse,
+  type PlatformName,
+  type ProviderAvailability,
+  type SignInProvider,
+} from "@/features/auth/providers";
 import type { TranslationKey } from "@eraya/i18n";
 
 /**
@@ -23,17 +30,31 @@ import type { TranslationKey } from "@eraya/i18n";
  * instead of typing a password, and -- more importantly -- the credentials are
  * entered in the browser's own UI, never in a screen this app drew.
  *
- * Provider availability is read from configuration, not assumed. Apple is not
- * configured on the Supabase project, so its button is not shown; fabricating
+ * Provider availability is read from configuration, not assumed, and then
+ * filtered by a per-platform allow list -- `features/auth/providers.ts`. Apple
+ * is not yet configured on the Supabase project, so its button is not shown
+ * anywhere today; when it is configured for iOS, the allow list is what keeps
+ * it off Android and the web until those have been tested. Fabricating
  * credentials or displaying a provider that will fail is worse than omitting it.
  */
 
 // Required on web; harmless and idempotent on native.
 WebBrowser.maybeCompleteAuthSession();
 
-export type SignInProvider = Extract<Provider, "google" | "facebook" | "apple">;
+export type { SignInProvider, ProviderAvailability };
 
-const ALL_PROVIDERS: readonly SignInProvider[] = ["google", "facebook", "apple"];
+/**
+ * This build's platform, narrowed to what the resolver distinguishes.
+ *
+ * `Platform.OS` can also be `windows`, `macos` or `native`; none of those is a
+ * target Eraya ships, and all of them should behave like the non-iOS case
+ * rather than like iOS.
+ */
+function currentPlatform(): PlatformName {
+  if (Platform.OS === "ios") return "ios";
+  if (Platform.OS === "web") return "web";
+  return "android";
+}
 
 /**
  * Which providers to offer, asked rather than assumed.
@@ -52,45 +73,45 @@ const ALL_PROVIDERS: readonly SignInProvider[] = ["google", "facebook", "apple"]
  * the only real guard, the same conclusion the web reached in
  * `features/auth/settings.ts`.
  *
- * Apple is included in the list asked about but is `enabled = false` on the
- * project, so it comes back absent. That is the correct way for it to be
- * missing -- enabling it becomes a config push rather than a code change. Note
- * iOS App Store review requires Sign in with Apple once any other social
- * provider ships, so it is a release blocker for iOS and not for Android.
+ * Asking the project is necessary and is not sufficient. The project is shared
+ * between the website, Android and iOS, and Sign in with Apple has to be
+ * enabled there before iOS can be submitted -- which would otherwise put an
+ * untested Apple button on Android too. So the answer is filtered through a
+ * per-platform allow list as well: see `features/auth/providers.ts`, where the
+ * decision lives as a pure function with tests, because it is a compliance
+ * property rather than a layout preference.
+ *
+ * The returned `degraded` flag distinguishes "the project says these are your
+ * options" from "the project could not be reached and these are a guess". The
+ * screen says which, because a silently shortened list reads as the former.
  */
-export async function fetchAvailableProviders(): Promise<
-  readonly SignInProvider[]
-> {
+export async function fetchAvailableProviders(): Promise<ProviderAvailability> {
+  const platform = currentPlatform();
+
   try {
     const response = await fetch(`${supabaseConfig.url}/auth/v1/settings`, {
       headers: { apikey: supabaseConfig.publishableKey },
     });
 
-    if (!response.ok) return FALLBACK_PROVIDERS;
+    if (!response.ok) return resolveProviders(platform, null);
 
-    const settings = (await response.json()) as {
-      external?: Record<string, boolean>;
-    };
+    const settings = (await response.json()) as AuthSettingsResponse;
 
-    return ALL_PROVIDERS.filter(
-      (provider) => settings.external?.[provider] === true,
-    );
+    /*
+     * A 200 carrying something that is not the expected shape is a failed read,
+     * not an empty answer. Treating it as "no providers are enabled" would hide
+     * every button on a malformed response and give no sign that anything went
+     * wrong.
+     */
+    if (!settings || typeof settings !== "object" || !settings.external) {
+      return resolveProviders(platform, null);
+    }
+
+    return resolveProviders(platform, settings);
   } catch {
-    // A phone with no signal has not learned that Facebook is off. Offering
-    // Google is better than offering nothing and stranding somebody on a screen
-    // with only an email field, and a provider that turns out to be disabled
-    // fails the way it always did rather than worse.
-    return FALLBACK_PROVIDERS;
+    return resolveProviders(platform, null);
   }
 }
-
-/**
- * What to show when the setting cannot be read.
- *
- * Google only. It is the provider that works, carries the overwhelming
- * majority of sign-ins, and is not waiting on anybody's review.
- */
-const FALLBACK_PROVIDERS: readonly SignInProvider[] = ["google"];
 
 /**
  * The address the provider sends the browser back to.

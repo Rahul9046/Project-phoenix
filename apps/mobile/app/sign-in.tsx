@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import { Redirect, router } from "expo-router";
 
@@ -14,6 +14,7 @@ import {
   fetchAvailableProviders,
   sendEmailSignIn,
   signInWithProvider,
+  type ProviderAvailability,
   type SignInProvider,
 } from "@/features/auth/sign-in";
 import { colors, iconSize, radius, space } from "@/theme/tokens";
@@ -49,21 +50,38 @@ export default function SignIn() {
 
   /*
    * Which providers to show is read from the project, not hardcoded -- see
-   * `fetchAvailableProviders`. Starting empty rather than with a guess: a
-   * button that appears and then vanishes is worse than one that arrives a
-   * moment late, because the vanishing one can be pressed first.
+   * `fetchAvailableProviders`, and `features/auth/providers.ts` for the
+   * per-platform allow list applied to its answer.
+   *
+   * Three states, not two. `null` is "we have not finished asking", which is
+   * why the list starts empty rather than with a guess: a button that appears
+   * and then vanishes is worse than one that arrives a moment late, because
+   * the vanishing one can be pressed first. `degraded` is "we could not ask",
+   * which the screen says out loud -- on iOS the fallback is deliberately no
+   * third-party provider at all, and without a word of explanation that is
+   * indistinguishable from email being the only way in.
    */
-  const [providers, setProviders] = useState<readonly SignInProvider[]>([]);
+  const [availability, setAvailability] = useState<ProviderAvailability | null>(
+    null,
+  );
+  const [retrying, setRetrying] = useState(false);
 
-  useEffect(() => {
+  const askForProviders = useCallback(() => {
     let current = true;
     void fetchAvailableProviders().then((available) => {
-      if (current) setProviders(available);
+      if (current) {
+        setAvailability(available);
+        setRetrying(false);
+      }
     });
     return () => {
       current = false;
     };
   }, []);
+
+  useEffect(() => askForProviders(), [askForProviders]);
+
+  const providers = availability?.providers ?? [];
 
   // Someone who is already signed in should never see this screen -- reaching
   // it via back navigation after signing in included.
@@ -141,6 +159,30 @@ export default function SignIn() {
             icon={<ProviderIcon provider={provider} size={iconSize.md} />}
           />
         ))}
+
+        {/*
+          * Only when the project could not be asked. A quiet line and a retry,
+          * not an error state: email sign-in is a complete path on its own, so
+          * nothing here is broken from the member's point of view -- they are
+          * simply not being shown options we cannot vouch for.
+          */}
+        {availability?.degraded ? (
+          <View style={{ gap: space.sm }}>
+            <Text variant="caption" tone="subtle">
+              {t("auth.signIn.providersOffline")}
+            </Text>
+            <Button
+              label={t("auth.signIn.providersRetry")}
+              variant="secondary"
+              loading={retrying}
+              disabled={retrying || pending !== null}
+              onPress={() => {
+                setRetrying(true);
+                askForProviders();
+              }}
+            />
+          </View>
+        ) : null}
       </View>
 
       <View

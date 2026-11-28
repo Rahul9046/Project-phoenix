@@ -16,5 +16,16 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  /*
+   * `*.test.ts` is run by `node --test` from the repository root, which strips
+   * types rather than checking them, and the files import `node:test` and
+   * `node:assert`. Checking them here would mean adding `@types/node` to a
+   * React Native project, and that brings Node's `setTimeout` -- which returns
+   * a `Timeout` object rather than RN's `number` -- into every file that uses a
+   * timer. The tests are deliberately pure modules with no React Native import,
+   * so the cost of not type-checking them is small and the cost of the
+   * alternative is spread across the whole app.
+   */
+  "exclude": ["**/*.test.ts"]
 }

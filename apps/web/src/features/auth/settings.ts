@@ -17,7 +17,26 @@ import type { SocialProviderId } from "@/features/auth/types";
  * no deploy.
  */
 
-const ALL: readonly SocialProviderId[] = ["google", "apple", "facebook"];
+/**
+ * The providers the *website* is willing to show.
+ *
+ * Apple is deliberately absent, and this is a compliance control rather than a
+ * preference. One Supabase project serves the website, the Android app and
+ * (soon) the iOS app, and `/auth/v1/settings` is per-project with no notion of
+ * platform. Sign in with Apple has to be enabled there before the iOS app can
+ * be submitted -- App Store Guideline 4.8 effectively requires it once Google
+ * ships -- and on the day it is enabled, this list is the only thing standing
+ * between that config push and an Apple button appearing on eraya.app, on a
+ * flow nobody has tested in a browser.
+ *
+ * It was `["google", "apple", "facebook"]`, which would have done exactly that.
+ *
+ * Reinstating it is a one-word change, and the right time is after the web
+ * redirect has actually been tested against the configured Apple provider --
+ * not as a side effect of unblocking iOS. The mobile app applies the same
+ * control per platform in `apps/mobile/src/features/auth/providers.ts`.
+ */
+const ALL: readonly SocialProviderId[] = ["google", "facebook"];
 
 type AuthSettings = { external?: Record<string, boolean> };
 
